@@ -7,8 +7,8 @@ setup(
     entry_points={
         'console_scripts': [
             #'convert2md=editor_assistant.convert_to_md:main',
-            'summarize_research=editor_assistant.summarizer:summarize_research',
-            'summarize_news=editor_assistant.summarizer:summarize_news',
+            'summarize_research=editor_assistant.main:summarize_research',
+            'summarize_news=editor_assistant.main:summarize_news',
         ],
     },
     install_requires=[
@@ -17,5 +17,6 @@ setup(
         'argparse',
         'python-dotenv'
         # add other dependencies
-    ]
+    ],
+    include_package_data=True
 )
