@@ -16,7 +16,8 @@ config = {
     "API_BASE_URL": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
     "MODELS": {
         "deepseek-r1": "deepseek-r1-250120",
-        "deepseek-v3": "deepseek-v3-241226"
+        "deepseek-v3": "deepseek-v3-241226",
+        "deepseek-v3-latest": "deepseek-v3-250324"
     },
     "TEMPERATURE": 0.6,
     "MAX_TOKENS": 4000,

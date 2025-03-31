@@ -14,19 +14,13 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 import os
 
+from ._contentchunker import ContentChunker
 
-from editor_assistant._contentchunker import ContentChunker
-from editor_assistant._prompt_research_summarizer import (
-    RESEARCH_CHUNK_ANALYSIS_PROMPT,
-    RESEARCH_SYNTHESIS_PROMPT,
-)
-from editor_assistant._prompt_news_summarizer import (
-    NEWS_CHUNK_ANALYSIS_PROMPT,
-    NEWS_SYNTHESIS_PROMPT,
-)
-from editor_assistant._prompt_translator import TRANSLATION_PROMPT
+from ..config.prompt_templates.translator import TRANSLATION_PROMPT
+from ..config.prompt_templates.research_summarizer import RESEARCH_CHUNK_ANALYSIS_PROMPT, RESEARCH_SYNTHESIS_PROMPT
+from ..config.prompt_templates.news_summarizer import NEWS_CHUNK_ANALYSIS_PROMPT, NEWS_SYNTHESIS_PROMPT
 
-SUMMARIZER_CONFIG = {
+SUMMARIZER_PROMPTS = {
     "research": {
         "chunk_analysis_prompt": RESEARCH_CHUNK_ANALYSIS_PROMPT,
         "synthesis_prompt": RESEARCH_SYNTHESIS_PROMPT,
@@ -36,6 +30,7 @@ SUMMARIZER_CONFIG = {
         "synthesis_prompt": NEWS_SYNTHESIS_PROMPT,
     }
 }
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -94,8 +89,23 @@ class Summarizer:
         paper_output_dir.mkdir(parents=True, exist_ok=True)
         print(f"\n{'='*50}\n{'='*50}\nSummarizer output directory: \n{paper_output_dir}\n") 
 
-        # read the paper content 
+        # read the content 
+        formats = self.load_supported_formats()
+        
+        # Check if the file format is supported
+        file_ext = Path(content_path).suffix.lower()
+        supported = False
+        for category in formats["supported_formats"]:
+            for fmt in formats["supported_formats"][category]:
+                if isinstance(fmt, dict) and "extension" in fmt and fmt["extension"] == file_ext:
+                    supported = True
+                    break
+        
+        if not supported:
+            logging.warning(f"File format {file_ext} may not be fully supported.")
+        
         try:
+            if content_path.endswith(".pdf",):
             with open(content_path, 'r', encoding='utf-8') as f:
                 content = f.read()
         except Exception as e:
@@ -119,7 +129,7 @@ class Summarizer:
 
         total_chunks = len(chunks)
         for i, chunk in enumerate(chunks):
-            prompt = SUMMARIZER_CONFIG[self.type]["chunk_analysis_prompt"].format(
+            prompt = SUMMARIZER_PROMPTS[self.type]["chunk_analysis_prompt"].format(
                 chunk_number=i+1,
                 total_chunks=total_chunks,
                 previous_chunksummary=chunk_analyses[i-1] if i > 0 else "",
@@ -160,7 +170,7 @@ class Summarizer:
         start_synthesis = time.time()
         if total_chunks > 1:
             combined_analyses = "\n\n".join([f"Chunk {i+1} Analysis:\n{analysis}" for i, analysis in enumerate(chunk_analyses)])
-            synthesis_prompt = SUMMARIZER_CONFIG[self.type]["synthesis_prompt"].format(analyses=combined_analyses)
+            synthesis_prompt = SUMMARIZER_PROMPTS[self.type]["synthesis_prompt"].format(analyses=combined_analyses)
             self._save_content("prompt", "synthesis", synthesis_prompt, paper_output_dir)       
             try:
                 synthesis_response = self._make_api_request(synthesis_prompt, "synthesis")

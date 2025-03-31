@@ -94,7 +94,7 @@ def summarize_news():
     """Main function to run the paper summarizer."""
     parser = argparse.ArgumentParser(description="Summarize research papers")
     parser.add_argument("content_paths", nargs='+', help="Path(s) to the research paper markdown file(s)")
-    parser.add_argument("--model", default="deepseek-v3", choices=["deepseek-r1", "deepseek-v3"], help="Model to use for generation")
+    parser.add_argument("--model", default="deepseek-v3-latest", choices=["deepseek-r1", "deepseek-v3", "deepseek-v3-latest"], help="Model to use for generation")
     args = parser.parse_args()
 
     summarize_multiple(args.content_paths, "news", args.model)

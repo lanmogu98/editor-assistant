@@ -119,14 +119,14 @@ MIT
 
 # 内容摘要工具
 
-一种使用大型语言模型(LLM)自动摘要各种类型内容（研究论文、新闻文章）的强大工具。该系统智能地将内容分割成可管理的块，用LLM处理每个块，然后将结果合成为全面的摘要并提供翻译。
+一种使用大型语言模型（LLM）自动总结各种类型内容（研究论文、科技新闻）的工具。该系统将内容分割成可管理的块，用 LLM 处理每个块，然后将结果合成为全面的总结并提供中文翻译。
 
 ## 功能特点
 
 - **内容分块**：在保持段落完整性的同时将内容分块
-- **上下文保持**：通过向前传递之前的摘要来保持块之间的上下文
+- **上下文保持**：通过向前传递之前的总结内容来保持块之间的上下文
 - **多种内容类型**：支持研究论文和新闻文章摘要
-- **双语摘要**：自动将摘要翻译成中文
+- **双语摘要**：自动将总结翻译成中文
 - **令牌使用跟踪**：监控令牌使用情况、成本和处理时间
 - **详细输出**：生成包含要点、术语等结构化摘要
 - **完全透明**：保存所有提示和响应以供检查
@@ -134,8 +134,8 @@ MIT
 ## 先决条件
 
 - Python 3.6+
-- 火山引擎API密钥（Deepseek模型）
-- 所需的Python包（见requirements.txt）
+- 火山引擎 API 密钥（Deepseek 模型）
+- 所需的Python包（见 requirements.txt）
 
 ## 安装
 
@@ -159,18 +159,18 @@ MIT
 ### Python API
 
 ```python
-from editor_assistant.summarize_content import summarize_one
 
-# 摘要研究论文
+# 总结单篇论文
+from editor_assistant.summarize_content import summarize_one
 summarize_one("path/to/paper.md", type="research", model_name="deepseek-r1")
 
-# 摘要多个研究论文
+# 总结多篇论文
 from editor_assistant.summarize_content import summarize_multiple
 summarize_multiple(["path/to/paper1.md", "path/to/paper2.md"], 
                   type="research", 
                   model_name="deepseek-r1")
 
-# 摘要新闻文章
+# 总结科技新闻
 summarize_one("path/to/article.md", type="news", model_name="deepseek-v3")
 ```
 
