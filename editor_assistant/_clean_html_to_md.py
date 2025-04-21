@@ -1,6 +1,9 @@
-# This module is used to convert html to clean markdown, 
-# extracting only the main content from a webpage
-# and removing all the noise like ads, headers, footers, etc.
+#!/usr/bin/env python3
+"""
+This module is used to convert html to clean markdown, 
+extracting only the main content from a webpage
+and removing all the noise like ads, headers, footers, etc.
+"""
 
 import requests
 import time
@@ -21,7 +24,13 @@ class CleanHTML2Markdown:
         return self.h2t
     
     def _convert_by_readabilipy(self, path):
-        from readabilipy import simple_json_from_html_string
+        try:
+            from readabilipy import simple_json_from_html_string
+        except ImportError:
+            raise ImportError(
+                "readabilipy is not installed. \
+                 Please install it with 'pip install readabilipy'.")
+        
         if path.startswith("http"):
             try:
                 # for url
@@ -29,7 +38,8 @@ class CleanHTML2Markdown:
                 response.raise_for_status()
                 content = response.text
             except Exception as e:
-                print(f"Error extracting url with Readabilipy from {path}: {str(e)}")
+                print(f"Error extracting url with Readabilipy from {path}: \
+                      {str(e)}")
                 return None
         else:
             # for local file
@@ -37,7 +47,8 @@ class CleanHTML2Markdown:
                 with open(path, "r", encoding="utf-8") as f:
                     content = f.read()
             except Exception as e:
-                print(f"Error extracting local file with Readabilipy from {path}: {str(e)}")
+                print(f"Error extracting local file with Readabilipy from {path}: \
+                      {str(e)}")
                 return None
     
         # Use Readability to extract the main content
@@ -53,10 +64,10 @@ class CleanHTML2Markdown:
             'title': article['title'],
             'authors': article['byline'],
             'markdown': markdown_content,
-            'url': url,
+            'url': path,
         }
 
-    def clean_convert(self, path, converter_name: str):
+    def convert(self, path, converter_name = "readabilipy"):
         match converter_name:
             case "readabilipy":
                 return self._convert_by_readabilipy(path)
@@ -64,10 +75,13 @@ class CleanHTML2Markdown:
                 raise ValueError(f"Invalid converter name: {converter_name}")
 
 
+"""
+test helper functions
+"""
 def test_readabilipy(url, export_path):
     time_start = time.time()
     converter = CleanHTML2Markdown()
-    result = converter.clean_convert(url, "readabilipy")
+    result = converter.convert(url)
     time_end = time.time()
     if result:
         with open(export_path, "w", encoding="utf-8") as f:
@@ -76,9 +90,7 @@ def test_readabilipy(url, export_path):
             f.write(f"url: {result['url']}\n")
             f.write(f"authors: {result['authors']}\n")
             f.write(result['markdown'])
-
     
-
 # TODO: add other methods if needed
 
 def extract_with_goose3(url):
@@ -182,7 +194,7 @@ def extract_with_readability(url):
         content_html = doc.summary()
         
         # Initialize html2text
-        h2t = init_html2text()
+        h2t = _init_html2text()
         
         # Convert HTML to Markdown
         markdown_content = h2t.handle(content_html)
@@ -211,9 +223,9 @@ if __name__ == "__main__":
 
     import pandas as pd
     from pathlib import Path
-    client_article_samples_path = "samples/client_test_cases.xlsx"
+    client_article_samples_path = "./samples/client_test_cases.xlsx"
     df = pd.read_excel(client_article_samples_path)
-    export_path = Path("samples") / "client_tests"
+    export_path = Path("./samples") / "client_tests"
     export_path.mkdir(parents=True, exist_ok=True)
     
     for _, row in df.iterrows():

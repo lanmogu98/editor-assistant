@@ -13,12 +13,21 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, Any
 import os
+from urllib.parse import urlparse
 
-from ._contentchunker import ContentChunker
 
+
+from ._content_chunker import ContentChunker
 from ..config.prompt_templates.translator import TRANSLATION_PROMPT
-from ..config.prompt_templates.research_summarizer import RESEARCH_CHUNK_ANALYSIS_PROMPT, RESEARCH_SYNTHESIS_PROMPT
-from ..config.prompt_templates.news_summarizer import NEWS_CHUNK_ANALYSIS_PROMPT, NEWS_SYNTHESIS_PROMPT
+from ..config.prompt_templates.research_summarizer import (
+    RESEARCH_CHUNK_ANALYSIS_PROMPT,
+    RESEARCH_SYNTHESIS_PROMPT,
+)
+from ..config.prompt_templates.news_summarizer import (
+    NEWS_CHUNK_ANALYSIS_PROMPT,
+    NEWS_SYNTHESIS_PROMPT,
+)
+from ..config.markitdown.support_formats import SUPPORTED_FORMATS
 
 SUMMARIZER_PROMPTS = {
     "research": {
@@ -40,7 +49,8 @@ logging.basicConfig(
 
 class Summarizer:
     """
-    Processes research papers by chunking them and using an LLM to generate summaries.
+    Processes research papers by chunking them and using an LLM to generate 
+    summaries.
     """
     
     def __init__(self, llm_client, type: str):
@@ -58,7 +68,9 @@ class Summarizer:
             "response": "responses",
         }
         self.type = type
+        self.extensions = SUPPORTED_FORMATS["file_extentions"]
     
+
     def process_content(self, content_path: str) -> Dict[str, Any]:
         """
         Process a research paper to generate a summary.
@@ -81,23 +93,23 @@ class Summarizer:
         
         start_total = time.time()
         
+  
         # get paper name
         paper_name = Path(content_path).stem
 
         # create the output directory for this paper
-        paper_output_dir = Path(content_path).parent.absolute() / "llm_summaries" / f"{paper_name}_{self.llm_client.model_name}"
+        paper_output_dir = (Path(content_path).parent.absolute() / 
+                            "llm_summaries" / 
+                            f"{paper_name}_{self.llm_client.model_name}")
         paper_output_dir.mkdir(parents=True, exist_ok=True)
-        print(f"\n{'='*50}\n{'='*50}\nSummarizer output directory: \n{paper_output_dir}\n") 
+        print(f"\n{'='*50}\n{'='*50}\nSummarizer output directory: 
+              \n{paper_output_dir}\n") 
 
-        # read the content 
-        formats = self.load_supported_formats()
-        
-        # Check if the file format is supported
-        file_ext = Path(content_path).suffix.lower()
-        supported = False
+  
         for category in formats["supported_formats"]:
             for fmt in formats["supported_formats"][category]:
-                if isinstance(fmt, dict) and "extension" in fmt and fmt["extension"] == file_ext:
+                if isinstance(fmt, dict) and "extension" in fmt and \
+                    fmt["extension"] == file_ext:
                     supported = True
                     break
         
@@ -105,9 +117,11 @@ class Summarizer:
             logging.warning(f"File format {file_ext} may not be fully supported.")
         
         try:
-            if content_path.endswith(".pdf",):
-            with open(content_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            if content_path.endswith(".pdf"):
+                content = self.llm_client.extract_text_from_pdf(content_path)
+            else:
+                with open(content_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
         except Exception as e:
             logging.error(f"Error reading paper content: {str(e)}")
             raise Exception(f"Error reading paper content: {str(e)}") from e
@@ -229,6 +243,20 @@ class Summarizer:
                 "paper_output_dir": paper_output_dir
             }
         }
+    
+    """
+    Check if a input path is a URL
+    """
+    def _is_url(self, content_path: str) -> bool:
+        """
+        Check if the content path is a URL.
+        """
+        try:
+            result = urlparse(content_path)
+            # Check if scheme and netloc are present
+            return all([result.scheme, result.netloc])
+        except ValueError:
+            return False
     
     def _extract_summary(self, response: str) -> Optional[str]:
         """

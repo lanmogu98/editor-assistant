@@ -1,5 +1,5 @@
 from ._summarizer import Summarizer
-from ._llmclient import LLMClient
+from ._llm_client import LLMClient
 import argparse
 import sys
 import traceback
