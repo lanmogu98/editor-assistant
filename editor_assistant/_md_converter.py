@@ -4,6 +4,16 @@ markdown converter
 
 Processes various types of input (files, URLs) and converts them to markdown 
 for further processing.
+
+Two converters are employed:
+1. CleanHTML2Markdown: named html_converter, for html urls and html files
+2. MarkItDown: named ms_converter, for other input types
+
+Workflow is as follows:
+1. Check if the input is a html url path or a html file path
+2. if so, html_converter is used to convert the input to markdown
+3. Else, other input types are converted by ms_converter
+
 """
 
 import logging
@@ -16,8 +26,6 @@ import urllib.error
 
 from ._clean_html_to_md import CleanHTML2Markdown
 
-from ..config.markitdown.support_formats import SUPPORTED_FORMATS
-support_file_suffixes = SUPPORTED_FORMATS["file_extentions"]
 
 # Configure logging
 logging.basicConfig(
@@ -37,13 +45,17 @@ class markdownConverter:
         Args:
             config_path: Path to the configuration file. If None, will use default.
         """
+        # use microsoft markitdown converter to handle requests other 
+        # than html page or file, in case html needs pre-formatting 
+        # before being converted to markdown
         try:
             from markitdown import MarkItDown
-            self.markitdown = MarkItDown()
         except ImportError: 
-            self.markitdown = None
-        self.clean_html = CleanHTML2Markdown()
+            raise ImportError("MarkItDown is not installed")
     
+        self.ms_converter = MarkItDown()
+        self.html_converter = CleanHTML2Markdown()
+
     """
     Check if a string is a url.
     """
@@ -52,44 +64,7 @@ class markdownConverter:
         parsed_url = urlparse(path)
         return all([parsed_url.scheme in ('http', 'https'), parsed_url.netloc])
 
-    def _get_url_type(self, url: str) -> str:
-        """
-        Checks if a URL points to an HTML page by checking the Content-Type 
-        header.
-        """
-        assert self._is_url(url)
 
-        try:
-             # Create a request object explicitly setting the method to HEAD. 
-            # This is to avoid downloading the entire page.
-            req = urllib.request.Request(url, method='HEAD')
-            req.add_header('User-Agent', 'Mozilla/5.0')
-
-
-            with urllib.request.urlopen(req, timeout=10) as response: 
-                # Check the status code (optional, but good practice)
-                if response.getcode() == 200:
-                    content_type = response.headers.get('Content-Type')
-                    if content_type and (content_type.strip().lower().
-                       startswith('text/html') or 
-                       content_type.strip().lower().
-                       startswith('application/xhtml+xml')):
-                        return "html"
-                    else:
-                        print(f"URL '{url}' has Content-Type:\
-                              {content_type} (not HTML)")
-                        return False
-                else:
-                    print(f"URL '{url}' returned status code: \
-                          {response.getcode()}")
-                    return False
-        except urllib.error.URLError as e:
-            print(f"Error accessing URL '{url}': {e.reason}")
-            return False
-        except Exception as e:
-            # Catch other potential errors like timeouts
-            print(f"An unexpected error occurred for URL '{url}': {e}")
-            return False
     def _is_html_url(self, url: str) -> bool:
         """
         Args:
@@ -107,36 +82,37 @@ class markdownConverter:
             req = urllib.request.Request(url, method='HEAD')
             req.add_header('User-Agent', 'Mozilla/5.0')
 
-
             with urllib.request.urlopen(req, timeout=10) as response: 
                 # Check the status code (optional, but good practice)
-                if response.getcode() == 200:
-                    content_type = response.headers.get('Content-Type')
+                if response.getcode () == 200:
+                    content_type = response.headers.get ('Content-Type')
                     if content_type and (content_type.strip().lower().
-                       startswith('text/html') or 
+                       startswith ('text/html') or 
                        content_type.strip().lower().
-                       startswith('application/xhtml+xml')):
+                       startswith ('application/xhtml+xml')):
                         return True
                     else:
-                        print(f"URL '{url}' has Content-Type:\
+                        print (f"URL '{url}' has Content-Type:\
                               {content_type} (not HTML)")
                         return False
                 else:
-                    print(f"URL '{url}' returned status code: \
-                          {response.getcode()}")
-                    return False
-        except urllib.error.URLError as e:
-            print(f"Error accessing URL '{url}': {e.reason}")
-            return False
-        except Exception as e:
-            # Catch other potential errors like timeouts
-            print(f"An unexpected error occurred for URL '{url}': {e}")
-            return False
+                    raise Exception (f"Error accessing URL '{url}': {response.getcode()}")
 
+
+        except urllib.error.URLError as e:
+            raise Exception(f"Error accessing URL '{url}': {e.reason}")
+
+    """
+    Check if a string is a path to a html file.
+    """
+    def _is_html_file (self, path: str) -> bool:
+        suffix = Path(path).suffix.lower()
+        return suffix == ".html" or suffix == ".htm"
+    
     """
     Check if a string is a path to a supported file.
     """
-    def _is_supported_file(self, path: str) -> bool:
+    def _is_supported_file (self, path: str) -> bool:
         """
         Args:
             path: The string to check
@@ -144,39 +120,23 @@ class markdownConverter:
         Returns:
             True if the string is a url or path to a file, False otherwise
         """
-        file_suffix = Path(path).suffix.lower()
-        if self._is_url(path):
-            r
-        return file_suffix in support_file_suffixes
+        is_supported_file = Path(path).suffix.lower() in support_file_suffixes
+        return is_supported_file
 
-    def _is_html(self, path: str) -> bool:
+    """
+    Get a suitable name for the content.
+    """
+    def _get_input_name (self, content_path: str) -> str:
         """
-        Check if a string is a path to a html file.
-        """
-        suffix = Path(path).suffix.lower()
-        is_html_file = suffix == ".html" or suffix == ".htm"
-        is_html_page = self._is_html_url(path)
-        return is_html_file or is_html_page
-
-        
-    # check if a input is an html link other than a file path or a url to a file
-    # if so, extract the main content instead directly call the converter
-    def _get_url_name(self, content_path: str) -> str:
-        """
-        Get a suitable name for the content.
-        
         Args:
             content_path: Path to the content
             
         Returns:
             Name for the content
         """
-
-        assert (self._is_html_url(content_path) or 
-                self._is_supported_file(content_path))
         
-        # for html urls, use the domain/path as the name
-        if self._is_html_url(content_path):
+        # for urls, use the domain/path as the name
+        if self._is_url(content_path):
             parsed_url = urlparse(content_path)
             name = f"{parsed_url.netloc}{parsed_url.path.replace('/', '_')}"
             if name.endswith('_'):
@@ -185,10 +145,11 @@ class markdownConverter:
             if len(name) > 100:
                 name = name[:100]
             return name
-        else:  # for supported files, use the filename without extension
+        # other types of input
+        else: 
             return Path(content_path).stem
 
-    def get_output_dir(self, content_path: str, model_name: str) -> Path:
+    def get_output_dir (self, content_path: str, model_name: str) -> Path:
         """
         Get the output directory for processing results.
         
@@ -210,7 +171,7 @@ class markdownConverter:
                     f"{content_name}_{model_name}")
             
   
-    def process_content(self, content_path: str) -> Tuple[str, Dict[str, Any]]:
+    def convert_content(self, content_path: str) -> Tuple[str, Dict[str, Any]]:
         """
         Process content from various sources and convert to a standard format.
         
@@ -223,42 +184,50 @@ class markdownConverter:
 
         # check if the content is supported
         if (not self._is_supported_file(content_path) and 
-            not self._is_html(content_path)):
-            raise ValueError(f"Unsupported content type: {content_path}")
+            not self._is_html_url(content_path) and 
+            not self._is_html_file(content_path)):
+            logging.error(f"Unsupported content type, conversion might fail: {content_path}")
 
         metadata = {
             "content_path": content_path,
-            "content_name": None,
+            "title": None,
+            "authors": None,
             "converter": None,
             "processing_time": 0
         }
         
         start_time = datetime.now()
         
-        if self._is_html(content_path):
+        success = False
+
+        # try to convert htmls with html_converter
+        if (self._is_html_url(content_path) or self._is_html_file(content_path)):
             try:
                 # clean_html.convert returns a dictionary
-                processed_content_dict = self.clean_html.convert(content_path, "readabilipy")
-                processed_content = processed_content_dict['markdown'] # Extract markdown string
-                metadata["converter"] = "CleanHTML2Markdown"
-                # Optionally add other details to metadata
-                metadata["title"] = processed_content_dict.get('title')
-                metadata["authors"] = processed_content_dict.get('authors')
+                processed_content_dict = self.html_converter.convert(content_path, 
+                                                                    "readabilipy")
+                if processed_content_dict is None:
+                    logging.error(f"Error coverting with CleanHTML2Markdown: {str(e)}")
+                else:
+                    processed_content = processed_content_dict['markdown'] # Extract markdown string
+                    metadata["converter"] = "html_converter"
+                    metadata["title"] = processed_content_dict.get('title')
+                    metadata["authors"] = processed_content_dict.get('authors')
+                    success = True
             except Exception as e:
-                raise Exception(f"Error coverting with CleanHTML2Markdown: {str(e)}") from e
-        else:
+                logging.error(f"Error coverting with CleanHTML2Markdown: {str(e)}")
+        
+        # if it's not html, or if html conversion fails, try to convert with ms_converter
+        if success == False:
             try:
-                processed_content = self.markitdown.convert(content_path).text_content
+                processed_content = self.ms_converter.convert(content_path).text_content
                 metadata["converter"] = "MarkItDown"
+                metadata["title"] = self._get_input_name(content_path)
             except Exception as e:
                 raise Exception(f"Error coverting with MarkItDown: {str(e)}") from e
         
-        # Update metadata
-        if self._is_url(content_path):
-            metadata["content_name"] = self._get_url_name(content_path)
-        else:
-            metadata["content_name"] = Path(content_path).stem.replace("/", "_")
-        
+
+        # add processing time to metadata
         metadata["processing_time"] = (datetime.now() - start_time).total_seconds()
         
         return processed_content, metadata
@@ -307,8 +276,8 @@ def test_md_converter():
         if isinstance(url, str):
             try:
                 processed_content, metadata = \
-                                    converter.process_content(url)
-                with open(export_path / f"url_{client}_{metadata['content_name']}.md", "w") as f:
+                                    converter.convert_content (url)
+                with open(export_path / f"url_{client}_{metadata['title']}.md", "w") as f:
                     f.write(processed_content)
                 print(f">> Success on URL of {client}" )
                 print(metadata)
