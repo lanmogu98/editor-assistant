@@ -8,6 +8,7 @@ import traceback
 import logging
 from enum import Enum
 import time
+from pathlib import Path
 
 supported_models = llm_config["MODELS"].keys()
 
@@ -29,39 +30,55 @@ class EditorAssistant:
         self.logger.info(f"Summarizing {len(paths)} {type} articles using {model_name}")
         
         time_start = time.time()
+        
+        # initialize metadata
         metadata = {
             "type": type,
             "item_count": len(paths),
-            "markdown_conversion": {
-                "success": 0,
-                "failed": len(paths),
-            },
-            "summarization": {
-                "success": 0,
-                "failed": len(paths),
-            },
-            "process_time": {
-                "total": 0,
-                "markdown_conversion": 0,
-                "summarization": 0,
-            }
+            "markdown_conversion": {"success": 0, "failed": len(paths)},
+            "summarization": {"success": 0, "failed": len(paths)},
+            "process_time": {"total": 0, "markdown_conversion": 0, "summarization": 0}
         }
-         
-        md_content = []
-        # 
+
+        # initialize the md content list
+        md_paths_list = []
+
+        # TODO: add multi-thread support for the job, for conversion and 
+        # llm summerization all takes time, especially for summerizations.
         for path in paths:
             try:
-                md_content.append(self.md_converter.convert_content(path))
+                md_content, md_metadata = self.md_converter.convert_content(path)
+                
+                if md_content is not None:
+                    # save the md content to a file
+                    file_name = md_metadata["title"] + ".md"
+                    md_path = Path (path).parent / "md" / file_name
+                    with open(md_path, "w") as f:
+                        f.write(md_content)
+                    # mark one success
+                    metadata["markdown_conversion"]["success"] += 1
+                    metadata["markdown_conversion"]["failed"] -= 1
+                    md_paths_list.append(md_path)
+                else:
+                    md_paths_list.append(None)
             except Exception as e:
                 logging.warning (f"failed to convert {path}: {str(e)} to md")
                 # Continue with next paper instead of exiting
+                md_content.append(None)
                 continue
 
-        
-        # Process the paper
-        try:
-            md_content, _ = self.md_converter.convert_content(input_path)
-            result = self.summarizer.summarize_content(md_content)
+        if metadata["markdown_conversion"]["success"] > 0:
+            # Process the paper
+            try:
+                for md_path in md_paths_list:
+                    if md_path is None:
+                        continue
+                    self.md_summarizer.summarize_content(md_path)
+                    if result is not None:
+                        metadata["summarization"]["success"] += 1
+                        metadata["summarization"]["failed"] -= 1
+                    else:
+                        metadata["summarization"]["failed"] += 1
             
             # Print summary information
             print("\n" + "="*50)
