@@ -84,6 +84,9 @@ class MDSummarizer:
         Returns:
             Dictionary containing the summary and metadata
         """
+        # initialize the success flag
+        success = False
+
         # Initialize process times tracking
         process_times = {
             "total": 0,
@@ -92,9 +95,9 @@ class MDSummarizer:
             "synthesis": 0,
             "translation": 0
         }
-        
         start_total = time.time()
         
+        # read the content from the file
         suffix = Path(content_path).suffix.lower()
         with open(content_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -108,7 +111,7 @@ class MDSummarizer:
                             "llm_summaries" / 
                             f"{title}_{self.llm_client.model_name}")
         output_dir.mkdir(parents=True, exist_ok=True)
-        print(f"\n{'='*50}\n{'='*50}\nSummarizer output directory: 
+        print(f"\n{'='*50}\n{'='*50}\nSummarizer output directory: \
               \n{output_dir}\n") 
         
         # Step 1: Split the paper into chunks
@@ -156,15 +159,16 @@ class MDSummarizer:
                     if summary:
                         chunk_analyses.append(summary)
                     else:
-                        logging.warning(f"Could not extract summary from chunk {i+1}")
-                        chunk_analyses.append(f"[Failed to extract summary for chunk {i+1}]")
+                        logging.warning (f"{title}: Could not extract summary \
+                                         from chunk {i+1}")
+                        chunk_analyses.append(response["text"])
                 # for news papers, add the response directlyto the chunk analyses
                 else:
                     chunk_analyses.append(response["text"])
 
             except Exception as e:
                 logging.error(f"Error analyzing chunk {i+1}: {str(e)}")
-                chunk_analyses.append(f"[Error analyzing chunk {i+1}: {str(e)}]")
+                return success
         
         process_times["chunk_analysis"] = time.time() - start_chunk_analysis
         
@@ -172,38 +176,45 @@ class MDSummarizer:
         print(f"Synthesizing {len(chunk_analyses)} chunks...")
         start_synthesis = time.time()
         if total_chunks > 1:
-            combined_analyses = "\n\n".join([f"Chunk {i+1} Analysis:\n{analysis}" for i, analysis in enumerate(chunk_analyses)])
-            synthesis_prompt = SUMMARIZER_PROMPTS[self.type]["synthesis_prompt"].format(analyses=combined_analyses)
+            combined_analyses = "\n\n".join([f"Chunk {i+1} Analysis:\n{analysis}" 
+                                             for i, analysis in 
+                                             enumerate(chunk_analyses)])
+            synthesis_prompt = SUMMARIZER_PROMPTS[self.type]["synthesis_prompt"]\
+                                            .format(analyses=combined_analyses)
             self._save_content("prompt", "synthesis", synthesis_prompt, output_dir)       
+            
             try:
-                synthesis_response = self._make_api_request(synthesis_prompt, "synthesis")
-                self._save_content("response", "synthesis", synthesis_response["text"], output_dir)
+                synthesis_response = self._make_api_request(synthesis_prompt, 
+                                                            "synthesis")
+                self._save_content("response", "synthesis", 
+                                   synthesis_response["text"], output_dir)
                 
             except Exception as e:
                 logging.error(f"Error synthesizing summary: {str(e)}")
+                return success
         
         process_times["synthesis"] = time.time() - start_synthesis
         
         # Step 4: Translate the synthesis to Chinese
         print(f"Translating synthesis to Chinese...")
         start_translation = time.time()
-        try:
-            translation_prompt = TRANSLATION_PROMPT.format(
-                content=synthesis_response["text"] if synthesis_response else "",
-                title=title
-            )
-            self._save_content("prompt", "translation", translation_prompt, output_dir)
-        except Exception as e:
-            logging.error(f"Error creating translation prompt: {str(e)}")
-            logging.error(f"Synthesis response: {synthesis_response}")
-            raise Exception(f"Error creating translation prompt: {str(e)}") from e
+        
+        translation_prompt = TRANSLATION_PROMPT.format(
+            content=synthesis_response["text"] if synthesis_response else "",
+            title=title
+        )
         
         try:
-            translation_response = self._make_api_request(translation_prompt, "translation")
-            self._save_content("response", "translation", translation_response["text"], output_dir)
+            self._save_content("prompt", "translation", translation_prompt, 
+                           output_dir)
+            translation_response = self._make_api_request(translation_prompt, 
+                                                          "translation")
+            self._save_content("response", "translation", 
+                               translation_response["text"], output_dir)
             
         except Exception as e:
             logging.error(f"Error translating summary: {str(e)}")
+            return success
         
         process_times["translation"] = time.time() - start_translation
         
@@ -214,24 +225,16 @@ class MDSummarizer:
         try:
             self._save_process_times_report(title, process_times, output_dir)
         except Exception as e:
-            logging.error(f"Error saving process times report: {str(e)}")
+            logging.warning (f"Unable to save process times report: {str(e)}")
         
         # Save token usage report
         try:
             self.llm_client.save_token_usage_report(title, output_dir)
         except Exception as e:
-            logging.error(f"Error saving token usage report: {str(e)}")
+            logging.warning (f"Unable to save token usage report: {str(e)}")
         
         # Return the summary and metadata
-        return {
-            "metadata": {
-                "title": title,
-                "chunks": len(chunks),
-                "process_times": process_times,
-                "token_usage": self.llm_client.get_token_usage(),
-                "output_dir": output_dir
-            }
-        }
+        return success
     
     
     def _extract_summary(self, response: str) -> Optional[str]:
@@ -330,3 +333,13 @@ class MDSummarizer:
             logging.error(f"Unexpected error in {request_name}: {str(e)}")
             raise Exception(f"Error generating response for {request_name}: {str(e)}") from e
 
+if __name__ == "__main__":
+    from .llm_client import LLMClient
+    from .md_summarizer import MDSummarizer
+
+    llm_client = LLMClient(model_name="deepseek-v3")
+    md_summarizer = MDSummarizer(llm_client, "research")
+
+    md_path = "samples/test_results/2025-06-05_11-22-23/url_BMC_Mapping \
+the viruses belonging to the order Bunyavirales in China.md"
+    md_summarizer.summarize_md(md_path)

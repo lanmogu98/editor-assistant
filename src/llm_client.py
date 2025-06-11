@@ -198,8 +198,8 @@ class LLMClient:
             f.write(f"  Total Input Tokens: {token_usage['total_input_tokens']}\n")
             f.write(f"  Total Output Tokens: {token_usage['total_output_tokens']}\n")
             f.write(f"  Total Tokens: {total_tokens}\n")
-            f.write(f"  Total Process Time: {token_usage['process_times']\
-                                             ['total_time']:.2f} seconds\n")
+            f.write(f"  Total Process Time: \
+                    {token_usage['process_times']['total_time']:.2f} seconds\n")
             f.write(f"  Input Cost: ¥{token_usage['cost']['input_cost']:.6f}\n")
             f.write(f"  Output Cost: ¥{token_usage['cost']['output_cost']:.6f}\n")
             f.write(f"  Total Cost: ¥{token_usage['cost']['total_cost']:.6f}\n\n")
