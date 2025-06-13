@@ -8,7 +8,7 @@ and preserving paragraph integrity.
 
 import re
 from typing import List, Dict, Any
-
+import logging
 
 class ContentChunker:
     """
@@ -16,7 +16,7 @@ class ContentChunker:
     Focuses on character limits while preserving paragraph integrity.
     """
     
-    def __init__(self, max_chunk_size: int = 8000, overlap: int = 200, min_chunk_size: int = 2000):
+    def __init__(self, max_chunk_size, overlap: int = 200, min_chunk_size: int = 20000):
         """
         Initialize the chunker with size parameters.
         
@@ -30,7 +30,13 @@ class ContentChunker:
         self.min_chunk_size = min_chunk_size
         # Approximate ratio of characters to tokens (varies by model)
         self.char_to_token_ratio = 4  # ~4 characters per token for English text
-    
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(
+            f"Content Chunker Initialized with max_chunk_size: "
+            f"{max_chunk_size}, overlap: {overlap}, "
+            f"min_chunk_size: {min_chunk_size}"
+        )
+
     def create_chunks(self, content: str) -> List[Dict[str, Any]]:
         """
         Create chunks from content based on paragraph boundaries.
