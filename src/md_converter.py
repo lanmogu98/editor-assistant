@@ -57,6 +57,8 @@ class MarkdownConverter:
     
         self.ms_converter = MarkItDown()
         self.html_converter = CleanHTML2Markdown()
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Markdown Converter Initialized")
 
     """
     Check if a string is a url.
@@ -76,7 +78,8 @@ class MarkdownConverter:
             True if the URL is valid and the Content-Type indicates HTML, 
             False otherwise.
         """
-        assert self._is_url(url)
+        if not self._is_url(url):
+            return False
 
         try:
             # Create a request object explicitly setting the method to HEAD. 
@@ -188,7 +191,7 @@ class MarkdownConverter:
         if (not self._is_supported_file(content_path) and 
             not self._is_html_url(content_path) and 
             not self._is_html_file(content_path)):
-            logging.warning (f"Unknown content type, conversion might fail: {content_path}")
+            self.logger.warning (f"Unknown content type, conversion might fail: {content_path}")
 
         metadata = {
             "content_path": content_path,
@@ -204,20 +207,24 @@ class MarkdownConverter:
 
         # try to convert htmls with html_converter
         if (self._is_html_url(content_path) or self._is_html_file(content_path)):
+            self.logger.debug (f"Converting html with html_converter: {content_path}")
             try:
                 # clean_html.convert returns a dictionary
                 processed_content_dict = self.html_converter.convert(content_path, 
                                                                     "readabilipy")
                 if processed_content_dict is None:
-                    logging.warning (f"Failed to convert with CleanHTML2Markdown: {str(e)}")
+                    self.logger.warning (f"Failed to convert with CleanHTML2Markdown:\
+                                          {content_path}")
                 else:
-                    processed_content = processed_content_dict['markdown'] # Extract markdown string
+                    processed_content = processed_content_dict['markdown']
                     metadata["converter"] = "html_converter"
                     metadata["title"] = processed_content_dict.get('title')
                     metadata["authors"] = processed_content_dict.get('authors')
                     success = True
+                    
             except Exception as e:
-                logging.warning (f"Failed to convert with CleanHTML2Markdown: {str(e)}")
+                self.logger.warning (f"Failed to convert with CleanHTML2Markdown:\
+                                      {str(e)} - {content_path}")
         
         # if it's not html, or if html conversion fails, try to convert with ms_converter
         if success == False:
@@ -226,7 +233,7 @@ class MarkdownConverter:
                 metadata["converter"] = "MarkItDown"
                 metadata["title"] = self._get_input_name(content_path)
             except Exception as e:
-                raise Exception(f"Failed to convert input with MarkItDown: {str(e)}") from e
+                self.logger.warning (f"Failed to convert input with MarkItDown: {str(e)}")
         
 
         # add processing time to metadata

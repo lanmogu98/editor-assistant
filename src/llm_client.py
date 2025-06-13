@@ -9,8 +9,18 @@ from datetime import datetime
 from typing import Dict, Any
 import json
 from pathlib import Path
-from ..config.llms.llm_config import llm_config
+import logging
 
+# set up logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+from ..config.llms.llm_config import llm_config
+if not llm_config:
+    raise ValueError("LLM configuration not found. \
+                        Please check the llm_config.py file.")
 
 class LLMClient:
     """Client for interacting with the LLM API."""
@@ -24,9 +34,12 @@ class LLMClient:
         """
         self.api_key = os.environ.get("VOLC_API_KEY")
         if not self.api_key:
-            raise ValueError("API key is required. \
-                             Set the VOLC_API_KEY environment variable.")
-        
+            raise ValueError(
+                "API key is required. "
+                "Set the VOLC_API_KEY environment variable."
+            )
+        self.model_context_window = llm_config["MODEL_CONTEXT_WINDOW"]
+        self.max_tokens = llm_config["MAX_TOKENS"]
         self.model_name = model_name
         self.model = llm_config["MODELS"][model_name]
         self.api_url = llm_config["API_BASE_URL"]
@@ -140,8 +153,10 @@ class LLMClient:
             
             except requests.exceptions.RequestException as e:
                 if attempt == max_retries - 1:
-                    raise Exception(f"Failed to generate response after \
-                                {max_retries} attempts: {str(e)}")
+                    raise Exception(
+                        f"Failed to generate response after "
+                        f"{max_retries} attempts: {str(e)}"
+                    )
                 
                 print(f"API request failed, retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
@@ -198,8 +213,10 @@ class LLMClient:
             f.write(f"  Total Input Tokens: {token_usage['total_input_tokens']}\n")
             f.write(f"  Total Output Tokens: {token_usage['total_output_tokens']}\n")
             f.write(f"  Total Tokens: {total_tokens}\n")
-            f.write(f"  Total Process Time: \
-                    {token_usage['process_times']['total_time']:.2f} seconds\n")
+            f.write(
+                f"  Total Process Time: "
+                f"{token_usage['process_times']['total_time']:.2f} seconds\n"
+            )
             f.write(f"  Input Cost: ¥{token_usage['cost']['input_cost']:.6f}\n")
             f.write(f"  Output Cost: ¥{token_usage['cost']['output_cost']:.6f}\n")
             f.write(f"  Total Cost: ¥{token_usage['cost']['total_cost']:.6f}\n\n")

@@ -1,39 +1,48 @@
-from .md_summarizer import MDSummarizer
+from .md_summarizer import MDSummarizer, ArticleType
 from .md_converter import MarkdownConverter
 from .llm_client import LLMClient
 from ..config.llms.llm_config import llm_config
-import argparse
-import sys
-import traceback
 import logging
-from enum import Enum
 import time
 from pathlib import Path
 
 supported_models = llm_config["MODELS"].keys()
 
-class ArticleType(Enum):
-    research = 'r'
-    news = 'n'
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 class EditorAssistant:
-    def __init__(self):
-        self.llm_client = LLMClient()
+    def __init__(self, model_name, type:ArticleType):
+        self.type = type
+        self.llm_client = LLMClient(model_name)
         self.md_converter = MarkdownConverter()
-        self.md_summarizer = MDSummarizer(self.llm_client, type)
+        self.md_summarizer = MDSummarizer(self.llm_client, self.type) 
+        # create and configure the logger
         self.logger = logging.getLogger(__name__)
-        self.logger.info("="*50)
-        self.logger.info(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: Editor Assistant Initialized")
+        self.logger.info("Editor Assistant Initialized")
     
-    def summarize_multiple(self, type:ArticleType, paths:list[str], 
-                           model_name="deepseek-r3"):
-        self.logger.info(f"Summarizing {len(paths)} {type} articles using {model_name}")
+    def summarize_multiple (self, paths:list[str]):
         
+        # early return if no paths are provided
+        if len(paths) == 0:
+            self.logger.error ("No paths provided")
+            return
+        
+        # start the timer
         time_start = time.time()
+
+        # print the summary of the job
+        self.logger.info(
+            f"Summarizing {len(paths)} {str(self.type.name)} article(s) "
+            f"using {self.llm_client.model_name}"
+        )
         
         # initialize metadata
         metadata = {
-            "type": type,
+            "type": str(self.type.name),
             "item_count": len(paths),
             "markdown_conversion": {"success": 0, "failed": len(paths)},
             "summarization": {"success": 0, "failed": len(paths)},
@@ -46,102 +55,107 @@ class EditorAssistant:
         # TODO: add multi-thread support for the job, for conversion and 
         # llm summerization all takes time, especially for summerizations.
         for path in paths:
-            try:
-                md_content, md_metadata = self.md_converter.convert_content(path)
-                
-                if md_content is not None:
-                    # save the md content to a file
-                    file_name = md_metadata["title"] + ".md"
-                    md_path = Path (path).parent / "md" / file_name
-                    with open(md_path, "w") as f:
-                        f.write(md_content)
-                    # mark one success
-                    metadata["markdown_conversion"]["success"] += 1
-                    metadata["markdown_conversion"]["failed"] -= 1
-                    md_paths_list.append(md_path)
-                else:
-                    md_paths_list.append(None)
-            except Exception as e:
-                logging.warning (f"failed to convert {path}: {str(e)} to md")
-                # Continue with next paper instead of exiting
-                md_content.append(None)
+            md_content, md_metadata = self.md_converter.convert_content(path)
+            
+            if md_content is not None:
+                # save the md content to a file
+                file_name = md_metadata["title"] + ".md"
+                md_path = Path (path).parent / "md" / file_name
+                Path(md_path).parent.mkdir(parents=True, exist_ok=True)
+                self.logger.debug (f"Saving md content to {md_path}")
+                with open(md_path, "w") as f:
+                    f.write(md_content)
+                # mark one success
+                md_paths_list.append(md_path)
+                metadata["markdown_conversion"]["success"] += 1
+                metadata["markdown_conversion"]["failed"] -= 1
+            else:
+                self.logger.warning (f"failed to convert {path}: {str(e)} to md")
+                md_paths_list.append(None)
+
+
+        if metadata["markdown_conversion"]["success"] == 0:
+            self.logger.error ("No markdown files converted successfully")
+            return
+
+        # print the metadata after conversion
+        self.logger.debug(
+            f"Successfully converted "
+            f"{metadata['markdown_conversion']['success']} "
+            f"markdown files out of {metadata['item_count']}"
+        )
+        
+        time_md_conversion_ended = time.time()
+        time_md_conversion = time_md_conversion_ended - time_start
+        metadata["process_time"]["markdown_conversion"] = f"{time_md_conversion:.2f} seconds"
+
+        # summarize the md files
+        for md_path in md_paths_list:
+            if md_path is None:
                 continue
-
-        if metadata["markdown_conversion"]["success"] > 0:
-            # Process the paper
             try:
-                for md_path in md_paths_list:
-                    if md_path is None:
-                        continue
-                    self.md_summarizer.summarize_content(md_path)
-                    if result is not None:
-                        metadata["summarization"]["success"] += 1
-                        metadata["summarization"]["failed"] -= 1
-                    else:
-                        metadata["summarization"]["failed"] += 1
-            
-            # Print summary information
-            print("\n" + "="*50)
-            print(f"Paper: {result['metadata']['title']}")
-            print(f"Model: {self.summarizer.llm_client.model_name} ({self.summarizer.llm_client.model})")
-            print(f"Number of chunks: {result['metadata']['chunks']}")
-            # Print token usage
-            token_usage = result['metadata']['token_usage']
-            print("\nToken Usage:")
-            print(f"  Total input tokens: {token_usage['total_input_tokens']}")
-            print(f"  Total output tokens: {token_usage['total_output_tokens']}")
-            print(f"  Total tokens: {token_usage['total_input_tokens'] + 
-                                     token_usage['total_output_tokens']}")
-            
-            # Print cost information
-            print("\nCost Information:")
-            print(f"  Input cost: ¥{token_usage['cost']['input_cost']:.6f}")
-            print(f"  Output cost: ¥{token_usage['cost']['output_cost']:.6f}")
-            print(f"  Total cost: ¥{token_usage['cost']['total_cost']:.6f}")
-            
-            # Print process times
-            process_times = result['metadata']['process_times']
-            print("\nProcess Times:")
-            print(f"  Chunking: {process_times['chunking']:.2f} seconds \
-                  ({process_times['chunking']/process_times['total']*100:.1f}%)")
-            print(f"  Chunk Analysis: {process_times['chunk_analysis']:.2f} seconds \
-                  ({process_times['chunk_analysis']/process_times['total']*100:.1f}%)")
-            print(f"  Synthesis: {process_times['synthesis']:.2f} seconds \
-                  ({process_times['synthesis']/process_times['total']*100:.1f}%)")
-            print(f"  Translation: {process_times['translation']:.2f} seconds\
-                   ({process_times['translation']/process_times['total']*100:.1f}%)")
-            print(f"  Total: {process_times['total']:.2f} seconds \
-                  {process_times['total']/60:.2f} minutes)")
-            
-            print("\nSummaries saved to:")
-            print(f"  {result['metadata']['paper_output_dir']}")
-            print("="*50)
-            
-        except Exception as e:
-            print(f"Error processing paper: {str(e)}")
-            traceback.print_exc()
-            sys.exit(1)
+                success = self.md_summarizer.summarize_md (md_path)
+                if success:
+                    metadata["summarization"]["success"] += 1
+                    metadata["summarization"]["failed"] -= 1
+                else:
+                    self.logger.warning (f"failed to summarize {md_path}")
+            except Exception as e:
+                self.logger.warning (f"failed to summarize {md_path}: {str(e)}")
 
-        return
+        if metadata["summarization"]["success"] == 0:
+            self.logger.error ("No markdown files summarized successfully")
+            return
 
+        # print the metadata after summarization
+        self.logger.debug(
+            f"Successfully summarized "
+            f"{metadata['summarization']['success']} "
+            f"markdown files out of {metadata['item_count']}"
+        )
+        
+        time_summarization_ended = time.time()
+        time_summarization = time_summarization_ended - time_md_conversion_ended
+        metadata["process_time"]["summarization"] = f"{time_summarization:.2f} seconds"
+
+        time_total = time_summarization_ended - time_start
+        metadata["process_time"]["total"] = f"{time_total:.2f} seconds"
+
+        # print the total time
+        self.logger.debug (f"Total time taken: {metadata['process_time']['total']}")
+
+        self.logger.info (f"Metadata: {metadata}")
+         
+        return 
+
+def summarize_news (paths:list[str], model_name="deepseek-r3-latest"):
+    summerizer = EditorAssistant(model_name, ArticleType.news)
+    summerizer.summarize_multiple(paths)
+
+def summarize_research (paths:list[str], model_name="deepseek-r3-latest"):
+    summerizer = EditorAssistant(model_name, ArticleType.research)
+    summerizer.summarize_multiple(paths)
 
 if __name__ == "__main__":
-  summerizer = SummarizeAssistant()
-
-  def summarize_research (self):
-        """Main function to run the paper summarizer."""
-        parser = argparse.ArgumentParser(description="Summarize research papers")
-        parser.add_argument("--type", 
-                            default = "research", 
-                            choices = ["research", "news"], 
-                            help = "Type of content to summarize")
-        parser.add_argument("content_paths", 
-                            nargs= '+', 
-                            help= "Path(s) to the research paper markdown file(s)")
-        parser.add_argument("--model", 
-                            default = "deepseek-v3", 
-                            choices = supported_models, 
-                            help = "Model to use for generation")
-        args = parser.parse_args()
-        
-        self.summarize_multiple(args.content_paths, "research", args.model)
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description="LLM Editor Assistant")
+    parser.add_argument("--type", 
+                        type = ArticleType,
+                        default = ArticleType.research, 
+                        choices = list(ArticleType), 
+                        help = "Type of content to summarize")
+    parser.add_argument("content_paths", 
+                        nargs= '+', 
+                        help= "Path(s) to the research paper markdown file(s)")
+    parser.add_argument("--model", 
+                        default = "deepseek-v3-latest", 
+                        choices = supported_models, 
+                        help = "Model to use for generation")
+    args = parser.parse_args()
+    
+    if args.type == ArticleType.research:
+        summarize_research(args.content_paths, args.model)
+    elif args.type == ArticleType.news:
+        summarize_news(args.content_paths, args.model)
+    else:
+        parser.error("Invalid article type, please input 'r' for research or 'n' for news")
