@@ -234,7 +234,7 @@ class MDSummarizer:
         process_times["synthesis"] = time.time() - start_synthesis
         
         # Step 4: Translate the synthesis to Chinese
-        self.logger.info (f"Translating synthesis to Chinese...")
+        self.logger.info (f"Translating summarization to Chinese...")
         start_translation = time.time()
         
         translation_prompt = TRANSLATION_PROMPT.format(

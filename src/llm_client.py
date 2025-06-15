@@ -208,7 +208,7 @@ class LLMClient:
             f.write(f"Token Usage Report for {project_name}\n")
             f.write(f"Generated on: {report['timestamp']}\n")
             f.write(f"Model: {report['model']} ({report['model_name']})\n\n")
-            
+
             f.write("Summary:\n")
             f.write(f"  Total Input Tokens: {token_usage['total_input_tokens']}\n")
             f.write(f"  Total Output Tokens: {token_usage['total_output_tokens']}\n")
@@ -233,3 +233,19 @@ class LLMClient:
                 f.write(f"    Input Cost: ¥{req['input_cost']:.6f}\n")
                 f.write(f"    Output Cost: ¥{req['output_cost']:.6f}\n")
                 f.write(f"    Total Cost: ¥{req['total_cost']:.6f}\n\n")
+
+        # print the summary to the console
+        print (f"Token Usage Report for '{project_name}'")
+        print (f"Generated on: on: {report['timestamp']}")
+        print (f"Model: {report['model']} ({report['model_name']})\n")       
+
+        print (f"  Total Input Tokens: {token_usage['total_input_tokens']}")
+        print (f"  Total Output Tokens: {token_usage['total_output_tokens']}")
+        print (f"  Total Tokens: {total_tokens}\n")
+        print (
+            f"  Total Process Time: "
+            f"{token_usage['process_times']['total_time']:.2f} seconds"
+        )
+        print (f"  Input Cost: ¥{token_usage['cost']['input_cost']:.6f}")
+        print (f"  Output Cost: ¥{token_usage['cost']['output_cost']:.6f}")
+        print (f"  Total Cost: ¥{token_usage['cost']['total_cost']:.6f}\n")
