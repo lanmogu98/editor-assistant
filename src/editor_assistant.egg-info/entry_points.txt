@@ -1,0 +1,6 @@
+[console_scripts]
+any2md = editor_assistant.src.editor_assistant.md_converter:main
+html2md = editor_assistant.src.editor_assistant.clean_html_to_md:main
+summarize_md = editor_assistant.src.editor_assistant.md_summarizer:main
+summarize_news = editor_assistant.src.editor_assistant.main:summarize_news
+summarize_research = editor_assistant.src.editor_assistant.main:summarize_research

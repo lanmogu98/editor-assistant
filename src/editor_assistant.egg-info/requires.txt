@@ -1,0 +1,9 @@
+markitdown
+requests
+argparse
+python-dotenv
+pydantic
+trafilatura
+readabilipy
+html2text
+pyyaml

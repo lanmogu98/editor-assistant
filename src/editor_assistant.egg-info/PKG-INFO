@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: editor_assistant
+Version: 0.1
+Requires-Dist: markitdown
+Requires-Dist: requests
+Requires-Dist: argparse
+Requires-Dist: python-dotenv
+Requires-Dist: pydantic
+Requires-Dist: trafilatura
+Requires-Dist: readabilipy
+Requires-Dist: html2text
+Requires-Dist: pyyaml
