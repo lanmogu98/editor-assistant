@@ -285,6 +285,7 @@ pip install -e .
 #### 依赖项
 
 该包会自动安装以下依赖项：
+
 - `markitdown` - Microsoft 的文档转换库
 - `requests` - 用于 API 调用的 HTTP 库
 - `pydantic` - 数据验证和设置管理
