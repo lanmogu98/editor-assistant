@@ -9,13 +9,7 @@ from datetime import datetime
 from typing import Dict, Any
 import json
 from pathlib import Path
-import logging
-
-# set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+from .config.logging_config import warning
 
 # set up the LLM model details
 from .config.set_llm import LLMModel, ALL_MODEL_DETAILS
@@ -163,7 +157,7 @@ class LLMClient:
                         f"{max_retries} attempts: {str(e)}"
                     )
                 
-                print(f"API request failed, retrying in {retry_delay} seconds...")
+                warning(f"API request failed, retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
     
@@ -222,9 +216,9 @@ class LLMClient:
                 f"  Total Process Time: "
                 f"{token_usage['process_times']['total_time']:.2f} seconds\n"
             )
-            f.write(f"  Input Cost: ¥{token_usage['cost']['input_cost']:.6f}\n")
-            f.write(f"  Output Cost: ¥{token_usage['cost']['output_cost']:.6f}\n")
-            f.write(f"  Total Cost: ¥{token_usage['cost']['total_cost']:.6f}\n\n")
+            f.write(f"  Input Cost: {self.pricing_currency}{token_usage['cost']['input_cost']:.6f}\n")
+            f.write(f"  Output Cost: {self.pricing_currency}{token_usage['cost']['output_cost']:.6f}\n")
+            f.write(f"  Total Cost: {self.pricing_currency}{token_usage['cost']['total_cost']:.6f}\n\n")
             
             # Add detailed request information
             f.write("Detailed Usage by Request:\n")
@@ -235,18 +229,18 @@ class LLMClient:
                 f.write(f"    Output Tokens: {req['output_tokens']}\n")
                 f.write(f"    Total Tokens: {req['total_tokens']}\n")
                 f.write(f"    Process Time: {req['process_time']:.2f} seconds\n")
-                f.write(f"    Input Cost: ¥{req['input_cost']:.6f}\n")
-                f.write(f"    Output Cost: ¥{req['output_cost']:.6f}\n")
-                f.write(f"    Total Cost: ¥{req['total_cost']:.6f}\n\n")
+                f.write(f"    Input Cost: {self.pricing_currency}{req['input_cost']:.6f}\n")
+                f.write(f"    Output Cost: {self.pricing_currency}{req['output_cost']:.6f}\n")
+                f.write(f"    Total Cost: {self.pricing_currency}{req['total_cost']:.6f}\n\n")
 
-        # print the summary to the console
-        print (f"\n>> Token Usage Report for '{project_name}'")
-        print (f"     Generated on: {report['timestamp']}")
-        print (f"     Model: {report['model']} ({report['model_name']})")       
-        print (f"     Total Input Tokens: {token_usage['total_input_tokens']}")
-        print (f"     Total Output Tokens: {token_usage['total_output_tokens']}")
-        print (f"     Total Tokens: {total_tokens}")
-        print (f"     Total Process Time: {token_usage['process_times']['total_time']:.2f} seconds")
-        print (f"     Input Cost: ¥{token_usage['cost']['input_cost']:.6f}")
-        print (f"     Output Cost: ¥{token_usage['cost']['output_cost']:.6f}")
-        print (f"     Total Cost: ¥{token_usage['cost']['total_cost']:.6f}\n")
+        # Import here to avoid circular imports
+        from .config.logging_config import user_message, progress
+        
+        # Show concise summary using logging system
+        user_message("")  # Empty line for spacing
+        progress(f"Token usage: {total_tokens} tokens (¥{token_usage['cost']['total_cost']:.4f}) in {token_usage['process_times']['total_time']:.1f}s")
+        
+        # Full report saved to file (mentioned only in debug mode)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Detailed token usage report saved to: {token_dir / 'token_usage.txt'}")

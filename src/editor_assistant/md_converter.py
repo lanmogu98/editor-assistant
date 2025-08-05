@@ -30,11 +30,7 @@ from .config.markitdown_formats import SUPPORTED_FORMATS
 
 markitdown_supported_formats = SUPPORTED_FORMATS["file_extentions"]
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Logging will be configured by main application
 
 class MarkdownConverter:
     """
@@ -59,7 +55,7 @@ class MarkdownConverter:
         self.ms_converter = MarkItDown()
         self.html_converter = CleanHTML2Markdown()
         self.logger = logging.getLogger(__name__)
-        self.logger.info("Markdown Converter Initialized")
+        self.logger.debug("Markdown Converter Initialized")
 
     """
     Check if a string is a url.

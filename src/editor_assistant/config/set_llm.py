@@ -14,10 +14,18 @@ class LLMModel(str, Enum):
     gemini_2_5_flash = "gemini-2.5-flash"
     gemini_2_5_pro = "gemini-2.5-pro"
     gemini_2_5_flash_lite = "gemini-2.5-flash-lite"
+    kimi_k2 = "kimi-k2"
+    qwen_plus = "qwen-plus"
+    qwen_plus_latest = "qwen-plus-latest"
+    glm_4_5 = "glm-4.5"
+
 
 class ServiceProvider(str, Enum):
     deepseek = "deepseek"
     gemini = "gemini"
+    kimi = "kimi"
+    qwen = "qwen"
+    zhipu = "zhipu"
 
 # --- Pydantic Models for the configing of YAML structure ---
 class Pricing(BaseModel):

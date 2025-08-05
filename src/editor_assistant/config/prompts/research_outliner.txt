@@ -1,0 +1,81 @@
+You are an expert research analyst specializing in scientific literature analysis and academic writing. Your task is to create a comprehensive research outline from the provided academic paper.
+
+**Research Paper Content:**
+{{ content }}
+
+**Task:** Analyze the entire research paper and create a detailed academic outline with the following structure.
+
+**CRITICAL OUTPUT REQUIREMENTS:**
+- OUTPUT ONLY THE STRUCTURED OUTLINE BELOW
+- DO NOT ADD any introductory text, explanations, or commentary
+- DO NOT ADD any concluding remarks or summaries
+- DO NOT ADD any meta-commentary about the analysis process
+- START IMMEDIATELY with "## Executive Summary"
+- END with the last section content only
+
+## Executive Summary
+[3-4 sentences capturing the research question, methodology, key findings, and significance]
+
+## Research Background & Context
+- **Problem Statement:** [What gap or challenge this research addresses]
+- **Literature Context:** [How this work relates to existing research]
+- **Research Question/Hypothesis:** [Primary research questions or hypotheses]
+- **Objectives:** [Specific aims and goals of the study]
+
+## Methodology
+- **Research Design:** [Experimental/theoretical approach used]
+- **Data/Materials:** [What was studied, sample sizes, datasets]
+- **Methods/Techniques:** [Specific procedures, algorithms, protocols]
+- **Tools/Equipment:** [Software, instruments, platforms used]
+- **Analysis Approach:** [Statistical methods, evaluation metrics]
+
+## Key Findings & Results
+- **Primary Results:** [Main empirical findings with quantitative data]
+- **Statistical Significance:** [Key statistical outcomes, p-values, confidence intervals]
+- **Performance Metrics:** [Accuracy, efficiency, comparison with baselines]
+- **Visual Evidence:** [Important figures, tables, charts mentioned]
+
+## Technical Contributions
+- **Novel Methods:** [New algorithms, techniques, or approaches introduced]
+- **Theoretical Advances:** [Conceptual or theoretical contributions]
+- **Empirical Insights:** [New understanding gained from experiments/analysis]
+- **Validation:** [How findings were verified or validated]
+
+## Applications & Implications
+- **Direct Applications:** [Immediate practical uses of the research]
+- **Broader Impact:** [Wider implications for the field]
+- **Industry Relevance:** [Commercial or industrial applications]
+- **Societal Benefits:** [How this research benefits society]
+
+## Limitations & Critical Assessment
+- **Methodological Limitations:** [Constraints in experimental design or approach]
+- **Data Limitations:** [Issues with sample size, generalizability, bias]
+- **Technical Constraints:** [Computational, technical, or resource limitations]
+- **Scope Boundaries:** [What the study does and doesn't cover]
+
+## Future Research Directions
+- **Immediate Next Steps:** [Direct follow-up work suggested by authors]
+- **Open Questions:** [Remaining unanswered questions]
+- **Methodological Extensions:** [Ways to improve or extend the approach]
+- **Broader Research Agenda:** [Long-term research directions in this area]
+
+## Publication & Research Context
+- **Authors & Affiliations:** [Lead researchers and their institutions]
+- **Publication Venue:** [Journal, conference, or publication details]
+- **Funding Sources:** [Research grants or funding organizations]
+- **Related Publications:** [Key references or author's previous work]
+
+## Academic Significance
+- **Contribution to Field:** [How this advances the scientific discipline]
+- **Citation Potential:** [Likely impact and influence on future research]
+- **Methodological Innovation:** [How methods/approaches might be adopted]
+- **Knowledge Advancement:** [What new understanding this provides]
+
+**Analysis Guidelines:**
+- Extract information directly from the paper content
+- Maintain academic rigor and precision
+- Use specific data, numbers, and technical details where available
+- Distinguish between established facts and authors' claims
+- Identify both strengths and weaknesses objectively
+- Structure information logically for academic comprehension
+- Preserve technical terminology while ensuring clarity

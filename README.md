@@ -4,24 +4,26 @@
 
 ## English
 
-A powerful Python tool for automatically converting, processing, and summarizing various types of content (research papers, news articles, PDFs, web pages) using Large Language Models (LLMs). The system intelligently processes content through chunking, LLM analysis, synthesis, and translation workflows.
+A powerful AI-powered Python tool for automatically converting, processing, and generating content from research papers, news articles, PDFs, and web pages using Large Language Models (LLMs). The system provides intelligent content processing with specialized workflows for research summaries and news generation.
 
 ### 🚀 Features
 
+- **Unified CLI Interface**: Professional command-line tool with subcommands (`editor-assistant news`, `editor-assistant outline`)
 - **Multi-format Content Conversion**: Converts PDFs, DOCs, web pages, and other formats to markdown
-- **Intelligent Content Chunking**: Splits large documents while preserving paragraph integrity and context
-- **LLM-Powered Summarization**: Processes content with state-of-the-art language models
-- **Dual Content Types**: Specialized workflows for research papers and news articles
-- **Bilingual Output**: Automatically translates summaries to Chinese
-- **Comprehensive Analytics**: Tracks token usage, costs, and processing times
-- **Full Transparency**: Saves all prompts, responses, and intermediate results
-- **Multiple LLM Providers**: Supports Deepseek and Gemini models
+- **Intelligent Content Processing**: Single-context processing for documents up to 128k+ tokens
+- **Dual Content Types**: 
+  - **Research Outlines**: Detailed analysis and Chinese translation of research papers
+  - **News Generation**: Convert research content into news articles for researcher audiences
+- **Advanced Logging System**: Clean console output with optional debug mode and file logging
+- **Comprehensive Analytics**: Token usage tracking, cost calculation, and processing time analysis
+- **Multiple LLM Providers**: Supports Deepseek R1/V3 and Gemini models
+- **Full Transparency**: Saves all prompts, responses, and processing reports
 
 ### 📋 Prerequisites
 
 - Python 3.8+
 - API keys for supported LLM providers:
-  - **Deepseek**: `VOLC_API_KEY` environment variable
+  - **Deepseek**: `VOLC_API_KEY` environment variable (via Volcengine)
   - **Gemini**: `GEMINI_API_KEY` environment variable
 
 ## 🛠️ Installation
@@ -45,11 +47,11 @@ The package automatically installs these dependencies:
 - `readabilipy` - Clean HTML content extraction
 - `html2text` - HTML to markdown conversion
 - `pyyaml` - YAML configuration parsing
-- `python-dotenv` - Environment variable management
+- `jinja2` - Template rendering for prompts
 
 ## 🔧 Configuration
 
-Set up your API keys (highly recommended):
+Set up your API keys:
 
 ```bash
 # For Deepseek models (via Volcengine)
@@ -68,74 +70,79 @@ GEMINI_API_KEY=your_gemini_api_key
 
 ## 🎯 Usage
 
-### Command Line Interface
+### New Unified CLI Interface
 
-**Summarize Research Papers:**
-
-```bash
-summarize_research path/to/paper.pdf --model deepseek-r1-latest
-summarize_research path/to/paper.md path/to/another.pdf --model deepseek-v3-latest
-```
-
-**Summarize News Articles:**
+**Generate News Articles:**
 
 ```bash
-summarize_news path/to/article.md --model deepseek-v3-latest
-summarize_news https://example.com/news-article --model gemini-2.5-flash
+editor-assistant news "https://example.com/research-article"
+editor-assistant news paper.pdf --model deepseek-r1-latest --debug
 ```
 
-**Convert Documents to Markdown:**
+**Generate Research Outlines:**
 
 ```bash
-any2md path/to/document.pdf -o output_directory/
-html2md https://example.com/webpage.html -o webpage.md
+editor-assistant outline "https://arxiv.org/paper.pdf"
+editor-assistant outline paper.pdf --model deepseek-r1-latest
 ```
 
-#### Python API
+**Convert Files to Markdown:**
+
+```bash
+editor-assistant convert document.pdf
+editor-assistant convert *.docx -o converted/
+```
+
+**Clean HTML to Markdown:**
+
+```bash
+editor-assistant clean "https://example.com/page.html" -o clean.md
+editor-assistant clean page.html --stdout
+```
+
+### Legacy Commands (Backward Compatible)
+
+```bash
+generate_news "https://example.com/article"    # Same as: editor-assistant news
+generate_outline paper.pdf                     # Same as: editor-assistant outline
+any2md document.pdf                           # Same as: editor-assistant convert  
+html2md page.html                             # Same as: editor-assistant clean
+```
+
+### Global Options
+
+- `--model`: Choose LLM model (default: deepseek-r1-latest)
+- `--debug`: Enable detailed debug logging with file output
+- `--version`: Show version information
+
+### Python API
 
 ```python
 from editor_assistant.main import EditorAssistant
-from editor_assistant.md_summarizer import ArticleType
+from editor_assistant.md_processesor import ArticleType
 
 # Initialize with your preferred model
-assistant = EditorAssistant("deepseek-r1-latest")
+assistant = EditorAssistant("deepseek-r1-latest", debug_mode=True)
 
-# Summarize research papers
+# Generate research outlines with Chinese translation
 assistant.summarize_multiple(
     ["path/to/paper1.pdf", "path/to/paper2.md"], 
     ArticleType.research
 )
 
-# Summarize news articles
+# Generate news articles
 assistant.summarize_multiple(
     ["https://example.com/article", "path/to/article.md"], 
     ArticleType.news
 )
 ```
 
-#### Individual Components
-
-```python
-# Content conversion only
-from editor_assistant.md_converter import MarkdownConverter
-
-converter = MarkdownConverter()
-md_article = converter.convert_content("path/to/document.pdf")
-print(md_article.markdown_content)
-
-# Summarization only (for existing markdown)
-from editor_assistant.md_summarizer import MDSummarizer, ArticleType
-
-summarizer = MDSummarizer("deepseek-v3-latest")
-success = summarizer.summarize_md("path/to/content.md", ArticleType.research)
-```
-
 ### 🤖 Supported Models
 
 #### Deepseek Models (via Volcengine)
 
-- `deepseek-r1` - Reasoning-focused model
-- `deepseek-r1-latest` - Latest reasoning model
+- `deepseek-r1` - Advanced reasoning model
+- `deepseek-r1-latest` - Latest reasoning model (recommended)
 - `deepseek-v3` - General-purpose model
 - `deepseek-v3-latest` - Latest general model
 
@@ -154,57 +161,164 @@ success = summarizer.summarize_md("path/to/content.md", ArticleType.research)
 
 ### 📊 Output Structure
 
-The tool creates a comprehensive directory structure for each processed document:
+The tool creates organized output for each processed document:
 
 ```text
 llm_summaries/
 ├── document_name_model_name/
-│   ├── chunks/
-│   │   ├── chunk_1.md
-│   │   └── chunk_2.md
-│   ├── prompts/
-│   │   ├── chunk_analysis_1.md
-│   │   ├── chunk_analysis_2.md
-│   │   ├── synthesis.md
-│   │   └── translation.md
-│   ├── responses/
-│   │   ├── chunk_analysis_1.md
-│   │   ├── chunk_analysis_2.md
-│   │   ├── synthesis.md
-│   │   └── translation.md
-│   ├── process_times/
-│   │   ├── process_times.json
-│   │   └── process_times.txt
-│   └── token_usage/
-│       ├── token_usage.json
-│       └── token_usage.txt
+│   ├── r/  (research) or n/ (news)
+│   │   ├── prompts/
+│   │   │   ├── analysis.md
+│   │   │   └── translation.md  (research only)
+│   │   ├── responses/
+│   │   │   ├── analysis.md
+│   │   │   └── translation.md  (research only)
+│   │   ├── process_times/
+│   │   │   ├── process_times.json
+│   │   │   └── process_times.txt
+│   │   └── token_usage/
+│   │       ├── token_usage.json
+│   │       └── token_usage.txt
 ```
 
 ### 🔍 Content Processing Workflow
 
-1. **Content Conversion**: Converts input files/URLs to clean markdown
-2. **Intelligent Chunking**: Splits content into manageable chunks (~2000 tokens each)
-3. **Chunk Analysis**: Each chunk is analyzed by the LLM with context from previous chunks
-4. **Synthesis**: Multiple chunk analyses are combined into a comprehensive summary
-5. **Translation**: The final summary is translated to Chinese
-6. **Reporting**: Generates detailed reports on token usage, costs, and processing times
+#### Research Papers (Outline Generation)
+1. **Content Conversion**: Convert input to clean markdown
+2. **Research Analysis**: Generate comprehensive outline with methodology, findings, and significance
+3. **Chinese Translation**: Translate the outline to Chinese
+4. **Reporting**: Generate token usage and processing time reports
+
+#### News Generation
+1. **Content Conversion**: Convert input to clean markdown
+2. **News Generation**: Create 400-word news articles tailored for researcher audiences
+3. **Scientific Focus**: Emphasize methodology, data, and research significance
+4. **Reporting**: Generate processing analytics
 
 ### 📈 Analytics & Monitoring
 
-- **Token Usage Tracking**: Input/output tokens per request
-- **Cost Calculation**: Automatic cost calculation based on model pricing
-- **Processing Time Analysis**: Detailed timing for each processing step
-- **Comprehensive Logging**: Full audit trail of all operations
+- **Clean Console Output**: Professional logging with colored symbols (•, ⚠, ✗)
+- **Token Usage Tracking**: Concise summary with detailed file reports
+- **Cost Calculation**: Automatic cost calculation in Chinese Yuan (¥)
+- **Processing Time Analysis**: Total time and step-by-step breakdown
+- **Debug Mode**: Comprehensive file logging when `--debug` flag is used
+
+### 🔧 Advanced Features
+
+#### User-Customizable Configuration
+All user-editable files are stored outside the source code in `~/.editor_assistant/`:
+
+```bash
+# Show configuration location and available options
+editor-assistant config show
+
+# Initialize user configuration (done automatically on first run)
+editor-assistant config init
+
+# View available models
+editor-assistant config models
+```
+
+**Configuration Structure:**
+```text
+~/.editor_assistant/
+├── user_prompts/               # Customizable prompt templates
+│   ├── news_generator.txt      # Edit to customize news generation
+│   ├── research_outliner.txt   # Edit to customize research outlines
+│   └── translator.txt          # Edit to customize translation
+└── user_llm_config.yml         # Add custom models and providers
+```
+
+#### Customizable Prompt Templates
+Prompts are stored as `.txt` files for easy editing:
+
+```bash
+# Edit news generation prompt
+nano ~/.editor_assistant/user_prompts/news_generator.txt
+
+# Edit research outline prompt  
+nano ~/.editor_assistant/user_prompts/research_outliner.txt
+
+# Changes take effect immediately
+```
+
+**Benefits:**
+- **No source code modification**: Safe customization without breaking the system
+- **Jinja2 templating**: Support for variables and logic in prompts
+- **Immediate effect**: Changes apply to next generation without restart
+- **Version control friendly**: Keep your custom prompts in git
+
+#### Add Custom Models
+Easily add new LLM models and providers:
+
+```bash
+# Add a custom OpenAI model
+editor-assistant config add-model \
+  --provider openai \
+  --model-name gpt-4-custom \
+  --model-id gpt-4-0125-preview \
+  --input-price 30.0 \
+  --output-price 60.0 \
+  --max-tokens 4000 \
+  --context-window 128000
+
+# Add a custom local model
+editor-assistant config add-model \
+  --provider ollama \
+  --model-name llama3-local \
+  --model-id llama3:70b \
+  --input-price 0.0 \
+  --output-price 0.0
+```
+
+**Model Configuration Example:**
+```yaml
+# ~/.editor_assistant/user_llm_config.yml
+openai:
+  api_key_env_var: "OPENAI_API_KEY"
+  api_base_url: "https://api.openai.com/v1/chat/completions"
+  temperature: 0.5
+  max_tokens: 4000
+  context_window: 128000
+  models:
+    gpt-4-custom:
+      id: "gpt-4-0125-preview"
+      pricing: { input: 30.0, output: 60.0 }
+```
+
+#### Centralized Logging System
+```bash
+# Normal mode: Clean console output
+editor-assistant news paper.pdf
+
+# Debug mode: Detailed logging to files
+editor-assistant news paper.pdf --debug
+# Creates logs/editor_assistant_TIMESTAMP.log
+```
+
+#### Scientific News Generation
+The news generation is specifically designed for researcher audiences:
+- Preserves technical details and methodology
+- Emphasizes scientific significance
+- Includes proper citations and publication information
+- Maintains academic rigor while improving readability
+
+#### Professional CLI Design
+- Git-like subcommand structure
+- Consistent argument patterns
+- Comprehensive help system
+- Backward compatibility with old commands
 
 ### 🛡️ Error Handling
 
-- **Retry Logic**: Automatic retry with exponential backoff for API failures
-- **Format Fallbacks**: Multiple conversion methods for robust content extraction
-- **Graceful Degradation**: Continues processing even if individual documents fail
+- **Robust Processing**: Continues even if individual documents fail
+- **Content Size Validation**: Checks content against model context windows
+- **Graceful Degradation**: Provides meaningful error messages
+- **Process Time Safety**: Prevents division by zero errors in reporting
 
-### 🔧 Advanced Configuration
+### 🔧 Configuration Files
 
-The system uses YAML configuration files for model settings:
+The system uses YAML configuration for model settings:
 
 ```yaml
 # config/llm_config.yml
@@ -219,6 +333,13 @@ deepseek:
       id: "deepseek-r1-250528"
       pricing: { input: 4.00, output: 16.00 }
 ```
+
+### 📚 Documentation
+
+- [`docs/cli_usage.md`](docs/cli_usage.md) - Comprehensive CLI usage guide
+- [`docs/argparse_and_cli_reference.md`](docs/argparse_and_cli_reference.md) - CLI architecture reference
+- [`docs/logging_system_manual.md`](docs/logging_system_manual.md) - Logging system documentation
+- [`docs/python_logging_basics.md`](docs/python_logging_basics.md) - Python logging fundamentals
 
 ### 🤝 Contributing
 
@@ -252,25 +373,27 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 ### 编辑助手 (Editor Assistant)
 
-一个强大的 Python 工具，用于自动转换、处理和总结各种类型的内容（研究论文、新闻文章、PDF、网页），使用大型语言模型（LLM）。系统通过分块、LLM 分析、综合和翻译工作流程智能地处理内容。
+一个强大的AI驱动的Python工具，使用大型语言模型（LLM）自动转换、处理和生成研究论文、新闻文章、PDF和网页内容。该系统为研究摘要和新闻生成提供智能内容处理和专门工作流程。
 
 ### 🚀 功能特色
 
-- **多格式内容转换**：将 PDF、DOC、网页和其他格式转换为 markdown
-- **智能内容分块**：在保持段落完整性和上下文的同时拆分大型文档
-- **LLM 驱动的摘要**：使用最先进的语言模型处理内容
-- **双重内容类型**：为研究论文和新闻文章提供专门的工作流程
-- **双语输出**：自动将摘要翻译成中文
-- **全面分析**：跟踪令牌使用情况、成本和处理时间
-- **完全透明**：保存所有提示、响应和中间结果
-- **多个 LLM 提供商**：支持 Deepseek 和 Gemini 模型
+- **统一CLI界面**：专业的命令行工具，带有子命令（`editor-assistant news`、`editor-assistant outline`）
+- **多格式内容转换**：将PDF、DOC、网页和其他格式转换为markdown
+- **智能内容处理**：支持高达128k+令牌的单一上下文文档处理
+- **双重内容类型**：
+  - **研究大纲**：研究论文的详细分析(提供中英双语版本)
+  - **新闻生成**：将研究内容转换为面向研究人员受众的新闻文章
+- **高级日志系统**：清洁的控制台输出，带有可选的调试模式和文件日志
+- **全面分析**：令牌使用跟踪、成本计算和处理时间分析
+- **多个LLM提供商**：支持Deepseek R1/V3和Gemini模型
+- **完全透明**：保存所有提示、响应和处理报告
 
 ### 📋 依赖条件
 
 - Python 3.8+
-- 支持的 LLM 提供商的 API 密钥：
-  - **Deepseek**：`VOLC_API_KEY` 环境变量
-  - **Gemini**：`GEMINI_API_KEY` 环境变量
+- 支持的LLM提供商的API密钥：
+  - **Deepseek**：`DEEPSEEK_API_KEY`环境变量（通过火山引擎）
+  - **Gemini**：`GEMINI_API_KEY`环境变量
 
 ### 🛠️ 安装
 
@@ -282,212 +405,129 @@ cd editor_assistant
 pip install -e .
 ```
 
-#### 依赖项
+### 🔧 配置
 
-该包会自动安装以下依赖项：
-
-- `markitdown` - Microsoft 的文档转换库
-- `requests` - 用于 API 调用的 HTTP 库
-- `pydantic` - 数据验证和设置管理
-- `trafilatura` - 网页内容提取
-- `readabilipy` - 清洁 HTML 内容提取
-- `html2text` - HTML 到 markdown 转换
-- `pyyaml` - YAML 配置解析
-- `python-dotenv` - 环境变量管理
-
-### 🔧 配置 (Configuration)
-
-设置您的 API 密钥（强烈推荐）：
+设置您的API密钥：
 
 ```bash
-# 对于 Deepseek 模型（通过火山引擎）
-export VOLC_API_KEY=your_volcengine_api_key
+# 对于Deepseek模型（通过火山引擎）
+export DEEPSEEK_API_KEY=your_volcengine_api_key
 
-# 对于 Gemini 模型
+# 对于Gemini模型
 export GEMINI_API_KEY=your_gemini_api_key
-```
-
-或创建 `.env` 文件：
-
-```env
-VOLC_API_KEY=your_volcengine_api_key
-GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### 🎯 使用方法
 
-#### 命令行界面
+#### 统一CLI界面
 
-**总结研究论文：**
-
-```bash
-summarize_research path/to/paper.pdf --model deepseek-r1-latest
-summarize_research path/to/paper.md path/to/another.pdf --model deepseek-v3-latest
-```
-
-**总结新闻文章：**
+**生成新闻文章：**
 
 ```bash
-summarize_news path/to/article.md --model deepseek-v3-latest
-summarize_news https://example.com/news-article --model gemini-2.5-flash
+editor-assistant news "https://example.com/research-article"
+editor-assistant news paper.pdf --model deepseek-r1-latest --debug
 ```
 
-**将文档转换为 Markdown：**
+**生成研究大纲：**
 
 ```bash
-any2md path/to/document.pdf -o output_directory/
-html2md https://example.com/webpage.html -o webpage.md
+editor-assistant outline "https://arxiv.org/paper.pdf"
+editor-assistant outline paper.pdf --model deepseek-r1-latest
 ```
 
-#### Python API
+**转换文件为Markdown：**
 
-```python
-from editor_assistant.main import EditorAssistant
-from editor_assistant.md_summarizer import ArticleType
-
-# 使用您首选的模型初始化
-assistant = EditorAssistant("deepseek-r1-latest")
-
-# 总结研究论文
-assistant.summarize_multiple(
-    ["path/to/paper1.pdf", "path/to/paper2.md"], 
-    ArticleType.research
-)
-
-# 总结新闻文章
-assistant.summarize_multiple(
-    ["https://example.com/article", "path/to/article.md"], 
-    ArticleType.news
-)
+```bash
+editor-assistant convert document.pdf
+editor-assistant convert *.docx -o converted/
 ```
 
-#### 独立组件
+**清理HTML为Markdown：**
 
-```python
-# 仅内容转换
-from editor_assistant.md_converter import MarkdownConverter
+```bash
+editor-assistant clean "https://example.com/page.html" -o clean.md
+editor-assistant clean page.html --stdout
+```
 
-converter = MarkdownConverter()
-md_article = converter.convert_content("path/to/document.pdf")
-print(md_article.markdown_content)
+#### 传统命令（向后兼容）
 
-# 仅摘要（对于现有的 markdown）
-from editor_assistant.md_summarizer import MDSummarizer, ArticleType
-
-summarizer = MDSummarizer("deepseek-v3-latest")
-success = summarizer.summarize_md("path/to/content.md", ArticleType.research)
+```bash
+generate_news "https://example.com/article"    # 等同于：editor-assistant news
+generate_outline paper.pdf                     # 等同于：editor-assistant outline
+any2md document.pdf                           # 等同于：editor-assistant convert  
+html2md page.html                             # 等同于：editor-assistant clean
 ```
 
 ### 🤖 支持的模型
 
-#### Deepseek 模型（通过火山引擎）
-- `deepseek-r1` - 推理导向模型
-- `deepseek-r1-latest` - 最新推理模型
+#### Deepseek模型（通过火山引擎）
+- `deepseek-r1` - 高级推理模型
+- `deepseek-r1-latest` - 最新推理模型（推荐）
 - `deepseek-v3` - 通用模型
 - `deepseek-v3-latest` - 最新通用模型
 
-#### Gemini 模型
+#### Gemini模型
 - `gemini-2.5-flash-lite` - 快速、轻量级模型
 - `gemini-2.5-flash` - 平衡性能模型
 - `gemini-2.5-pro` - 高性能模型
 
-### 📁 支持的输入格式
-
-- **文档**：PDF、DOCX、DOC、PPTX、PPT、XLSX、XLS、EPUB
-- **网页内容**：HTML 页面、URL
-- **媒体**：JPG、PNG、GIF、MP3、WAV、M4A
-- **数据**：CSV、JSON、XML、TXT、MD、ZIP
-
-### 📊 输出结构
-
-该工具为每个处理的文档创建全面的目录结构：
-
-```text
-llm_summaries/
-├── document_name_model_name/
-│   ├── chunks/
-│   │   ├── chunk_1.md
-│   │   └── chunk_2.md
-│   ├── prompts/
-│   │   ├── chunk_analysis_1.md
-│   │   ├── chunk_analysis_2.md
-│   │   ├── synthesis.md
-│   │   └── translation.md
-│   ├── responses/
-│   │   ├── chunk_analysis_1.md
-│   │   ├── chunk_analysis_2.md
-│   │   ├── synthesis.md
-│   │   └── translation.md
-│   ├── process_times/
-│   │   ├── process_times.json
-│   │   └── process_times.txt
-│   └── token_usage/
-│       ├── token_usage.json
-│       └── token_usage.txt
-```
-
 ### 🔍 内容处理工作流程
 
-1. **内容转换**：将输入文件/URL 转换为清洁的 markdown
-2. **智能分块**：将内容拆分为可管理的块（每个约 2000 个令牌）
-3. **块分析**：每个块都由 LLM 分析，并包含来自之前块的上下文
-4. **综合**：将多个块分析合并为全面的摘要
-5. **翻译**：将最终摘要翻译成中文
-6. **报告**：生成有关令牌使用情况、成本和处理时间的详细报告
+#### 研究论文（大纲生成）
+1. **内容转换**：将输入转换为清洁的markdown
+2. **研究分析**：生成包含方法论、发现和意义的综合大纲
+3. **中文翻译**：将大纲翻译成中文
+4. **报告**：生成令牌使用和处理时间报告
+
+#### 新闻生成
+1. **内容转换**：将输入转换为清洁的markdown
+2. **新闻生成**：创建面向研究人员受众的400字新闻文章
+3. **科学重点**：强调方法论、数据和研究意义
+4. **报告**：生成处理分析
 
 ### 📈 分析与监控
 
-- **Token使用跟踪**：每个请求的输入/输出令牌
-- **成本计算**：基于模型定价的自动成本计算
-- **处理时间分析**：每个处理步骤的详细计时
-- **全面日志记录**：所有操作的完整审计跟踪
+- **清洁控制台输出**：带有彩色符号的专业日志记录（•、⚠、✗）
+- **令牌使用跟踪**：简洁摘要与详细文件报告
+- **成本计算**：自动计算人民币（¥）成本
+- **处理时间分析**：总时间和逐步分解
+- **调试模式**：使用`--debug`标志时的综合文件日志记录
 
-### 🛡️ 错误处理
+### 🔧 高级功能
 
-- **重试逻辑**：API 失败时的自动重试与指数退避
-- **格式回退**：多种转换方法确保强大的内容提取
-- **优雅降级**：即使个别文档失败也继续处理
+#### 集中化日志系统
+```bash
+# 普通模式：清洁控制台输出
+editor-assistant news paper.pdf
 
-### 🔧 高级配置 (Advanced Configuration)
-
-系统使用 YAML 配置文件进行模型设置：
-
-```yaml
-# config/llm_config.yml
-deepseek:
-  api_key_env_var: "VOLC_API_KEY"
-  api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
-  temperature: 0.5
-  max_tokens: 16000
-  context_window: 128000
-  models:
-    deepseek-r1-latest:
-      id: "deepseek-r1-250528"
-      pricing: { input: 4.00, output: 16.00 }
+# 调试模式：详细的文件日志记录
+editor-assistant news paper.pdf --debug
+# 创建logs/editor_assistant_TIMESTAMP.log
 ```
 
-### 🤝 贡献
+#### 科学新闻生成
+新闻生成专门为研究人员受众设计：
+- 保留技术细节和方法论
+- 强调科学意义
+- 包含适当的引用和发表信息
+- 在提高可读性的同时保持学术严谨性
 
-1. Fork 仓库
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 打开 Pull Request
+### 📚 文档
+
+- [`docs/cli_usage.md`](docs/cli_usage.md) - 综合CLI使用指南
+- [`docs/logging_system_manual.md`](docs/logging_system_manual.md) - 日志系统文档
+- [`docs/python_logging_basics.md`](docs/python_logging_basics.md) - Python日志基础
 
 ### 📝 许可证
 
-该项目根据 MIT 许可证授权 - 有关详细信息，请参阅 [LICENSE](LICENSE) 文件。
+该项目根据MIT许可证授权 - 有关详细信息，请参阅[LICENSE](LICENSE)文件。
 
 ### 🙏 致谢
 
 - **Microsoft MarkItDown** 提供文档转换功能
 - **Readabilipy** 和 **Trafilatura** 提供网页内容提取
-- **Deepseek** 和 **Google Gemini** 提供 LLM 功能
-
-### 📞 支持
-
-如需支持，请在 GitHub 上开启问题或联系维护者。
+- **Deepseek** 和 **Google Gemini** 提供LLM功能
 
 ---
 
-**注意**：该工具专为研究和教育目的而设计。请确保您有必要的权利来处理和总结您正在使用的内容，并在处理大量内容时注意 API 使用成本。
+**注意**：该工具专为研究和教育目的而设计。请确保您有必要的权利来处理和总结您正在使用的内容，并在处理大量内容时注意API使用成本。
