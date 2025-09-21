@@ -8,7 +8,7 @@ A powerful AI-powered Python tool for automatically converting, processing, and 
 
 ### 🚀 Features
 
-- **Unified CLI Interface**: Professional command-line tool with subcommands (`editor-assistant news`, `editor-assistant outline`)
+- **Unified CLI Interface**: Professional command-line tool with subcommands (`editor-assistant brief`, `editor-assistant outline`)
 - **Multi-format Content Conversion**: Converts PDFs, DOCs, web pages, and other formats to markdown
 - **Intelligent Content Processing**: Single-context processing for documents up to 128k+ tokens
 - **Dual Content Types**: 
@@ -55,7 +55,7 @@ Set up your API keys:
 
 ```bash
 # For Deepseek models (via Volcengine)
-export VOLC_API_KEY=your_volcengine_api_key
+export DEEPSEEK_API_KEY=your_volcengine_api_key
 
 # For Gemini models
 export GEMINI_API_KEY=your_gemini_api_key
@@ -64,26 +64,30 @@ export GEMINI_API_KEY=your_gemini_api_key
 Or create a `.env` file:
 
 ```env
-VOLC_API_KEY=your_volcengine_api_key
+DEEPSEEK_API_KEY=your_volcengine_api_key
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ## 🎯 Usage
 
-### New Unified CLI Interface
+### Unified CLI Interface
 
-**Generate News Articles:**
+**Generate Brief News (multi-source supported):**
 
 ```bash
-editor-assistant news "https://example.com/research-article"
-editor-assistant news paper.pdf --model deepseek-r1-latest --debug
+editor-assistant brief --article paper:https://example.com/research-article
+editor-assistant brief \
+  --article paper:paper.pdf \
+  --article news:https://example.com/related-news \
+  --article news:context.md \
+  --model deepseek-r1-latest --debug
 ```
 
-**Generate Research Outlines:**
+**Generate Research Outlines (single source):**
 
 ```bash
-editor-assistant outline "https://arxiv.org/paper.pdf"
-editor-assistant outline paper.pdf --model deepseek-r1-latest
+editor-assistant outline --article paper:https://arxiv.org/paper.pdf
+editor-assistant outline --article paper:paper.pdf --model deepseek-r1-latest
 ```
 
 **Convert Files to Markdown:**
@@ -103,8 +107,8 @@ editor-assistant clean page.html --stdout
 ### Legacy Commands (Backward Compatible)
 
 ```bash
-generate_news "https://example.com/article"    # Same as: editor-assistant news
-generate_outline paper.pdf                     # Same as: editor-assistant outline
+generate_news "https://example.com/article"    # Same as: editor-assistant brief
+generate_outline --article paper:paper.pdf     # Same as: editor-assistant outline
 any2md document.pdf                           # Same as: editor-assistant convert  
 html2md page.html                             # Same as: editor-assistant clean
 ```
@@ -119,21 +123,25 @@ html2md page.html                             # Same as: editor-assistant clean
 
 ```python
 from editor_assistant.main import EditorAssistant
-from editor_assistant.md_processesor import ArticleType
+from editor_assistant.data_models import ProcessType, SourceType, Input
 
 # Initialize with your preferred model
 assistant = EditorAssistant("deepseek-r1-latest", debug_mode=True)
 
-# Generate research outlines with Chinese translation
-assistant.summarize_multiple(
-    ["path/to/paper1.pdf", "path/to/paper2.md"], 
-    ArticleType.research
+# Generate research outline (single paper)
+assistant.process_multiple(
+    [Input(type=SourceType.PAPER, path="path/to/paper.pdf")],
+    ProcessType.OUTLINE
 )
 
-# Generate news articles
-assistant.summarize_multiple(
-    ["https://example.com/article", "path/to/article.md"], 
-    ArticleType.news
+# Generate multi-source brief (paper + reports)
+assistant.process_multiple(
+    [
+        Input(type=SourceType.PAPER, path="paper.pdf"),
+        Input(type=SourceType.REPORT, path="https://example.com/news"),
+        Input(type=SourceType.REPORT, path="context.md"),
+    ],
+    ProcessType.BRIEF
 )
 ```
 
@@ -377,7 +385,7 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 ### 🚀 功能特色
 
-- **统一CLI界面**：专业的命令行工具，带有子命令（`editor-assistant news`、`editor-assistant outline`）
+- **统一CLI界面**：专业的命令行工具，带有子命令（`editor-assistant brief`、`editor-assistant outline`）
 - **多格式内容转换**：将PDF、DOC、网页和其他格式转换为markdown
 - **智能内容处理**：支持高达128k+令牌的单一上下文文档处理
 - **双重内容类型**：
@@ -421,18 +429,22 @@ export GEMINI_API_KEY=your_gemini_api_key
 
 #### 统一CLI界面
 
-**生成新闻文章：**
+**生成简讯（支持多来源）：**
 
 ```bash
-editor-assistant news "https://example.com/research-article"
-editor-assistant news paper.pdf --model deepseek-r1-latest --debug
+editor-assistant brief --article paper:https://example.com/research-article
+editor-assistant brief \
+  --article paper:paper.pdf \
+  --article news:https://example.com/related-news \
+  --article news:context.md \
+  --model deepseek-r1-latest --debug
 ```
 
-**生成研究大纲：**
+**生成研究大纲（仅单来源，paper）：**
 
 ```bash
-editor-assistant outline "https://arxiv.org/paper.pdf"
-editor-assistant outline paper.pdf --model deepseek-r1-latest
+editor-assistant outline --article paper:https://arxiv.org/paper.pdf
+editor-assistant outline --article paper:paper.pdf --model deepseek-r1-latest
 ```
 
 **转换文件为Markdown：**
@@ -452,8 +464,8 @@ editor-assistant clean page.html --stdout
 #### 传统命令（向后兼容）
 
 ```bash
-generate_news "https://example.com/article"    # 等同于：editor-assistant news
-generate_outline paper.pdf                     # 等同于：editor-assistant outline
+generate_news "https://example.com/article"    # 等同于：editor-assistant brief
+generate_outline --article paper:paper.pdf     # 等同于：editor-assistant outline
 any2md document.pdf                           # 等同于：editor-assistant convert  
 html2md page.html                             # 等同于：editor-assistant clean
 ```
@@ -498,10 +510,10 @@ html2md page.html                             # 等同于：editor-assistant cle
 #### 集中化日志系统
 ```bash
 # 普通模式：清洁控制台输出
-editor-assistant news paper.pdf
+editor-assistant brief --article paper:paper.pdf
 
 # 调试模式：详细的文件日志记录
-editor-assistant news paper.pdf --debug
+editor-assistant brief --article paper:paper.pdf --debug
 # 创建logs/editor_assistant_TIMESTAMP.log
 ```
 

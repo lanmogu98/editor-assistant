@@ -2,16 +2,52 @@
 
 from pydantic import BaseModel
 from typing import Optional
+from enum import Enum
+from pathlib import Path
 
-# for the converted markdown article
+
+# for the input source data
+class SourceType(str, Enum):
+    """
+    The type of source.
+    """
+    PAPER = "paper"
+    NEWS = "news"
+
+# class for the input source
+class Input(BaseModel):
+    """
+    The type of input source.
+    """
+    type: SourceType
+    path: str
+
+# for the process type
+class ProcessType(str, Enum):
+    """
+    Type of process to perform on the markdown content.
+    """
+    OUTLINE = 'outline' # outline the research paper
+    BRIEF = 'brief' # generate brief news from the input content
+    TRANSLATE = 'translate' # translate the outline to Chinese
+
+# for the converted markdown article, the output of the markdown converter
 class MDArticle(BaseModel):
     """
     A structure for a converted markdown article.
     """
-    markdown_content: str
-    title: str
+    type: SourceType
+    content: Optional[str] = None
+    title: Optional[str] = None
     authors: Optional[str] = None
-    converter: str
-    source_path: str
+    converter: Optional[str] = None
+    source_path: Optional[str] = None
+    output_path: Optional[str] = None
 
 
+class SaveType(str, Enum):
+    """
+    Type of content to save.
+    """
+    PROMPT = "prompt"
+    RESPONSE = "response"

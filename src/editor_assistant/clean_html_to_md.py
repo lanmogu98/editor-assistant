@@ -7,7 +7,7 @@ and removing all the noise like ads, headers, footers, etc.
 
 import requests
 import time
-from .data_models import MDArticle
+from .data_models import MDArticle, SourceType
 import logging
 from typing import Optional
 from enum import Enum
@@ -92,7 +92,8 @@ class CleanHTML2Markdown:
         markdown_content = h2t.handle(article['content'])
 
         return MDArticle(
-            markdown_content=markdown_content,
+            type=SourceType.PAPER,
+            content=markdown_content,
             title=article['title'],
             authors=article['byline'],
             source_path=path,
@@ -141,7 +142,8 @@ class CleanHTML2Markdown:
         authors = metadata.get('authors', '') if metadata else ''
         
         return MDArticle(
-            markdown_content=markdown_content,
+            type=SourceType.PAPER,
+            content=markdown_content,
             title=title,
             authors=authors,
             source_path=path,
@@ -181,14 +183,14 @@ def main():
         if args.output:
             try:
                 with open(args.output, "w", encoding="utf-8") as f:
-                    f.write(result.markdown_content)
+                    f.write(result.content)
                 print(f"Saved markdown to {args.output}")
             except Exception as e:
                 print(f"Error saving to file: {e}")
         else:
             # Print to console if no output file is specified
             print("\n--- Markdown Content ---\n")
-            print(result.markdown_content)
+            print(result.content)
     else:
         print(f"Failed to convert {args.path}")
 
@@ -203,7 +205,7 @@ def test_converter(url, export_path, converter_name):
             f.write(f"title: {result.title}\n")
             f.write(f"url: {result.source_path}\n")
             f.write(f"authors: {result.authors}\n")
-            f.write(result.markdown_content)
+            f.write(result.content)
     
 
 def direct_markitdown(url: str) :

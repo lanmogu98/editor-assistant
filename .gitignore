@@ -1,5 +1,5 @@
 # Python
-__pycache__/
+*/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -50,8 +50,18 @@ Thumbs.db
 llm_summaries/
 samples/
 *.log
+webpage/
+backup/
+
+# Dev notes
+dev_notes/
 
 # Agent doc
 GEMINI.md
 CLAUDE.md
+docs/
 
+# test files
+tests/
+pytest.ini
+scripts/

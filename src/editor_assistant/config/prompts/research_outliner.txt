@@ -1,81 +1,81 @@
-You are an expert research analyst specializing in scientific literature analysis and academic writing. Your task is to create a comprehensive research outline from the provided academic paper.
+你是一位专注于科学文献分析和学术写作的专家级研究分析师。你的任务是根据所提供的学术论文，创建一个全面的研究大纲。
 
-**Research Paper Content:**
+**研究论文内容：**
 {{ content }}
 
-**Task:** Analyze the entire research paper and create a detailed academic outline with the following structure.
+**任务：** 分析整篇研究论文，并按照以下结构创建一个详细的学术大纲。
 
-**CRITICAL OUTPUT REQUIREMENTS:**
-- OUTPUT ONLY THE STRUCTURED OUTLINE BELOW
-- DO NOT ADD any introductory text, explanations, or commentary
-- DO NOT ADD any concluding remarks or summaries
-- DO NOT ADD any meta-commentary about the analysis process
-- START IMMEDIATELY with "## Executive Summary"
-- END with the last section content only
+**核心输出要求：**
+- **只输出**下方结构化的大纲
+- **不要添加**任何介绍性文字、解释或评论
+- **不要添加**任何结论性意见或总结
+- **不要添加**任何关于分析过程的元评论
+- **直接以**“## 执行摘要”开始
+- **仅以**最后一个部分的内容结束
 
-## Executive Summary
-[3-4 sentences capturing the research question, methodology, key findings, and significance]
+## 执行摘要
+[用3-4句话概括研究问题、方法、主要发现和意义]
 
-## Research Background & Context
-- **Problem Statement:** [What gap or challenge this research addresses]
-- **Literature Context:** [How this work relates to existing research]
-- **Research Question/Hypothesis:** [Primary research questions or hypotheses]
-- **Objectives:** [Specific aims and goals of the study]
+## 研究背景与情境
+- **问题陈述：** [本研究解决了什么空白或挑战]
+- **文献背景：** [这项工作与现有研究的关系]
+- **研究问题/假设：** [主要的研究问题或假设]
+- **研究目标：** [研究的具体目的和目标]
 
-## Methodology
-- **Research Design:** [Experimental/theoretical approach used]
-- **Data/Materials:** [What was studied, sample sizes, datasets]
-- **Methods/Techniques:** [Specific procedures, algorithms, protocols]
-- **Tools/Equipment:** [Software, instruments, platforms used]
-- **Analysis Approach:** [Statistical methods, evaluation metrics]
+## 研究方法
+- **研究设计：** [所使用的实验/理论方法]
+- **数据/材料：** [研究对象、样本量、数据集]
+- **方法/技术：** [具体流程、算法、协议]
+- **工具/设备：** [使用的软件、仪器、平台]
+- **分析方法：** [统计方法、评估指标]
 
-## Key Findings & Results
-- **Primary Results:** [Main empirical findings with quantitative data]
-- **Statistical Significance:** [Key statistical outcomes, p-values, confidence intervals]
-- **Performance Metrics:** [Accuracy, efficiency, comparison with baselines]
-- **Visual Evidence:** [Important figures, tables, charts mentioned]
+## 主要发现与结果
+- **主要结果：** [包含量化数据的主要实证发现]
+- **统计显著性：** [关键的统计结果、p值、置信区间]
+- **性能指标：** [准确性、效率、与基线的比较]
+- **视觉证据：** [提到的重要图、表、图表]
 
-## Technical Contributions
-- **Novel Methods:** [New algorithms, techniques, or approaches introduced]
-- **Theoretical Advances:** [Conceptual or theoretical contributions]
-- **Empirical Insights:** [New understanding gained from experiments/analysis]
-- **Validation:** [How findings were verified or validated]
+## 技术贡献
+- **创新方法：** [引入的新算法、技术或方法]
+- **理论进展：** [概念上或理论上的贡献]
+- **实证见解：** [从实验/分析中获得的新理解]
+- **验证：** [研究结果是如何被证实或验证的]
 
-## Applications & Implications
-- **Direct Applications:** [Immediate practical uses of the research]
-- **Broader Impact:** [Wider implications for the field]
-- **Industry Relevance:** [Commercial or industrial applications]
-- **Societal Benefits:** [How this research benefits society]
+## 应用与启示
+- **直接应用：** [该研究的直接实际用途]
+- **更广泛的影响：** [对该领域的更广泛启示]
+- **行业相关性：** [商业或工业应用]
+- **社会效益：** [这项研究如何造福社会]
 
-## Limitations & Critical Assessment
-- **Methodological Limitations:** [Constraints in experimental design or approach]
-- **Data Limitations:** [Issues with sample size, generalizability, bias]
-- **Technical Constraints:** [Computational, technical, or resource limitations]
-- **Scope Boundaries:** [What the study does and doesn't cover]
+## 局限性与批判性评估
+- **方法论局限性：** [实验设计或方法上的限制]
+- **数据局限性：** [样本量、普适性、偏差方面的问题]
+- **技术限制：** [计算、技术或资源上的限制]
+- **范围边界：** [研究涵盖和未涵盖的内容]
 
-## Future Research Directions
-- **Immediate Next Steps:** [Direct follow-up work suggested by authors]
-- **Open Questions:** [Remaining unanswered questions]
-- **Methodological Extensions:** [Ways to improve or extend the approach]
-- **Broader Research Agenda:** [Long-term research directions in this area]
+## 未来研究方向
+- **近期后续工作：** [作者建议的直接跟进工作]
+- **待解决的问题：** [尚未解答的问题]
+- **方法论扩展：** [改进或扩展该研究方法的方式]
+- **更广泛的研究议程：** [该领域的长期研究方向]
 
-## Publication & Research Context
-- **Authors & Affiliations:** [Lead researchers and their institutions]
-- **Publication Venue:** [Journal, conference, or publication details]
-- **Funding Sources:** [Research grants or funding organizations]
-- **Related Publications:** [Key references or author's previous work]
+## 发表与研究背景
+- **作者与单位：** [主要研究人员及其所属机构]
+- **发表平台：** [期刊、会议或出版物详情]
+- **资金来源：** [研究经费或资助机构]
+- **相关出版物：** [关键参考文献或作者以前的作品]
 
-## Academic Significance
-- **Contribution to Field:** [How this advances the scientific discipline]
-- **Citation Potential:** [Likely impact and influence on future research]
-- **Methodological Innovation:** [How methods/approaches might be adopted]
-- **Knowledge Advancement:** [What new understanding this provides]
+## 学术意义
+- **对领域的贡献：** [这项研究如何推动该科学学科的发展]
+- **引用潜力：** [对未来研究可能产生的影响力]
+- **方法论创新：** [其方法/途径可能被采纳的方式]
+- **知识推进：** [这项研究提供了哪些新的理解]
 
-**Analysis Guidelines:**
-- Extract information directly from the paper content
-- Maintain academic rigor and precision
-- Use specific data, numbers, and technical details where available
-- Distinguish between established facts and authors' claims
-- Identify both strengths and weaknesses objectively
-- Structure information logically for academic comprehension
-- Preserve technical terminology while ensuring clarity
+**分析准则：**
+- 直接从论文内容中提取信息
+- 保持学术的严谨性和精确性
+- 在可能的情况下使用具体的数据、数字和技术细节
+- 区分既定事实与作者的主张
+- 客观地识别优点和缺点
+- 为便于学术理解，对信息进行逻辑化组织
+- 在确保清晰度的前提下保留技术术语

@@ -14,48 +14,33 @@ Workflow is as follows:
 2. if so, html_converter is used to convert the input to markdown
 3. Else, other input types are converted by ms_converter
 
+Converted output:
+An MDArticle consists of the markdown content as well as necessary metadata.
+
 """
 
-import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
-from .data_models import MDArticle
-
-from .clean_html_to_md import CleanHTML2Markdown
+from .data_models import MDArticle, SourceType
 from .config.markitdown_formats import SUPPORTED_FORMATS
+from .config.logging_config import error, warning
+import logging
+
+LOGGING_LEVEL = logging.INFO
 
 markitdown_supported_formats = SUPPORTED_FORMATS["file_extentions"]
 
 # Logging will be configured by main application
 
 class MarkdownConverter:
-    """
-    Handles various types of input and converts them to markdown.
-    """
-    
+    """Handles various types of input and converts them to markdown."""
     def __init__(self):
-        """
-        Initialize the content handler.
-        
-        Args:
-            config_path: Path to the configuration file. If None, will use default.
-        """
-        # use microsoft markitdown converter to handle requests other 
-        # than html page or file, in case html needs pre-formatting 
-        # before being converted to markdown
-        try:
-            from markitdown import MarkItDown
-        except ImportError: 
-            raise ImportError("MarkItDown is not installed")
-    
-        self.ms_converter = MarkItDown()
-        self.html_converter = CleanHTML2Markdown()
         self.logger = logging.getLogger(__name__)
-        self.logger.debug("Markdown Converter Initialized")
+        self.logger.setLevel(LOGGING_LEVEL)
 
     """
     Check if a string is a url.
@@ -66,7 +51,7 @@ class MarkdownConverter:
         return all([parsed_url.scheme in ('http', 'https'), parsed_url.netloc])
 
 
-    def _is_html_url(self, url: str) -> bool:
+    def _is_url_html(self, url: str) -> bool:
         """
         Args:
             url: The URL string to check.
@@ -94,8 +79,7 @@ class MarkdownConverter:
                        startswith ('application/xhtml+xml')):
                         return True
                     else:
-                        print (f"URL '{url}' has Content-Type:\
-                              {content_type} (not HTML)")
+                        self.logger.warning (f"URL '{url}' has Content-Type: {content_type} (not HTML)")
                         return False
                 else:
                     raise Exception (f"Error accessing URL '{url}': {response.getcode()}")
@@ -124,56 +108,8 @@ class MarkdownConverter:
         """
         is_supported_file = Path(path).suffix.lower() in markitdown_supported_formats
         return is_supported_file
-
-    """
-    Get a suitable name for the content.
-    """
-    def _get_input_name (self, content_path: str) -> str:
-        """
-        Args:
-            content_path: Path to the content
-            
-        Returns:
-            Name for the content
-        """
-        
-        # for urls, use the domain/path as the name
-        if self._is_url(content_path):
-            parsed_url = urlparse(content_path)
-            name = f"{parsed_url.netloc}{parsed_url.path.replace('/', '_')}"
-            if name.endswith('_'):
-                name = name[:-1]
-            # Ensure the name is not too long
-            if len(name) > 100:
-                name = name[:100]
-            return name
-        # other types of input
-        else: 
-            return Path(content_path).stem
-
-    def get_output_dir (self, content_path: str, model_name: str) -> Path:
-        """
-        Get the output directory for processing results.
-        
-        Args:
-            content_path: Path to the content
-            model_name: Name of the model used for processing
-            
-        Returns:
-            Path to the output directory
-        """
-        content_name = self.get_content_name(content_path)
-        
-        if self._is_url(content_path):
-            # For URLs, create directory in current working directory
-            return Path.cwd() / "llm_summaries" / f"{content_name}_{model_name}"
-        else:
-            # For files, create directory in the same directory as the file
-            return (Path(content_path).parent.absolute() / "llm_summaries" / 
-                    f"{content_name}_{model_name}")
-            
   
-    def convert_content(self, content_path: str) -> Optional[MDArticle]:
+    def convert_content(self, content_path: str, type: SourceType = SourceType.PAPER) -> Optional[MDArticle]:
         """
         Process content from various sources and convert to a standard format.
         
@@ -184,51 +120,63 @@ class MarkdownConverter:
             Tuple of (processed_content, metadata)
         """
 
-        # check if the content is supported
-        if (not self._is_supported_file(content_path) and 
-            not self._is_html_url(content_path) and 
-            not self._is_html_file(content_path)):
-            self.logger.warning (f"Unknown content type, conversion might fail: {content_path}")
-
         # initialize the processed content
-        processed_content = None
+        md_article= None
 
-        # # try to convert htmls with html_converter
-        # if (self._is_html_url(content_path) or self._is_html_file(content_path)):
-        #     self.logger.debug (f"Converting html with html_converter: {content_path}")
-        #     try:
-        #         # clean_html.convert returns a dictionary
-        #         processed_content = self.html_converter.convert(content_path, 
-        #                                                             "readabilipy")
-        #         if processed_content is None:
-        #             self.logger.warning (
-        #                 "Failed to convert with CleanHTML2Markdown:" 
-        #                 f"{content_path}"
-        #             )
-        #         else:
-        #             success = True
-                    
-        #     except Exception as e:
-        #         self.logger.warning (
-        #             "Failed to convert with CleanHTML2Markdown:"
-        #             f"{str(e)} - {content_path}"
-        #         )
-        
-        # if it's not html, or if html conversion fails, try to convert with ms_converter
-        if processed_content is None:
+            
+        # try to convert htmls with html_converter
+        if (self._is_url_html(content_path) or self._is_html_file(content_path)):
+            self.logger.debug (f"Converting html with html_converter: {content_path}")
             try:
-                md_content = self.ms_converter.convert(content_path).text_content
-                processed_content = MDArticle(
-                    markdown_content=md_content,
-                    title=self._get_input_name(content_path),
-                    authors=None,
-                    source_path=content_path,
-                    converter="MarkItDown"
-                )
+                # clean_html.convert returns a dictionary, default to use readability
+                from .clean_html_to_md import CleanHTML2Markdown
+                md_article = CleanHTML2Markdown().convert(content_path)
+                if md_article is None:
+                    self.logger.warning (
+                        "Failed to convert with CleanHTML2Markdown:" 
+                        f"{content_path}"
+                    )
+                      
             except Exception as e:
-                self.logger.warning (f"Failed to convert input with MarkItDown: {str(e)}")
+                self.logger.warning (
+                    "Failed to convert with CleanHTML2Markdown:"
+                    f"{str(e)} - {content_path}"
+                )
         
-        return processed_content
+        # if it's not html, or if html conversion fails, try to convert MarkItDown
+        if md_article is None:
+            try:
+                from markitdown import MarkItDown
+            except Exception as e:  
+                error("markitdown is not installed.")   
+            
+            try:
+                ms_conversion = MarkItDown().convert(content_path)
+                md_article = MDArticle(
+                    type = type,
+                    content = ms_conversion.markdown,
+                    title = ms_conversion.title,
+                    converter = "MarkItDown",
+                    source_path = content_path
+                )    
+            except Exception as e:
+                error (f"Failed to convert input with MarkItDown: {str(e)}")    
+                return None
+        
+        # TODO: save the content to a centralized directory
+        if "https:" in content_path:
+            output_dir = Path(content_path.replace("https:", "webpage")).parent
+        else:
+            output_dir = Path(content_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+        # save the content and insert output path
+        md_article.output_path = output_dir / f"{md_article.title}.md"
+        with open(md_article.output_path, "w") as f:
+            f.write(md_article.title) if md_article.title else None
+            f.write(f"\nsource: {md_article.source_path}\n")
+            f.write(md_article.content)
+
+        return md_article
         
   
 def test_md_converter():
@@ -329,7 +277,7 @@ def main():
                     f.write(f"url: {processed_content.source_path}\n\n")
                     f.write(f"title: {processed_content.title}\n\n")
                     f.write(f"authors: {processed_content.authors}\n\n")
-                    f.write(processed_content.markdown_content)
+                    f.write(processed_content.content)
             print(f"Saved to {output_path}")
 
 if __name__ == "__main__":

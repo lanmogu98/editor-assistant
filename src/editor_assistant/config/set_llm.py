@@ -2,7 +2,7 @@ import yaml
 from pathlib import Path
 from pydantic import BaseModel
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, Any
 
 
 # --- LLMModel and ServiceProvider enums as a single source of truth of model switch ---
@@ -18,6 +18,7 @@ class LLMModel(str, Enum):
     qwen_plus = "qwen-plus"
     qwen_plus_latest = "qwen-plus-latest"
     glm_4_5 = "glm-4.5"
+    glm_4_5_openrouter = "glm-4.5-openrouter"
 
 
 class ServiceProvider(str, Enum):
@@ -26,6 +27,7 @@ class ServiceProvider(str, Enum):
     kimi = "kimi"
     qwen = "qwen"
     zhipu = "zhipu"
+    zhipu_openrouter = "zhipu-openrouter"
 
 # --- Pydantic Models for the configing of YAML structure ---
 class Pricing(BaseModel):
@@ -36,14 +38,17 @@ class ModelDetails(BaseModel):
     id: str  # The actual model ID for the API call
     pricing: Pricing
 
+
 class ProviderSettings(BaseModel):
     api_key_env_var: str
     api_base_url: str
-    temperature: float
-    max_tokens: int
-    context_window: int
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
     pricing_currency: str
     models: Dict[LLMModel, ModelDetails]
+    # provider specific overrides
+    request_overrides: Optional[Dict[str, Any]] = None
 
 
 # --- Function to load the single config file ---

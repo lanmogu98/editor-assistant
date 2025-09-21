@@ -92,3 +92,20 @@ zhipu:
     glm-4.5:
       id: "glm-4.5"
       pricing: {input: 0.80, output: 8.00}
+
+zhipu-openrouter:
+  api_key_env_var: "ZHIPU_API_KEY_OPENROUTER"
+  api_base_url: "https://openrouter.ai/api/v1/chat/completions"
+  temperature: 0.6
+  max_tokens: 96000
+  context_window: 131100
+  pricing_currency: "$"
+  # overides for the OpenRouter provider
+  request_overrides:
+    provider:
+      only: ["z-ai"]
+      allow_fallbacks: false
+  models:
+    glm-4.5-openrouter:
+      id: "z-ai/glm-4.5"
+      pricing: {input: 0.60, output: 2.20}

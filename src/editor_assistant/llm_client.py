@@ -58,6 +58,8 @@ class LLMClient:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
+        # set up the request overrides if there is any
+        self.request_overrides = provider_settings.request_overrides or {}
         
         # Initialize token tracking
         self.token_usage = {
@@ -95,7 +97,8 @@ class LLMClient:
                 {"role": "user", "content": prompt}
             ],
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens
+            "max_tokens": self.max_tokens,
+            **self.request_overrides
         }
         
         # Implement retry logic with exponential backoff
@@ -238,7 +241,7 @@ class LLMClient:
         
         # Show concise summary using logging system
         user_message("")  # Empty line for spacing
-        progress(f"Token usage: {total_tokens} tokens (¥{token_usage['cost']['total_cost']:.4f}) in {token_usage['process_times']['total_time']:.1f}s")
+        progress(f"Token usage: {total_tokens} tokens ({self.pricing_currency}{token_usage['cost']['total_cost']:.4f}) in {token_usage['process_times']['total_time']:.1f}s")
         
         # Full report saved to file (mentioned only in debug mode)
         import logging
