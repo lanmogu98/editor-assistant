@@ -52,6 +52,10 @@ samples/
 *.log
 webpage/
 backup/
+<<<<<<< HEAD
+=======
+Makefile
+>>>>>>> 9256c5b (Refactor project structure and enhance functionality)
 
 # Dev notes
 dev_notes/

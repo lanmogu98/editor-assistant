@@ -16,15 +16,21 @@ A powerful AI-powered Python tool for automatically converting, processing, and 
   - **News Generation**: Convert research content into news articles for researcher audiences
 - **Advanced Logging System**: Clean console output with optional debug mode and file logging
 - **Comprehensive Analytics**: Token usage tracking, cost calculation, and processing time analysis
-- **Multiple LLM Providers**: Supports Deepseek R1/V3 and Gemini models
+- **Multiple LLM Providers**: Supports Deepseek, Gemini, Kimi, Qwen, and GLM models
 - **Full Transparency**: Saves all prompts, responses, and processing reports
+- **Request Overrides**: Support for provider-specific API parameters (e.g., OpenRouter provider routing)
+- **Metadata Integration**: Automatically includes document title and source path in generated responses
 
 ### 📋 Prerequisites
 
 - Python 3.8+
 - API keys for supported LLM providers:
-  - **Deepseek**: `VOLC_API_KEY` environment variable (via Volcengine)
+  - **Deepseek**: `DEEPSEEK_API_KEY` environment variable (via Volcengine)
   - **Gemini**: `GEMINI_API_KEY` environment variable
+  - **Kimi**: `KIMI_API_KEY` environment variable (via Volcengine)
+  - **Qwen**: `QWEN_API_KEY` environment variable (via Alibaba Cloud)
+  - **GLM**: `ZHIPU_API_KEY` environment variable (via Zhipu AI)
+  - **GLM (OpenRouter)**: `ZHIPU_API_KEY_OPENROUTER` environment variable (via OpenRouter)
 
 ## 🛠️ Installation
 
@@ -59,6 +65,18 @@ export DEEPSEEK_API_KEY=your_volcengine_api_key
 
 # For Gemini models
 export GEMINI_API_KEY=your_gemini_api_key
+
+# For Kimi models (via Volcengine)
+export KIMI_API_KEY=your_kimi_api_key
+
+# For Qwen models (via Alibaba Cloud)
+export QWEN_API_KEY=your_qwen_api_key
+
+# For GLM models (via Zhipu AI)
+export ZHIPU_API_KEY=your_zhipu_api_key
+
+# For GLM models (via OpenRouter)
+export ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
 Or create a `.env` file:
@@ -66,6 +84,10 @@ Or create a `.env` file:
 ```env
 DEEPSEEK_API_KEY=your_volcengine_api_key
 GEMINI_API_KEY=your_gemini_api_key
+KIMI_API_KEY=your_kimi_api_key
+QWEN_API_KEY=your_qwen_api_key
+ZHIPU_API_KEY=your_zhipu_api_key
+ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
 ## 🎯 Usage
@@ -160,6 +182,20 @@ assistant.process_multiple(
 - `gemini-2.5-flash` - Balanced performance model
 - `gemini-2.5-pro` - High-performance model
 
+#### Kimi Models (via Volcengine)
+
+- `kimi-k2` - Advanced reasoning model
+
+#### Qwen Models (via Alibaba Cloud)
+
+- `qwen-plus` - General-purpose model
+- `qwen-plus-latest` - Latest general model
+
+#### GLM Models
+
+- `glm-4.5` - High-performance model (via Zhipu AI)
+- `glm-4.5-openrouter` - High-performance model (via OpenRouter)
+
 ### 📁 Supported Input Formats
 
 - **Documents**: PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, EPUB
@@ -174,19 +210,15 @@ The tool creates organized output for each processed document:
 ```text
 llm_summaries/
 ├── document_name_model_name/
-│   ├── r/  (research) or n/ (news)
-│   │   ├── prompts/
-│   │   │   ├── analysis.md
-│   │   │   └── translation.md  (research only)
-│   │   ├── responses/
-│   │   │   ├── analysis.md
-│   │   │   └── translation.md  (research only)
-│   │   ├── process_times/
-│   │   │   ├── process_times.json
-│   │   │   └── process_times.txt
-│   │   └── token_usage/
-│   │       ├── token_usage.json
-│   │       └── token_usage.txt
+│   ├── prompts/
+│   │   ├── document_name_brief.md
+│   │   └── document_name_outline.md
+│   ├── responses/
+│   │   ├── document_name_brief.md
+│   │   └── document_name_outline.md
+│   └── token_usage/
+│       ├── token_usage.json
+│       └── token_usage.txt
 ```
 
 ### 🔍 Content Processing Workflow
@@ -213,8 +245,14 @@ llm_summaries/
 
 ### 🔧 Advanced Features
 
-#### User-Customizable Configuration
-All user-editable files are stored outside the source code in `~/.editor_assistant/`:
+#### Recent Improvements
+- **Enhanced LLM Client**: Improved request handling with provider-specific overrides
+- **Metadata Integration**: Document titles and source paths are automatically prepended to responses
+- **OpenRouter Support**: Full support for OpenRouter API with provider routing
+- **Content Validation**: Built-in content size validation against model context windows
+- **Improved Error Handling**: Better error messages and graceful degradation
+
+
 
 ```bash
 # Show configuration location and available options
@@ -326,36 +364,23 @@ The news generation is specifically designed for researcher audiences:
 
 ### 🔧 Configuration Files
 
-The system uses YAML configuration for model settings:
+The system uses YAML configuration for model settings. The main configuration file is located at `src/editor_assistant/config/llm_config.yml` and contains all provider settings, model details, and pricing information.
 
 ```yaml
-# config/llm_config.yml
+# src/editor_assistant/config/llm_config.yml
 deepseek:
-  api_key_env_var: "VOLC_API_KEY"
+  api_key_env_var: "DEEPSEEK_API_KEY"
   api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
-  temperature: 0.5
+  temperature: 0.4
   max_tokens: 16000
   context_window: 128000
+  pricing_currency: "¥"
   models:
     deepseek-r1-latest:
       id: "deepseek-r1-250528"
       pricing: { input: 4.00, output: 16.00 }
 ```
 
-### 📚 Documentation
-
-- [`docs/cli_usage.md`](docs/cli_usage.md) - Comprehensive CLI usage guide
-- [`docs/argparse_and_cli_reference.md`](docs/argparse_and_cli_reference.md) - CLI architecture reference
-- [`docs/logging_system_manual.md`](docs/logging_system_manual.md) - Logging system documentation
-- [`docs/python_logging_basics.md`](docs/python_logging_basics.md) - Python logging fundamentals
-
-### 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ### 📝 License
 
@@ -365,7 +390,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Microsoft MarkItDown** for document conversion capabilities
 - **Readabilipy** and **Trafilatura** for web content extraction
-- **Deepseek** and **Google Gemini** for LLM capabilities
+- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **KIMI**for LLM capabilities
 
 ### 📞 Support
 
@@ -393,8 +418,10 @@ For support, please open an issue on GitHub or contact the maintainers.
   - **新闻生成**：将研究内容转换为面向研究人员受众的新闻文章
 - **高级日志系统**：清洁的控制台输出，带有可选的调试模式和文件日志
 - **全面分析**：令牌使用跟踪、成本计算和处理时间分析
-- **多个LLM提供商**：支持Deepseek R1/V3和Gemini模型
+- **多个LLM提供商**：支持Deepseek、Gemini、Kimi、Qwen和GLM模型
 - **完全透明**：保存所有提示、响应和处理报告
+- **请求覆盖**：支持提供商特定的API参数（如OpenRouter提供商路由）
+- **元数据集成**：自动在生成的响应中包含文档标题和源路径
 
 ### 📋 依赖条件
 
@@ -402,6 +429,10 @@ For support, please open an issue on GitHub or contact the maintainers.
 - 支持的LLM提供商的API密钥：
   - **Deepseek**：`DEEPSEEK_API_KEY`环境变量（通过火山引擎）
   - **Gemini**：`GEMINI_API_KEY`环境变量
+  - **Kimi**：`KIMI_API_KEY`环境变量（通过火山引擎）
+  - **Qwen**：`QWEN_API_KEY`环境变量（通过阿里云）
+  - **GLM**：`ZHIPU_API_KEY`环境变量（通过智谱AI）
+  - **GLM (OpenRouter)**：`ZHIPU_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
 
 ### 🛠️ 安装
 
@@ -454,7 +485,7 @@ editor-assistant convert document.pdf
 editor-assistant convert *.docx -o converted/
 ```
 
-**清理HTML为Markdown：**
+**将HTML转换为格式干净的Markdown：**
 
 ```bash
 editor-assistant clean "https://example.com/page.html" -o clean.md
@@ -483,6 +514,17 @@ html2md page.html                             # 等同于：editor-assistant cle
 - `gemini-2.5-flash` - 平衡性能模型
 - `gemini-2.5-pro` - 高性能模型
 
+#### Kimi模型（通过火山引擎）
+- `kimi-k2` - 高级推理模型
+
+#### Qwen模型（通过阿里云）
+- `qwen-plus` - 通用模型
+- `qwen-plus-latest` - 最新通用模型
+
+#### GLM模型
+- `glm-4.5` - 高性能模型（通过智谱AI）
+- `glm-4.5-openrouter` - 高性能模型（通过OpenRouter）
+
 ### 🔍 内容处理工作流程
 
 #### 研究论文（大纲生成）
@@ -501,9 +543,7 @@ html2md page.html                             # 等同于：editor-assistant cle
 
 - **清洁控制台输出**：带有彩色符号的专业日志记录（•、⚠、✗）
 - **令牌使用跟踪**：简洁摘要与详细文件报告
-- **成本计算**：自动计算人民币（¥）成本
-- **处理时间分析**：总时间和逐步分解
-- **调试模式**：使用`--debug`标志时的综合文件日志记录
+- **成本计算**：自动计算人民币或美元成本
 
 ### 🔧 高级功能
 
@@ -524,11 +564,6 @@ editor-assistant brief --article paper:paper.pdf --debug
 - 包含适当的引用和发表信息
 - 在提高可读性的同时保持学术严谨性
 
-### 📚 文档
-
-- [`docs/cli_usage.md`](docs/cli_usage.md) - 综合CLI使用指南
-- [`docs/logging_system_manual.md`](docs/logging_system_manual.md) - 日志系统文档
-- [`docs/python_logging_basics.md`](docs/python_logging_basics.md) - Python日志基础
 
 ### 📝 许可证
 
@@ -538,7 +573,7 @@ editor-assistant brief --article paper:paper.pdf --debug
 
 - **Microsoft MarkItDown** 提供文档转换功能
 - **Readabilipy** 和 **Trafilatura** 提供网页内容提取
-- **Deepseek** 和 **Google Gemini** 提供LLM功能
+- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **Kimi**提供LLM功能
 
 ---
 
