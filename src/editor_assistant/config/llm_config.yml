@@ -23,6 +23,9 @@ deepseek:
   context_window: 128000
   pricing_currency: "¥"
   models:
+    deepseek-v3.1:
+      id: "deepseek-v3-1-250821"
+      pricing: { input: 4.00, output: 12.00 }
     deepseek-r1:
       id: "deepseek-r1-250120"
       pricing: { input: 4.00, output: 16.00 }
@@ -46,10 +49,10 @@ gemini:
   models:
     gemini-2.5-flash-lite:
       id: "gemini-2.5-flash-lite-preview-06-17"
-      pricing: { input: 0.10, output: 0.40 } # USD per 1M tokens
+      pricing: { input: 0.10, output: 0.40 } 
     gemini-2.5-flash:
       id: "gemini-2.5-flash"
-      pricing: { input: 0.30, output: 2.50 } # USD per 1M tokens
+      pricing: { input: 0.30, output: 2.50 } 
     gemini-2.5-pro:
       id: "gemini-2.5-pro"
       pricing: { input: 1.25, output: 10.00 } # USD per 1M tokens 
@@ -63,23 +66,23 @@ kimi:
   pricing_currency: "¥"
   models:
     kimi-k2:
-      id: "kimi-k2-250711"
+      id: "kimi-k2-250905"
       pricing: {input: 4.00, output: 16.00}
 
 qwen:
   api_key_env_var: "QWEN_API_KEY"
   api_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
   temperature: 0.6
-  max_tokens: 98304
-  context_window: 128000
+  max_tokens: 32768
+  context_window: 995904
   pricing_currency: "¥"
   models:
     qwen-plus:
       id: "qwen-plus"
-      pricing: {input: 0.80, output: 8.00}
+      pricing: {input: 0.80, output: 2.00} # with thinking model defaultly disabled
     qwen-plus-latest:
       id: "qwen-plus-latest"
-      pricing: {input: 0.80, output: 8.00}
+      pricing: {input: 0.80, output: 2.00} # with thinking model defaultly disabled
 
 zhipu:
   api_key_env_var: "ZHIPU_API_KEY"
@@ -109,3 +112,15 @@ zhipu-openrouter:
     glm-4.5-openrouter:
       id: "z-ai/glm-4.5"
       pricing: {input: 0.60, output: 2.20}
+
+doubao:
+  api_key_env_var: "DOUBAO_API_KEY"
+  api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+  temperature: 0.6
+  max_tokens: 32000
+  context_window: 256000
+  pricing_currency: "¥"
+  models:
+    doubao-seed-1.6:
+      id: "doubao-seed-1-6-250615"
+      pricing: {input: 0.80, output: 2}

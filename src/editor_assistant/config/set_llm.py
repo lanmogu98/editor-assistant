@@ -7,6 +7,7 @@ from typing import Dict, Tuple, Optional, Any
 
 # --- LLMModel and ServiceProvider enums as a single source of truth of model switch ---
 class LLMModel(str, Enum):
+    deepseek_v3_1 = "deepseek-v3.1"
     deepseek_r1 = "deepseek-r1"
     deepseek_r1_latest = "deepseek-r1-latest"
     deepseek_v3 = "deepseek-v3"
@@ -19,6 +20,7 @@ class LLMModel(str, Enum):
     qwen_plus_latest = "qwen-plus-latest"
     glm_4_5 = "glm-4.5"
     glm_4_5_openrouter = "glm-4.5-openrouter"
+    doubao_seed_1_6 = "doubao-seed-1.6"
 
 
 class ServiceProvider(str, Enum):
@@ -28,7 +30,8 @@ class ServiceProvider(str, Enum):
     qwen = "qwen"
     zhipu = "zhipu"
     zhipu_openrouter = "zhipu-openrouter"
-
+    doubao = "doubao"
+    
 # --- Pydantic Models for the configing of YAML structure ---
 class Pricing(BaseModel):
     input: float

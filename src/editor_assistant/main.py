@@ -3,7 +3,6 @@ from .data_models import MDArticle, SourceType, Input, ProcessType
 from .md_converter import MarkdownConverter
 from .config.logging_config import setup_logging, progress, error
 import logging
-import time
 from pathlib import Path
 
 class EditorAssistant:
@@ -21,7 +20,7 @@ class EditorAssistant:
             return
 
         # show clean progress message to user
-        progress(f"Start to {process_type.value} {len(inputs)} article(s) with {self.md_processor.llm_client.model_name}")
+        progress(f"Start to {process_type.value} with {self.md_processor.llm_client.model_name}")
 
         # initialize the md content list
         md_articles = []

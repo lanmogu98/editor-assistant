@@ -62,6 +62,12 @@ def cmd_generate_outline(args):
         raise ValueError("outline requires exactly one --article of type 'paper'")
     assistant.process_multiple([args.article[0]], ProcessType.OUTLINE)
 
+def cmd_generate_translate(args):
+    """Generate translate from a single paper (requires explicit type)."""
+    assistant = EditorAssistant(args.model, debug_mode=args.debug)
+    if len(args.article) != 1:
+        raise ValueError("translate requires exactly one --article of type 'paper'")
+    assistant.process_multiple([args.article[0]], ProcessType.TRANSLATE)
 
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
@@ -178,6 +184,23 @@ Examples:
     )
     add_common_arguments(outline_parser)
     outline_parser.set_defaults(func=cmd_generate_outline)
+
+    # Translate command
+    translate_parser = subparsers.add_parser(
+        "translate",
+        help="Generate translate from a single paper",
+        description="Create detailed outlines and Chinese translations of research papers"
+    )
+    translate_parser.add_argument(
+        "--article",
+        action="append",
+        required=True,
+        type=make_article_parser({"paper"}),
+        metavar="TYPE:PATH",
+        help="Add a paper source as TYPE:PATH (TYPE must be 'paper')"
+    )
+    add_common_arguments(translate_parser)
+    translate_parser.set_defaults(func=cmd_generate_translate)
     
     # Format conversion command
     convert_parser = subparsers.add_parser(

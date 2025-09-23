@@ -245,7 +245,6 @@ class LLMClient:
         from .config.logging_config import user_message, progress
         
         # Show concise summary using logging system
-        user_message("")  # Empty line for spacing
         progress(f"Token usage: {total_tokens} tokens ({self.pricing_currency}{token_usage['cost']['total_cost']:.4f}) in {token_usage['process_times']['total_time']:.1f}s")
         
         # Full report saved to file (mentioned only in debug mode)

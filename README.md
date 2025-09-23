@@ -8,15 +8,16 @@ A powerful AI-powered Python tool for automatically converting, processing, and 
 
 ### 🚀 Features
 
-- **Unified CLI Interface**: Professional command-line tool with subcommands (`editor-assistant brief`, `editor-assistant outline`)
+- **Unified CLI Interface**: Professional command-line tool with subcommands (`editor-assistant brief`, `editor-assistant outline`, `editor-assistant translate`)
 - **Multi-format Content Conversion**: Converts PDFs, DOCs, web pages, and other formats to markdown
 - **Intelligent Content Processing**: Single-context processing for documents up to 128k+ tokens
-- **Dual Content Types**: 
+- **Triple Content Processing Types**:
   - **Research Outlines**: Detailed analysis and Chinese translation of research papers
   - **News Generation**: Convert research content into news articles for researcher audiences
+  - **Bilingual Translation**: Standalone Chinese translation with dual-format output (translation-only + bilingual side-by-side)
 - **Advanced Logging System**: Clean console output with optional debug mode and file logging
 - **Comprehensive Analytics**: Token usage tracking, cost calculation, and processing time analysis
-- **Multiple LLM Providers**: Supports Deepseek, Gemini, Kimi, Qwen, and GLM models
+- **Multiple LLM Providers**: Supports Deepseek, Gemini, Kimi, Doubao, Qwen, and GLM models
 - **Full Transparency**: Saves all prompts, responses, and processing reports
 - **Request Overrides**: Support for provider-specific API parameters (e.g., OpenRouter provider routing)
 - **Metadata Integration**: Automatically includes document title and source path in generated responses
@@ -28,6 +29,7 @@ A powerful AI-powered Python tool for automatically converting, processing, and 
   - **Deepseek**: `DEEPSEEK_API_KEY` environment variable (via Volcengine)
   - **Gemini**: `GEMINI_API_KEY` environment variable
   - **Kimi**: `KIMI_API_KEY` environment variable (via Volcengine)
+  - **Doubao**: `DOUBAO_API_KEY` environment variable (via Volcengine)
   - **Qwen**: `QWEN_API_KEY` environment variable (via Alibaba Cloud)
   - **GLM**: `ZHIPU_API_KEY` environment variable (via Zhipu AI)
   - **GLM (OpenRouter)**: `ZHIPU_API_KEY_OPENROUTER` environment variable (via OpenRouter)
@@ -69,6 +71,9 @@ export GEMINI_API_KEY=your_gemini_api_key
 # For Kimi models (via Volcengine)
 export KIMI_API_KEY=your_kimi_api_key
 
+# For Doubao models (via Volcengine)
+export DOUBAO_API_KEY=your_doubao_api_key
+
 # For Qwen models (via Alibaba Cloud)
 export QWEN_API_KEY=your_qwen_api_key
 
@@ -85,6 +90,7 @@ Or create a `.env` file:
 DEEPSEEK_API_KEY=your_volcengine_api_key
 GEMINI_API_KEY=your_gemini_api_key
 KIMI_API_KEY=your_kimi_api_key
+DOUBAO_API_KEY=your_doubao_api_key
 QWEN_API_KEY=your_qwen_api_key
 ZHIPU_API_KEY=your_zhipu_api_key
 ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
@@ -111,6 +117,16 @@ editor-assistant brief \
 editor-assistant outline --article paper:https://arxiv.org/paper.pdf
 editor-assistant outline --article paper:paper.pdf --model deepseek-r1-latest
 ```
+
+**Generate Chinese Translations with Bilingual Output (single source):**
+
+```bash
+editor-assistant translate --article paper:https://arxiv.org/paper.pdf
+editor-assistant translate --article paper:document.pdf --model gemini-2.5-pro
+editor-assistant translate --article paper:research.md --model deepseek-r1-latest --debug
+```
+
+*Note: Translation generates both Chinese-only and bilingual side-by-side versions*
 
 **Convert Files to Markdown:**
 
@@ -171,6 +187,7 @@ assistant.process_multiple(
 
 #### Deepseek Models (via Volcengine)
 
+- `deepseek-v3.1` - Latest general-purpose model (2025 release)
 - `deepseek-r1` - Advanced reasoning model
 - `deepseek-r1-latest` - Latest reasoning model (recommended)
 - `deepseek-v3` - General-purpose model
@@ -186,10 +203,14 @@ assistant.process_multiple(
 
 - `kimi-k2` - Advanced reasoning model
 
+#### Doubao Models (via Volcengine)
+
+- `doubao-seed-1.6` - Advanced language model with 256k context window
+
 #### Qwen Models (via Alibaba Cloud)
 
-- `qwen-plus` - General-purpose model
-- `qwen-plus-latest` - Latest general model
+- `qwen-plus` - General-purpose model with thinking capabilities
+- `qwen-plus-latest` - Latest general model with enhanced reasoning
 
 #### GLM Models
 
@@ -212,10 +233,13 @@ llm_summaries/
 ├── document_name_model_name/
 │   ├── prompts/
 │   │   ├── document_name_brief.md
-│   │   └── document_name_outline.md
+│   │   ├── document_name_outline.md
+│   │   └── document_name_translate.md
 │   ├── responses/
 │   │   ├── document_name_brief.md
-│   │   └── document_name_outline.md
+│   │   ├── document_name_outline.md
+│   │   ├── document_name_translate_model.md
+│   │   └── bilingual_document_name_translate_model.md  # Bilingual side-by-side
 │   └── token_usage/
 │       ├── token_usage.json
 │       └── token_usage.txt
@@ -235,6 +259,13 @@ llm_summaries/
 3. **Scientific Focus**: Emphasize methodology, data, and research significance
 4. **Reporting**: Generate processing analytics
 
+#### Translation Processing (Standalone)
+1. **Content Conversion**: Convert input to clean markdown
+2. **Chinese Translation**: Generate accurate Chinese translation preserving academic terminology
+3. **Bilingual Output Generation**: Create side-by-side English-Chinese comparison document
+4. **Dual File Export**: Save both translation-only and bilingual versions
+5. **Reporting**: Generate token usage and processing time reports
+
 ### 📈 Analytics & Monitoring
 
 - **Clean Console Output**: Professional logging with colored symbols (•, ⚠, ✗)
@@ -246,11 +277,13 @@ llm_summaries/
 ### 🔧 Advanced Features
 
 #### Recent Improvements
-- **Enhanced LLM Client**: Improved request handling with provider-specific overrides
+- **Bilingual Translation Output**: Automatic generation of side-by-side English-Chinese bilingual documents for translation tasks
+- **Enhanced LLM Client**: Improved request handling with provider-specific overrides supporting 6+ LLM providers
+- **Gemini OpenAI Compatibility**: Updated Gemini integration to use OpenAI-compatible endpoints for better reliability
 - **Metadata Integration**: Document titles and source paths are automatically prepended to responses
 - **OpenRouter Support**: Full support for OpenRouter API with provider routing
 - **Content Validation**: Built-in content size validation against model context windows
-- **Improved Error Handling**: Better error messages and graceful degradation
+- **Improved Error Handling**: Granular exception handling with graceful degradation and detailed logging
 
 
 
@@ -390,7 +423,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Microsoft MarkItDown** for document conversion capabilities
 - **Readabilipy** and **Trafilatura** for web content extraction
-- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **KIMI**for LLM capabilities
+- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **Kimi**, **Doubao** for LLM capabilities
 
 ### 📞 Support
 
@@ -410,15 +443,16 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 ### 🚀 功能特色
 
-- **统一CLI界面**：专业的命令行工具，带有子命令（`editor-assistant brief`、`editor-assistant outline`）
+- **统一CLI界面**：专业的命令行工具，带有子命令（`editor-assistant brief`、`editor-assistant outline`、`editor-assistant translate`）
 - **多格式内容转换**：将PDF、DOC、网页和其他格式转换为markdown
 - **智能内容处理**：支持高达128k+令牌的单一上下文文档处理
-- **双重内容类型**：
+- **三重内容处理类型**：
   - **研究大纲**：研究论文的详细分析(提供中英双语版本)
   - **新闻生成**：将研究内容转换为面向研究人员受众的新闻文章
+  - **双语翻译**：独立的中文翻译功能，提供双格式输出（纯翻译版本+双语对照版本）
 - **高级日志系统**：清洁的控制台输出，带有可选的调试模式和文件日志
 - **全面分析**：令牌使用跟踪、成本计算和处理时间分析
-- **多个LLM提供商**：支持Deepseek、Gemini、Kimi、Qwen和GLM模型
+- **多个LLM提供商**：支持Deepseek、Gemini、Kimi、Doubao、Qwen和GLM模型
 - **完全透明**：保存所有提示、响应和处理报告
 - **请求覆盖**：支持提供商特定的API参数（如OpenRouter提供商路由）
 - **元数据集成**：自动在生成的响应中包含文档标题和源路径
@@ -430,6 +464,7 @@ For support, please open an issue on GitHub or contact the maintainers.
   - **Deepseek**：`DEEPSEEK_API_KEY`环境变量（通过火山引擎）
   - **Gemini**：`GEMINI_API_KEY`环境变量
   - **Kimi**：`KIMI_API_KEY`环境变量（通过火山引擎）
+  - **Doubao**：`DOUBAO_API_KEY`环境变量（通过火山引擎）
   - **Qwen**：`QWEN_API_KEY`环境变量（通过阿里云）
   - **GLM**：`ZHIPU_API_KEY`环境变量（通过智谱AI）
   - **GLM (OpenRouter)**：`ZHIPU_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
@@ -454,6 +489,12 @@ export DEEPSEEK_API_KEY=your_volcengine_api_key
 
 # 对于Gemini模型
 export GEMINI_API_KEY=your_gemini_api_key
+
+# 对于Kimi模型（通过火山引擎）
+export KIMI_API_KEY=your_kimi_api_key
+
+# 对于Doubao模型（通过火山引擎）
+export DOUBAO_API_KEY=your_doubao_api_key
 ```
 
 ### 🎯 使用方法
@@ -477,6 +518,16 @@ editor-assistant brief \
 editor-assistant outline --article paper:https://arxiv.org/paper.pdf
 editor-assistant outline --article paper:paper.pdf --model deepseek-r1-latest
 ```
+
+**生成双语对照中文翻译（仅单来源，paper）：**
+
+```bash
+editor-assistant translate --article paper:https://arxiv.org/paper.pdf
+editor-assistant translate --article paper:document.pdf --model gemini-2.5-pro
+editor-assistant translate --article paper:research.md --model deepseek-r1-latest --debug
+```
+
+*注意：翻译功能同时生成纯中文版本和双语对照版本*
 
 **转换文件为Markdown：**
 
@@ -504,6 +555,7 @@ html2md page.html                             # 等同于：editor-assistant cle
 ### 🤖 支持的模型
 
 #### Deepseek模型（通过火山引擎）
+- `deepseek-v3.1` - 最新通用模型（2025年发布）
 - `deepseek-r1` - 高级推理模型
 - `deepseek-r1-latest` - 最新推理模型（推荐）
 - `deepseek-v3` - 通用模型
@@ -517,9 +569,12 @@ html2md page.html                             # 等同于：editor-assistant cle
 #### Kimi模型（通过火山引擎）
 - `kimi-k2` - 高级推理模型
 
+#### Doubao模型（通过火山引擎）
+- `doubao-seed-1.6` - 高级语言模型，支持256k上下文窗口
+
 #### Qwen模型（通过阿里云）
-- `qwen-plus` - 通用模型
-- `qwen-plus-latest` - 最新通用模型
+- `qwen-plus` - 具有思考能力的通用模型
+- `qwen-plus-latest` - 最新的增强推理通用模型
 
 #### GLM模型
 - `glm-4.5` - 高性能模型（通过智谱AI）
@@ -538,6 +593,13 @@ html2md page.html                             # 等同于：editor-assistant cle
 2. **新闻生成**：创建面向研究人员受众的400字新闻文章
 3. **科学重点**：强调方法论、数据和研究意义
 4. **报告**：生成处理分析
+
+#### 翻译处理（独立功能）
+1. **内容转换**：将输入转换为清洁的markdown
+2. **中文翻译**：生成保持学术术语准确性的中文翻译
+3. **双语对照生成**：创建英中对照比较文档
+4. **双文件导出**：保存纯翻译版本和双语版本
+5. **报告**：生成令牌使用和处理时间报告
 
 ### 📈 分析与监控
 
@@ -573,7 +635,7 @@ editor-assistant brief --article paper:paper.pdf --debug
 
 - **Microsoft MarkItDown** 提供文档转换功能
 - **Readabilipy** 和 **Trafilatura** 提供网页内容提取
-- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **Kimi**提供LLM功能
+- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **Kimi**, **Doubao** 提供LLM功能
 
 ---
 

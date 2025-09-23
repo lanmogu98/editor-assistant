@@ -11,9 +11,8 @@ Workflow:
 3. Translate the summary to Chinese
 """
 
-import json
 import logging
-import time
+import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 import os
@@ -77,6 +76,7 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
             f"Please make consult the raw input is properly converted or formatted."
         )
 
+LOGGER_LEVEL = logging.DEBUG
 
 # Summarizer class for processing markdown content
 class MDProcessor:
@@ -93,6 +93,9 @@ class MDProcessor:
             model_name: Name of the LLM model to use
         """
         self.llm_client = LLMClient(model_name)
+        self.model_name = model_name
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(LOGGER_LEVEL)
     
     def process_mds (self, md_articles: List[MDArticle], type: ProcessType) -> bool:
         """
@@ -130,8 +133,9 @@ class MDProcessor:
         title = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
         if type == ProcessType.BRIEF and len(md_articles) > 1:
             title = f"{title}-multi"
+        time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         output_dir = (Path(md_articles[0].output_path).parent / 
-                    "llm_summaries" / title / self.llm_client.model_name)
+                    "llm_summaries" / title / self.model_name / time)
         output_dir.mkdir(parents=True, exist_ok=True)
 
     
@@ -162,13 +166,19 @@ class MDProcessor:
             return False
         self._save_content(SaveType.PROMPT, f"{title}_{type.value}", prompt, output_dir)
 
-        # Make LLM request
+        # Make LLM request and save the output
         try:
             progress(f"Processing document with {len(prompt)} characters...")
             response = self._make_api_request(prompt, type.value)
-            
-            # Prepend metadata from articles
-            metadata_lines = []
+        
+        except Exception as e:
+            error(f"Error making API request: {str(e)}")
+            return False
+
+        # Prepend metadata from articles
+        metadata_lines = []
+
+        try:
             for article in md_articles:
                 art_title = article.title or "Untitled"
                 art_source = article.source_path or "Unknown Source"
@@ -177,10 +187,31 @@ class MDProcessor:
             metadata_prefix = "\n".join(metadata_lines) + "\n\n" if metadata_lines else ""
             formatted_response = metadata_prefix + response
             
-            self._save_content(SaveType.RESPONSE, f"{title}_{type.value}", formatted_response, output_dir)
+            self._save_content(SaveType.RESPONSE, f"{title}_{type.value}_{self.model_name}", formatted_response, output_dir)
         except Exception as e:
-            error(f"Error processing document: {str(e)}")
+            error(f"Error saving response: {str(e)}")
             return False
+        
+        # Create bilingual content if translation is requested
+        if type == ProcessType.TRANSLATE:
+            try:    
+                bilingual_content = self._create_bilingual_content(md_articles[0].content, response)
+            except Exception as e:
+                error(f"Error creating bilingual content: {str(e)}")                                                      
+            try:
+                if metadata_lines:
+                    bilingual_content = "\n".join(metadata_lines) + "\n\n" + bilingual_content
+            except Exception as e:
+                error(f"Error adding metadata to bilingual content: {str(e)}")
+            try:
+                self._save_content(SaveType.RESPONSE, f"bilingual_{title}_{type.value}_{self.model_name}", 
+                                   bilingual_content, output_dir, console_print=False)
+                progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}_{type.value}_{self.model_name}.md'}")                   
+            except Exception as e:
+                error(f"Error saving bilingual content: {str(e)}")
+                return False
+
+
 
         # Save token usage report
         try:
@@ -190,10 +221,38 @@ class MDProcessor:
         
         return True
     
-    
-    
+    # create a bilingual markdown file
+    def _create_bilingual_content(self, input:str, output:str) -> str:
+        """
+        Create a bilingual markdown file.
+        """
+        # TODO: debug setting is not working, need to fix it (in conflict with the global logging setting?)
+        # Debug: Check types of input parameters
+        self.logger.debug(f"DEBUG: input type: {type(input)}, output type: {type(output)}")
+        self.logger.debug(f"DEBUG: input first 100 chars: {str(input)[:100]}")
+        self.logger.debug(f"DEBUG: output first 100 chars: {str(output)[:100]}")
+
+        # split the input and output into lists of lines
+        input_lines = input.strip().split("\n")
+        output_lines = output.strip().split("\n")
+
+        # create a bilingual string content, with the input and output lines alternated
+        bilingual_content = ""
+        for i in range(len(input_lines)):
+            try:
+                prefix = "" # change prefix to i for debugging when needed
+                bilingual_content += f"{prefix}{input_lines[i]}{output_lines[i]}\n"
+            except Exception as e:
+                warning(f"Inconsistancy detected in the {i}th line of the bilingual content: {str(e)}")
+                print(f"Input line: {input_lines[i]}")
+                break
+
+        return bilingual_content
+
+
+    # save content to a file
     def _save_content(self, type:SaveType, content_name: str, content: str, 
-                      paper_output_dir: Path) -> None:
+                      paper_output_dir: Path, console_print: bool = True) -> None:
         """
         Save a prompt to a file for inspection.
         
@@ -211,9 +270,8 @@ class MDProcessor:
         try:
             with open(f"{save_dir}/{content_name}.md", 'w', encoding='utf-8') as f:
                 f.write(content)
-            if type == SaveType.RESPONSE:
+            if type == SaveType.RESPONSE and console_print:
                 user_message(f"{content}")
-                progress(f"Saved: {save_dir}/{content_name}.md")
         except Exception as e:
             logging.error(f"Error saving content: {str(e)}")
     
