@@ -71,13 +71,57 @@ quick-test:  ## Quick test cycle for development
 	@echo "Running quick development tests..."
 	python -m pytest tests/unit/ -v --tb=short
 
-# Multi-source development (for your planned feature)
+# Multi-source development
 test-multi-source:  ## Test multi-source functionality (budget models)
 	python -m pytest tests/integration/test_multi_source_processing.py -v -m "budget_llm"
 
+# Bilingual translation development
+test-bilingual:  ## Test bilingual translation functionality
+	python -m pytest tests/integration/ -v -k "bilingual or translate" -m "budget_llm"
+
+# Development workflow with different providers
+dev-test-gemini:  ## Quick test with Gemini models
+	editor-assistant outline --article paper:tests/fixtures/sample.pdf --model gemini-2.5-pro --debug
+
+dev-test-deepseek:  ## Quick test with Deepseek models
+	editor-assistant brief --article web:"https://example.com" --model deepseek-v3.1 --debug
+
+dev-test-doubao:  ## Quick test with Doubao models
+	editor-assistant translate --article paper:tests/fixtures/sample.pdf --model doubao-pro-32k
+
 # Example usage
-example-news:  ## Run example news generation
-	editor-assistant news "https://example.com" --model deepseek-v3-latest --debug
+example-brief:  ## Run example brief news generation (multi-source)
+	editor-assistant brief --article paper:"https://example.com" --model deepseek-v3.1 --debug
+
+example-news:  ## Alias for example-brief (backward compatibility)
+	$(MAKE) example-brief
 
 example-outline:  ## Run example research outline
-	editor-assistant outline example.pdf --model deepseek-r1-latest
+	editor-assistant outline --article paper:example.pdf --model deepseek-r1-latest
+
+example-translate:  ## Run example bilingual translation
+	editor-assistant translate --article paper:example.pdf --model gemini-2.5-pro --debug
+
+example-translate-deepseek:  ## Run example translation with Deepseek
+	editor-assistant translate --article paper:example.pdf --model deepseek-v3.1
+
+example-translate-doubao:  ## Run example translation with Doubao
+	editor-assistant translate --article paper:example.pdf --model doubao-pro-32k
+
+example-brief-multi-provider:  ## Run example brief with different providers
+	editor-assistant brief --article web:"https://example.com" --article paper:example.pdf --model deepseek-v3.1 --debug
+
+example-outline-gemini:  ## Run example outline with Gemini
+	editor-assistant outline --article paper:example.pdf --model gemini-2.5-pro --debug
+
+example-convert:  ## Run example file conversion
+	editor-assistant convert example.pdf -o converted/
+
+example-convert-multiple:  ## Convert multiple files
+	editor-assistant convert *.pdf *.docx -o converted/
+
+example-clean:  ## Run example HTML cleaning
+	editor-assistant clean "https://example.com/article.html" -o clean.md
+
+example-clean-local:  ## Clean local HTML file
+	editor-assistant clean example.html --stdout
