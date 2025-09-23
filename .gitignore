@@ -51,21 +51,17 @@ llm_summaries/
 samples/
 *.log
 webpage/
-backup/
-<<<<<<< HEAD
-=======
-Makefile
->>>>>>> 9256c5b (Refactor project structure and enhance functionality)
 
-# Dev notes
+# Development and backup files
+backup/
+scripts/
 dev_notes/
 
-# Agent doc
+# Documentation (agent-specific)
 GEMINI.md
 CLAUDE.md
 docs/
 
-# test files
+# Testing (keep tests untracked for now)
 tests/
 pytest.ini
-scripts/
