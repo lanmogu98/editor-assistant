@@ -38,7 +38,7 @@ deepseek:
 
 gemini:
   api_key_env_var: "GEMINI_API_KEY"
-  api_base_url: "https://generativelanguage.googleapis.com/v1beta/models"
+  api_base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
   temperature: 0.5
   max_tokens: 65536
   context_window: 200000
