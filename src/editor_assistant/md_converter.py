@@ -132,13 +132,13 @@ class MarkdownConverter:
                 from .clean_html_to_md import CleanHTML2Markdown
                 md_article = CleanHTML2Markdown().convert(content_path)
                 if md_article is None:
-                    self.logger.warning (
+                    self.logger.debug (
                         "Failed to convert with CleanHTML2Markdown:" 
                         f"{content_path}"
                     )
                       
             except Exception as e:
-                self.logger.warning (
+                self.logger.debug (
                     "Failed to convert with CleanHTML2Markdown:"
                     f"{str(e)} - {content_path}"
                 )
@@ -163,7 +163,6 @@ class MarkdownConverter:
                 error (f"Failed to convert input with MarkItDown: {str(e)}")    
                 return None
         
-        # TODO: save the content to a centralized directory
         if "https:" in content_path:
             output_dir = Path(content_path.replace("https:", "webpage")).parent
         else:

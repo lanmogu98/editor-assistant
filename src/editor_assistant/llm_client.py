@@ -50,14 +50,29 @@ class LLMClient:
         self.max_tokens = provider_settings.max_tokens
         self.model_name = model_name
         self.model = model_details.id  # Use the specific ID for the API call
-        self.api_url = provider_settings.api_base_url
         self.pricing = model_details.pricing
         self.pricing_currency = provider_settings.pricing_currency
         self.temperature = provider_settings.temperature
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        
+        # 4. Check if this is Gemini (needs special handling)
+        self.is_gemini = "gemini" in model_name.lower()
+        
+        # 5. Set up API URL and headers based on provider
+        if self.is_gemini:
+            # Gemini uses a different URL format with model in path
+            self.api_url = f"{provider_settings.api_base_url}/{model_details.id}:generateContent"
+            self.headers = {
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key
+            }
+        else:
+            # Standard OpenAI-compatible format
+            self.api_url = provider_settings.api_base_url
+            self.headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            }
+        
         # set up the request overrides if there is any
         self.request_overrides = provider_settings.request_overrides or {}
         
@@ -91,15 +106,34 @@ class LLMClient:
         """
         start_time = time.time()
         
-        data = {
-            "model": self.model,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            **self.request_overrides
-        }
+        # Build request data based on provider format
+        if self.is_gemini:
+            # Gemini format
+            data = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt}
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": self.temperature,
+                    "maxOutputTokens": self.max_tokens,
+                },
+                **self.request_overrides
+            }
+        else:
+            # Standard OpenAI-compatible format
+            data = {
+                "model": self.model,
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+                **self.request_overrides
+            }
         
         # Implement retry logic with exponential backoff
         max_retries = 3
@@ -111,11 +145,21 @@ class LLMClient:
                 response.raise_for_status()
                 
                 result = response.json()
-                response_text = result["choices"][0]["message"]["content"]
                 
-                # Track token usage
-                input_tokens = result.get("usage", {}).get("prompt_tokens", 0)
-                output_tokens = result.get("usage", {}).get("completion_tokens", 0)
+                # Extract response text based on provider format
+                if self.is_gemini:
+                    # Gemini response format
+                    response_text = result["candidates"][0]["content"]["parts"][0]["text"]
+                    # Extract token usage from Gemini response
+                    usage_metadata = result.get("usageMetadata", {})
+                    input_tokens = usage_metadata.get("promptTokenCount", 0)
+                    output_tokens = usage_metadata.get("candidatesTokenCount", 0)
+                else:
+                    # Standard OpenAI format
+                    response_text = result["choices"][0]["message"]["content"]
+                    # Track token usage
+                    input_tokens = result.get("usage", {}).get("prompt_tokens", 0)
+                    output_tokens = result.get("usage", {}).get("completion_tokens", 0)
                 
                 # Calculate costs
                 input_cost = (input_tokens / 1_000_000) * self.pricing.input
