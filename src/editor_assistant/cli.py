@@ -29,45 +29,48 @@ def add_common_arguments(parser):
         help="Enable debug mode with detailed logging"
     )
 
-def make_article_parser(allowed_types: set[str] | None = None):
-    """Return a parse-time validator for TYPE:PATH to an Input object."""
-    def _parser(spec: str) -> Input:
-        if ":" not in spec:
-            raise argparse.ArgumentTypeError("Each --article must be in the format 'type:path'")
-        type_str, path = spec.split(":", 1)
-        type_str = type_str.strip().lower()
-        try:
-            src_type = SourceType(type_str)
-        except ValueError:
-            raise argparse.ArgumentTypeError("Invalid source type. Use 'paper' or 'news'.")
-        if allowed_types and type_str not in allowed_types:
-            allowed_msg = ", ".join(sorted(allowed_types))
-            raise argparse.ArgumentTypeError(f"Unsupported type '{type_str}'. Allowed: {allowed_msg}")
-        if not path.strip():
-            raise argparse.ArgumentTypeError("Path portion in TYPE:PATH cannot be empty")
-        return Input(type=src_type, path=path)
-    return _parser
 
+
+def parse_source_spec(spec: str) -> Input:
+    """Parse key=value format into Input object."""
+    if "=" not in spec:
+        raise argparse.ArgumentTypeError("Sources must be in format 'type=path' (e.g., paper=file.pdf, news=url.com)")
+
+    type_str, path = spec.split("=", 1)
+    type_str = type_str.strip().lower()
+
+    if type_str not in ["paper", "news"]:
+        raise argparse.ArgumentTypeError(f"Invalid source type '{type_str}'. Use 'paper' or 'news'")
+
+    if not path.strip():
+        raise argparse.ArgumentTypeError("Path cannot be empty in 'type=path' format")
+
+    src_type = SourceType.PAPER if type_str == "paper" else SourceType.NEWS
+    return Input(type=src_type, path=path.strip())
 
 def cmd_generate_brief(args):
     """Generate brief news from one or more sources (multi-source supported)."""
     assistant = EditorAssistant(args.model, debug_mode=args.debug)
-    assistant.process_multiple(args.article, ProcessType.BRIEF)
+
+    # Parse key=value sources into Input objects
+    inputs = [parse_source_spec(source) for source in args.sources]
+
+    assistant.process_multiple(inputs, ProcessType.BRIEF)
 
 
 def cmd_generate_outline(args):
-    """Generate research outlines from a single paper (requires explicit type)."""
+    """Generate research outlines from a single paper."""
     assistant = EditorAssistant(args.model, debug_mode=args.debug)
-    if len(args.article) != 1:
-        raise ValueError("outline requires exactly one --article of type 'paper'")
-    assistant.process_multiple([args.article[0]], ProcessType.OUTLINE)
+    # Create Input object for the paper
+    input_obj = Input(type=SourceType.PAPER, path=args.input_file)
+    assistant.process_multiple([input_obj], ProcessType.OUTLINE)
 
 def cmd_generate_translate(args):
-    """Generate translate from a single paper (requires explicit type)."""
+    """Generate translation from a single paper."""
     assistant = EditorAssistant(args.model, debug_mode=args.debug)
-    if len(args.article) != 1:
-        raise ValueError("translate requires exactly one --article of type 'paper'")
-    assistant.process_multiple([args.article[0]], ProcessType.TRANSLATE)
+    # Create Input object for the paper
+    input_obj = Input(type=SourceType.PAPER, path=args.input_file)
+    assistant.process_multiple([input_obj], ProcessType.TRANSLATE)
 
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
@@ -128,10 +131,11 @@ def create_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s brief --article paper:https://arxiv.org/pdf/2508.08443
-  %(prog)s brief --article paper:paper.pdf --article news:https://example.com/article \
+  %(prog)s brief paper=https://arxiv.org/pdf/2508.08443
+  %(prog)s brief paper=paper.pdf news=https://example.com/article \
                  --model deepseek-r1-latest --debug
-  %(prog)s outline --article paper:paper.pdf --model deepseek-r1-latest
+  %(prog)s outline paper.pdf --model deepseek-r1-latest
+  %(prog)s translate paper.pdf --model deepseek-r1-latest
   %(prog)s convert *.pdf -o ./markdown/
   %(prog)s clean https://example.com/page.html -o clean.md
 """
@@ -152,35 +156,28 @@ Examples:
     )
     
     # Brief (short news generation) command - multi-source supported
-    news_parser = subparsers.add_parser(
+    brief_parser = subparsers.add_parser(
         "brief",
         help="Generate brief news from research content",
         description="Convert research papers and articles into short news format"
     )
-    news_parser.add_argument(
-        "--article",
-        action="append",
-        required=True,
-        type=make_article_parser({"paper", "news"}),
-        metavar="TYPE:PATH",
-        help="Add a source as TYPE:PATH (TYPE in {paper,news}); repeatable"
+    brief_parser.add_argument(
+        "sources",
+        nargs="+",
+        help="Sources in format 'type=path' (e.g., paper=file.pdf news=url.com)"
     )
-    add_common_arguments(news_parser)
-    news_parser.set_defaults(func=cmd_generate_brief)
+    add_common_arguments(brief_parser)
+    brief_parser.set_defaults(func=cmd_generate_brief)
     
-    # Research outline command  
+    # Research outline command
     outline_parser = subparsers.add_parser(
-        "outline", 
+        "outline",
         help="Generate research outlines and summaries",
         description="Create detailed outlines and Chinese translations of research papers"
     )
     outline_parser.add_argument(
-        "--article",
-        action="append",
-        required=True,
-        type=make_article_parser({"paper"}),
-        metavar="TYPE:PATH",
-        help="Add a paper source as TYPE:PATH (TYPE must be 'paper')"
+        "input_file",
+        help="Path to research paper (PDF, DOCX, or markdown file)"
     )
     add_common_arguments(outline_parser)
     outline_parser.set_defaults(func=cmd_generate_outline)
@@ -188,16 +185,12 @@ Examples:
     # Translate command
     translate_parser = subparsers.add_parser(
         "translate",
-        help="Generate translate from a single paper",
-        description="Create detailed outlines and Chinese translations of research papers"
+        help="Generate Chinese translation from a single paper",
+        description="Create Chinese translations of research papers"
     )
     translate_parser.add_argument(
-        "--article",
-        action="append",
-        required=True,
-        type=make_article_parser({"paper"}),
-        metavar="TYPE:PATH",
-        help="Add a paper source as TYPE:PATH (TYPE must be 'paper')"
+        "input_file",
+        help="Path to research paper (PDF, DOCX, or markdown file)"
     )
     add_common_arguments(translate_parser)
     translate_parser.set_defaults(func=cmd_generate_translate)

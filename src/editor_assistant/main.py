@@ -47,6 +47,7 @@ class EditorAssistant:
                 error (f"failed to convert {input.path}: {str(e)} to md")
                 return 
 
+        progress("Input formatted as markdown files ready for processing.")
         # process the md files
         try:
             success = self.md_processor.process_mds (md_articles, process_type)

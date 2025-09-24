@@ -4,23 +4,18 @@
 
 ## English
 
-A powerful AI-powered Python tool for automatically converting, processing, and generating content from research papers, news articles, PDFs, and web pages using Large Language Models (LLMs). The system provides intelligent content processing with specialized workflows for research summaries and news generation.
+A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
 
 ### 🚀 Features
 
-- **Unified CLI Interface**: Professional command-line tool with subcommands (`editor-assistant brief`, `editor-assistant outline`, `editor-assistant translate`)
-- **Multi-format Content Conversion**: Converts PDFs, DOCs, web pages, and other formats to markdown
-- **Intelligent Content Processing**: Single-context processing for documents up to 128k+ tokens
-- **Triple Content Processing Types**:
-  - **Research Outlines**: Detailed analysis and Chinese translation of research papers
-  - **News Generation**: Convert research content into news articles for researcher audiences
-  - **Bilingual Translation**: Standalone Chinese translation with dual-format output (translation-only + bilingual side-by-side)
-- **Advanced Logging System**: Clean console output with optional debug mode and file logging
-- **Comprehensive Analytics**: Token usage tracking, cost calculation, and processing time analysis
-- **Multiple LLM Providers**: Supports Deepseek, Gemini, Kimi, Doubao, Qwen, and GLM models
-- **Full Transparency**: Saves all prompts, responses, and processing reports
-- **Request Overrides**: Support for provider-specific API parameters (e.g., OpenRouter provider routing)
-- **Metadata Integration**: Automatically includes document title and source path in generated responses
+- **Simple CLI Interface**: Command-line tool with 5 main commands
+- **Multi-format Input**: Processes PDFs, DOCs, web pages, URLs, and markdown files
+- **Three Content Types**:
+  - **Brief News**: Convert research papers into short news articles
+  - **Research Outlines**: Generate detailed outlines with Chinese translation
+  - **Translation**: Standalone Chinese translation with bilingual output
+- **Multiple LLM Support**: Works with Deepseek, Gemini, and other providers
+- **Debug Logging**: Optional detailed logging for troubleshooting
 
 ### 📋 Prerequisites
 
@@ -103,27 +98,23 @@ ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
 **Generate Brief News (multi-source supported):**
 
 ```bash
-editor-assistant brief --article paper:https://example.com/research-article
-editor-assistant brief \
-  --article paper:paper.pdf \
-  --article news:https://example.com/related-news \
-  --article news:context.md \
-  --model deepseek-r1-latest --debug
+editor-assistant brief paper=https://example.com/research-article
+editor-assistant brief paper=paper.pdf news=https://example.com/related-news news=context.md --model deepseek-r1-latest --debug
 ```
 
 **Generate Research Outlines (single source):**
 
 ```bash
-editor-assistant outline --article paper:https://arxiv.org/paper.pdf
-editor-assistant outline --article paper:paper.pdf --model deepseek-r1-latest
+editor-assistant outline https://arxiv.org/paper.pdf
+editor-assistant outline paper.pdf --model deepseek-r1-latest
 ```
 
 **Generate Chinese Translations with Bilingual Output (single source):**
 
 ```bash
-editor-assistant translate --article paper:https://arxiv.org/paper.pdf
-editor-assistant translate --article paper:document.pdf --model gemini-2.5-pro
-editor-assistant translate --article paper:research.md --model deepseek-r1-latest --debug
+editor-assistant translate https://arxiv.org/paper.pdf
+editor-assistant translate document.pdf --model gemini-2.5-pro
+editor-assistant translate research.md --model deepseek-r1-latest --debug
 ```
 
 *Note: Translation generates both Chinese-only and bilingual side-by-side versions*
@@ -140,15 +131,6 @@ editor-assistant convert *.docx -o converted/
 ```bash
 editor-assistant clean "https://example.com/page.html" -o clean.md
 editor-assistant clean page.html --stdout
-```
-
-### Legacy Commands (Backward Compatible)
-
-```bash
-generate_news "https://example.com/article"    # Same as: editor-assistant brief
-generate_outline --article paper:paper.pdf     # Same as: editor-assistant outline
-any2md document.pdf                           # Same as: editor-assistant convert  
-html2md page.html                             # Same as: editor-assistant clean
 ```
 
 ### Global Options
@@ -172,12 +154,12 @@ assistant.process_multiple(
     ProcessType.OUTLINE
 )
 
-# Generate multi-source brief (paper + reports)
+# Generate multi-source brief (paper + news)
 assistant.process_multiple(
     [
         Input(type=SourceType.PAPER, path="paper.pdf"),
-        Input(type=SourceType.REPORT, path="https://example.com/news"),
-        Input(type=SourceType.REPORT, path="context.md"),
+        Input(type=SourceType.NEWS, path="https://example.com/news"),
+        Input(type=SourceType.NEWS, path="context.md"),
     ],
     ProcessType.BRIEF
 )
@@ -245,148 +227,8 @@ llm_summaries/
 │       └── token_usage.txt
 ```
 
-### 🔍 Content Processing Workflow
-
-#### Research Papers (Outline Generation)
-1. **Content Conversion**: Convert input to clean markdown
-2. **Research Analysis**: Generate comprehensive outline with methodology, findings, and significance
-3. **Chinese Translation**: Translate the outline to Chinese
-4. **Reporting**: Generate token usage and processing time reports
-
-#### News Generation
-1. **Content Conversion**: Convert input to clean markdown
-2. **News Generation**: Create 400-word news articles tailored for researcher audiences
-3. **Scientific Focus**: Emphasize methodology, data, and research significance
-4. **Reporting**: Generate processing analytics
-
-#### Translation Processing (Standalone)
-1. **Content Conversion**: Convert input to clean markdown
-2. **Chinese Translation**: Generate accurate Chinese translation preserving academic terminology
-3. **Bilingual Output Generation**: Create side-by-side English-Chinese comparison document
-4. **Dual File Export**: Save both translation-only and bilingual versions
-5. **Reporting**: Generate token usage and processing time reports
-
-### 📈 Analytics & Monitoring
-
-- **Clean Console Output**: Professional logging with colored symbols (•, ⚠, ✗)
-- **Token Usage Tracking**: Concise summary with detailed file reports
-- **Cost Calculation**: Automatic cost calculation in Chinese Yuan (¥)
-- **Processing Time Analysis**: Total time and step-by-step breakdown
-- **Debug Mode**: Comprehensive file logging when `--debug` flag is used
-
-### 🔧 Advanced Features
-
-#### Recent Improvements
-- **Bilingual Translation Output**: Automatic generation of side-by-side English-Chinese bilingual documents for translation tasks
-- **Enhanced LLM Client**: Improved request handling with provider-specific overrides supporting 6+ LLM providers
-- **Gemini OpenAI Compatibility**: Updated Gemini integration to use OpenAI-compatible endpoints for better reliability
-- **Metadata Integration**: Document titles and source paths are automatically prepended to responses
-- **OpenRouter Support**: Full support for OpenRouter API with provider routing
-- **Content Validation**: Built-in content size validation against model context windows
-- **Improved Error Handling**: Granular exception handling with graceful degradation and detailed logging
 
 
-
-```bash
-# Show configuration location and available options
-editor-assistant config show
-
-# Initialize user configuration (done automatically on first run)
-editor-assistant config init
-
-# View available models
-editor-assistant config models
-```
-
-**Configuration Structure:**
-```text
-~/.editor_assistant/
-├── user_prompts/               # Customizable prompt templates
-│   ├── news_generator.txt      # Edit to customize news generation
-│   ├── research_outliner.txt   # Edit to customize research outlines
-│   └── translator.txt          # Edit to customize translation
-└── user_llm_config.yml         # Add custom models and providers
-```
-
-#### Customizable Prompt Templates
-Prompts are stored as `.txt` files for easy editing:
-
-```bash
-# Edit news generation prompt
-nano ~/.editor_assistant/user_prompts/news_generator.txt
-
-# Edit research outline prompt  
-nano ~/.editor_assistant/user_prompts/research_outliner.txt
-
-# Changes take effect immediately
-```
-
-**Benefits:**
-- **No source code modification**: Safe customization without breaking the system
-- **Jinja2 templating**: Support for variables and logic in prompts
-- **Immediate effect**: Changes apply to next generation without restart
-- **Version control friendly**: Keep your custom prompts in git
-
-#### Add Custom Models
-Easily add new LLM models and providers:
-
-```bash
-# Add a custom OpenAI model
-editor-assistant config add-model \
-  --provider openai \
-  --model-name gpt-4-custom \
-  --model-id gpt-4-0125-preview \
-  --input-price 30.0 \
-  --output-price 60.0 \
-  --max-tokens 4000 \
-  --context-window 128000
-
-# Add a custom local model
-editor-assistant config add-model \
-  --provider ollama \
-  --model-name llama3-local \
-  --model-id llama3:70b \
-  --input-price 0.0 \
-  --output-price 0.0
-```
-
-**Model Configuration Example:**
-```yaml
-# ~/.editor_assistant/user_llm_config.yml
-openai:
-  api_key_env_var: "OPENAI_API_KEY"
-  api_base_url: "https://api.openai.com/v1/chat/completions"
-  temperature: 0.5
-  max_tokens: 4000
-  context_window: 128000
-  models:
-    gpt-4-custom:
-      id: "gpt-4-0125-preview"
-      pricing: { input: 30.0, output: 60.0 }
-```
-
-#### Centralized Logging System
-```bash
-# Normal mode: Clean console output
-editor-assistant news paper.pdf
-
-# Debug mode: Detailed logging to files
-editor-assistant news paper.pdf --debug
-# Creates logs/editor_assistant_TIMESTAMP.log
-```
-
-#### Scientific News Generation
-The news generation is specifically designed for researcher audiences:
-- Preserves technical details and methodology
-- Emphasizes scientific significance
-- Includes proper citations and publication information
-- Maintains academic rigor while improving readability
-
-#### Professional CLI Design
-- Git-like subcommand structure
-- Consistent argument patterns
-- Comprehensive help system
-- Backward compatibility with old commands
 
 ### 🛡️ Error Handling
 
@@ -394,26 +236,6 @@ The news generation is specifically designed for researcher audiences:
 - **Content Size Validation**: Checks content against model context windows
 - **Graceful Degradation**: Provides meaningful error messages
 - **Process Time Safety**: Prevents division by zero errors in reporting
-
-### 🔧 Configuration Files
-
-The system uses YAML configuration for model settings. The main configuration file is located at `src/editor_assistant/config/llm_config.yml` and contains all provider settings, model details, and pricing information.
-
-```yaml
-# src/editor_assistant/config/llm_config.yml
-deepseek:
-  api_key_env_var: "DEEPSEEK_API_KEY"
-  api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
-  temperature: 0.4
-  max_tokens: 16000
-  context_window: 128000
-  pricing_currency: "¥"
-  models:
-    deepseek-r1-latest:
-      id: "deepseek-r1-250528"
-      pricing: { input: 4.00, output: 16.00 }
-```
-
 
 ### 📝 License
 
@@ -439,23 +261,18 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 ### 编辑助手 (Editor Assistant)
 
-一个强大的AI驱动的Python工具，使用大型语言模型（LLM）自动转换、处理和生成研究论文、新闻文章、PDF和网页内容。该系统为研究摘要和新闻生成提供智能内容处理和专门工作流程。
+一个简单的AI驱动的Python命令行工具，用于处理研究论文并使用大型语言模型（LLM）生成内容。专为个人研究工作流程自动化设计。
 
 ### 🚀 功能特色
 
-- **统一CLI界面**：专业的命令行工具，带有子命令（`editor-assistant brief`、`editor-assistant outline`、`editor-assistant translate`）
-- **多格式内容转换**：将PDF、DOC、网页和其他格式转换为markdown
-- **智能内容处理**：支持高达128k+令牌的单一上下文文档处理
-- **三重内容处理类型**：
-  - **研究大纲**：研究论文的详细分析(提供中英双语版本)
-  - **新闻生成**：将研究内容转换为面向研究人员受众的新闻文章
-  - **双语翻译**：独立的中文翻译功能，提供双格式输出（纯翻译版本+双语对照版本）
-- **高级日志系统**：清洁的控制台输出，带有可选的调试模式和文件日志
-- **全面分析**：令牌使用跟踪、成本计算和处理时间分析
-- **多个LLM提供商**：支持Deepseek、Gemini、Kimi、Doubao、Qwen和GLM模型
-- **完全透明**：保存所有提示、响应和处理报告
-- **请求覆盖**：支持提供商特定的API参数（如OpenRouter提供商路由）
-- **元数据集成**：自动在生成的响应中包含文档标题和源路径
+- **简单CLI界面**：包含5个主要命令的命令行工具
+- **多格式输入**：处理PDF、DOC、网页、URL和markdown文件
+- **三种内容类型**：
+  - **简讯**：将研究论文转换为短新闻文章
+  - **研究大纲**：生成详细大纲并提供中文翻译
+  - **翻译**：独立的中文翻译，支持双语输出
+- **多LLM支持**：兼容Deepseek、Gemini等提供商
+- **调试日志**：可选的详细日志记录用于故障排除
 
 ### 📋 依赖条件
 
@@ -504,27 +321,27 @@ export DOUBAO_API_KEY=your_doubao_api_key
 **生成简讯（支持多来源）：**
 
 ```bash
-editor-assistant brief --article paper:https://example.com/research-article
+editor-assistant brief paper=https://example.com/research-article
 editor-assistant brief \
-  --article paper:paper.pdf \
-  --article news:https://example.com/related-news \
-  --article news:context.md \
+  paper=paper.pdf \
+  news=https://example.com/related-news \
+  news=context.md \
   --model deepseek-r1-latest --debug
 ```
 
 **生成研究大纲（仅单来源，paper）：**
 
 ```bash
-editor-assistant outline --article paper:https://arxiv.org/paper.pdf
-editor-assistant outline --article paper:paper.pdf --model deepseek-r1-latest
+editor-assistant outline https://arxiv.org/paper.pdf
+editor-assistant outline paper.pdf --model deepseek-r1-latest
 ```
 
 **生成双语对照中文翻译（仅单来源，paper）：**
 
 ```bash
-editor-assistant translate --article paper:https://arxiv.org/paper.pdf
-editor-assistant translate --article paper:document.pdf --model gemini-2.5-pro
-editor-assistant translate --article paper:research.md --model deepseek-r1-latest --debug
+editor-assistant translate https://arxiv.org/paper.pdf
+editor-assistant translate document.pdf --model gemini-2.5-pro
+editor-assistant translate research.md --model deepseek-r1-latest --debug
 ```
 
 *注意：翻译功能同时生成纯中文版本和双语对照版本*
@@ -543,14 +360,6 @@ editor-assistant clean "https://example.com/page.html" -o clean.md
 editor-assistant clean page.html --stdout
 ```
 
-#### 传统命令（向后兼容）
-
-```bash
-generate_news "https://example.com/article"    # 等同于：editor-assistant brief
-generate_outline --article paper:paper.pdf     # 等同于：editor-assistant outline
-any2md document.pdf                           # 等同于：editor-assistant convert  
-html2md page.html                             # 等同于：editor-assistant clean
-```
 
 ### 🤖 支持的模型
 
@@ -580,51 +389,6 @@ html2md page.html                             # 等同于：editor-assistant cle
 - `glm-4.5` - 高性能模型（通过智谱AI）
 - `glm-4.5-openrouter` - 高性能模型（通过OpenRouter）
 
-### 🔍 内容处理工作流程
-
-#### 研究论文（大纲生成）
-1. **内容转换**：将输入转换为清洁的markdown
-2. **研究分析**：生成包含方法论、发现和意义的综合大纲
-3. **中文翻译**：将大纲翻译成中文
-4. **报告**：生成令牌使用和处理时间报告
-
-#### 新闻生成
-1. **内容转换**：将输入转换为清洁的markdown
-2. **新闻生成**：创建面向研究人员受众的400字新闻文章
-3. **科学重点**：强调方法论、数据和研究意义
-4. **报告**：生成处理分析
-
-#### 翻译处理（独立功能）
-1. **内容转换**：将输入转换为清洁的markdown
-2. **中文翻译**：生成保持学术术语准确性的中文翻译
-3. **双语对照生成**：创建英中对照比较文档
-4. **双文件导出**：保存纯翻译版本和双语版本
-5. **报告**：生成令牌使用和处理时间报告
-
-### 📈 分析与监控
-
-- **清洁控制台输出**：带有彩色符号的专业日志记录（•、⚠、✗）
-- **令牌使用跟踪**：简洁摘要与详细文件报告
-- **成本计算**：自动计算人民币或美元成本
-
-### 🔧 高级功能
-
-#### 集中化日志系统
-```bash
-# 普通模式：清洁控制台输出
-editor-assistant brief --article paper:paper.pdf
-
-# 调试模式：详细的文件日志记录
-editor-assistant brief --article paper:paper.pdf --debug
-# 创建logs/editor_assistant_TIMESTAMP.log
-```
-
-#### 科学新闻生成
-新闻生成专门为研究人员受众设计：
-- 保留技术细节和方法论
-- 强调科学意义
-- 包含适当的引用和发表信息
-- 在提高可读性的同时保持学术严谨性
 
 
 ### 📝 许可证
