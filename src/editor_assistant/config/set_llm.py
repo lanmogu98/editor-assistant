@@ -22,6 +22,7 @@ class LLMModel(str, Enum):
     qwen3_max = "qwen3-max"
     # zhipu
     glm_4_5 = "glm-4.5"
+    glm_4_6 = "glm-4.6"
     glm_4_5_openrouter = "glm-4.5-or"
     # doubao
     doubao_seed_1_6 = "doubao-seed-1.6"

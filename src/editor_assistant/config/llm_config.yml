@@ -103,11 +103,14 @@ zhipu:
   temperature: 0.6
   max_tokens: 96000
   context_window: 128000
-  pricing_currency: "¥"
+  pricing_currency: "$"
   models:
     glm-4.5:
       id: "glm-4.5"
-      pricing: {input: 0.80, output: 8.00}
+      pricing: {input: 0.60, output: 2.20}
+    glm-4.6:
+      id: "glm-4.6"
+      pricing: {input: 0.60, output: 2.20}
 
 zhipu-openrouter:
   api_key_env_var: "ZHIPU_API_KEY_OPENROUTER"
