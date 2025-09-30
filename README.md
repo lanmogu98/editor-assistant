@@ -6,6 +6,8 @@
 
 A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
 
+**Version: 0.2** | [See Breaking Changes](#-breaking-changes-in-v02)
+
 ### 🚀 Features
 
 - **Simple CLI Interface**: Command-line tool with 5 main commands
@@ -28,6 +30,8 @@ A simple AI-powered Python CLI tool for processing research papers and generatin
   - **Qwen**: `QWEN_API_KEY` environment variable (via Alibaba Cloud)
   - **GLM**: `ZHIPU_API_KEY` environment variable (via Zhipu AI)
   - **GLM (OpenRouter)**: `ZHIPU_API_KEY_OPENROUTER` environment variable (via OpenRouter)
+  - **OpenAI (OpenRouter)**: `OPENAI_API_KEY` environment variable (via OpenRouter)
+  - **Anthropic (OpenRouter)**: `ANTHROPIC_API_KEY` environment variable (via OpenRouter)
 
 ## 🛠️ Installation
 
@@ -77,6 +81,12 @@ export ZHIPU_API_KEY=your_zhipu_api_key
 
 # For GLM models (via OpenRouter)
 export ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
+
+# For OpenAI models (via OpenRouter)
+export OPENAI_API_KEY=your_openrouter_api_key
+
+# For Anthropic models (via OpenRouter)
+export ANTHROPIC_API_KEY=your_openrouter_api_key
 ```
 
 Or create a `.env` file:
@@ -89,6 +99,8 @@ DOUBAO_API_KEY=your_doubao_api_key
 QWEN_API_KEY=your_qwen_api_key
 ZHIPU_API_KEY=your_zhipu_api_key
 ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
+OPENAI_API_KEY=your_openrouter_api_key
+ANTHROPIC_API_KEY=your_openrouter_api_key
 ```
 
 ## 🎯 Usage
@@ -99,14 +111,14 @@ ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
 
 ```bash
 editor-assistant brief paper=https://example.com/research-article
-editor-assistant brief paper=paper.pdf news=https://example.com/related-news news=context.md --model deepseek-r1-latest --debug
+editor-assistant brief paper=paper.pdf news=https://example.com/related-news news=context.md --model deepseek-r1 --debug
 ```
 
 **Generate Research Outlines (single source):**
 
 ```bash
 editor-assistant outline https://arxiv.org/paper.pdf
-editor-assistant outline paper.pdf --model deepseek-r1-latest
+editor-assistant outline paper.pdf --model deepseek-r1
 ```
 
 **Generate Chinese Translations with Bilingual Output (single source):**
@@ -114,7 +126,7 @@ editor-assistant outline paper.pdf --model deepseek-r1-latest
 ```bash
 editor-assistant translate https://arxiv.org/paper.pdf
 editor-assistant translate document.pdf --model gemini-2.5-pro
-editor-assistant translate research.md --model deepseek-r1-latest --debug
+editor-assistant translate research.md --model deepseek-r1 --debug
 ```
 
 *Note: Translation generates both Chinese-only and bilingual side-by-side versions*
@@ -135,7 +147,7 @@ editor-assistant clean page.html --stdout
 
 ### Global Options
 
-- `--model`: Choose LLM model (default: deepseek-r1-latest)
+- `--model`: Choose LLM model (default: glm-4.5-or)
 - `--debug`: Enable detailed debug logging with file output
 - `--version`: Show version information
 
@@ -143,23 +155,23 @@ editor-assistant clean page.html --stdout
 
 ```python
 from editor_assistant.main import EditorAssistant
-from editor_assistant.data_models import ProcessType, SourceType, Input
+from editor_assistant.data_models import ProcessType, InputType, Input
 
 # Initialize with your preferred model
-assistant = EditorAssistant("deepseek-r1-latest", debug_mode=True)
+assistant = EditorAssistant("deepseek-r1", debug_mode=True)
 
 # Generate research outline (single paper)
 assistant.process_multiple(
-    [Input(type=SourceType.PAPER, path="path/to/paper.pdf")],
+    [Input(type=InputType.PAPER, path="path/to/paper.pdf")],
     ProcessType.OUTLINE
 )
 
 # Generate multi-source brief (paper + news)
 assistant.process_multiple(
     [
-        Input(type=SourceType.PAPER, path="paper.pdf"),
-        Input(type=SourceType.NEWS, path="https://example.com/news"),
-        Input(type=SourceType.NEWS, path="context.md"),
+        Input(type=InputType.PAPER, path="paper.pdf"),
+        Input(type=InputType.NEWS, path="https://example.com/news"),
+        Input(type=InputType.NEWS, path="context.md"),
     ],
     ProcessType.BRIEF
 )
@@ -171,13 +183,14 @@ assistant.process_multiple(
 
 - `deepseek-v3.1` - Latest general-purpose model (2025 release)
 - `deepseek-r1` - Advanced reasoning model
-- `deepseek-r1-latest` - Latest reasoning model (recommended)
 - `deepseek-v3` - General-purpose model
-- `deepseek-v3-latest` - Latest general model
+
+#### Deepseek Models (Native API)
+
+- `deepseek-v3.2` - Next-generation reasoning model with enhanced capabilities
 
 #### Gemini Models
 
-- `gemini-2.5-flash-lite` - Fast, lightweight model
 - `gemini-2.5-flash` - Balanced performance model
 - `gemini-2.5-pro` - High-performance model
 
@@ -192,12 +205,23 @@ assistant.process_multiple(
 #### Qwen Models (via Alibaba Cloud)
 
 - `qwen-plus` - General-purpose model with thinking capabilities
-- `qwen-plus-latest` - Latest general model with enhanced reasoning
+- `qwen3-max` - Latest general model with enhanced reasoning
+- `qwen3-max-preview` - Preview version of Qwen3-Max
 
 #### GLM Models
 
 - `glm-4.5` - High-performance model (via Zhipu AI)
-- `glm-4.5-openrouter` - High-performance model (via OpenRouter)
+- `glm-4.5-or` - High-performance model (via OpenRouter)
+
+#### OpenAI Models (via OpenRouter)
+
+- `gpt-4o-or` - GPT-4 Omni model with vision capabilities
+- `gpt-4.1-or` - Latest GPT-4 Turbo model
+- `gpt-5-or` - Next-generation GPT-5 model
+
+#### Anthropic Models (via OpenRouter)
+
+- `claude-sonnet-4-or` - Latest Claude Sonnet 4 model with 200k context
 
 ### 📁 Supported Input Formats
 
@@ -227,8 +251,60 @@ llm_summaries/
 │       └── token_usage.txt
 ```
 
+### ⚠️ Breaking Changes in v0.2
 
+**Important**: Version 0.2 introduces breaking changes. Please review before upgrading.
 
+#### CLI Syntax Changes
+
+**Old syntax (v0.1):**
+```bash
+editor-assistant brief --article paper:paper.pdf --article news:article.md
+editor-assistant outline --article paper:research.pdf
+```
+
+**New syntax (v0.2):**
+```bash
+editor-assistant brief paper=paper.pdf news=article.md
+editor-assistant outline research.pdf
+```
+
+**Why the change?** The new syntax is cleaner, more intuitive, and follows common CLI conventions like `key=value` pairs used in tools like `git` and `docker`.
+
+#### Model Name Changes
+
+Several model names have been updated or removed:
+
+| Old Name (v0.1) | New Name (v0.2) | Status |
+|----------------|----------------|--------|
+| `deepseek-r1-latest` | `deepseek-r1` | ✅ Use `deepseek-r1` |
+| `deepseek-v3-latest` | `deepseek-v3` | ✅ Use `deepseek-v3` |
+| `qwen-plus-latest` | `qwen3-max` or `qwen3-max-preview` | ✅ Use `qwen3-max` |
+| `gemini-2.5-flash-lite` | Removed | ❌ Use `gemini-2.5-flash` instead |
+| `glm-4.5-openrouter` | `glm-4.5-or` | ✅ Renamed for consistency |
+
+**New additions:**
+- `deepseek-v3.2` - Native Deepseek API support
+- `gpt-4o-or`, `gpt-4.1-or`, `gpt-5-or` - OpenAI models via OpenRouter
+- `claude-sonnet-4-or` - Anthropic Claude via OpenRouter
+
+#### Default Model Change
+
+- **Old default**: `deepseek-r1-latest`
+- **New default**: `glm-4.5-or`
+
+**Why?** Better balance of performance, cost, and reliability across different use cases.
+
+#### Migration Guide
+
+1. **Update CLI commands**: Replace `--article type:path` with `type=path`
+2. **Update model names**: Check the table above and update your scripts
+3. **Set new environment variables** (if using new providers):
+   ```bash
+   export OPENAI_API_KEY=your_openrouter_key
+   export ANTHROPIC_API_KEY=your_openrouter_key
+   ```
+4. **Test your workflow** with `--debug` flag to verify everything works
 
 ### 🛡️ Error Handling
 
@@ -285,6 +361,8 @@ For support, please open an issue on GitHub or contact the maintainers.
   - **Qwen**：`QWEN_API_KEY`环境变量（通过阿里云）
   - **GLM**：`ZHIPU_API_KEY`环境变量（通过智谱AI）
   - **GLM (OpenRouter)**：`ZHIPU_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
+  - **OpenAI (OpenRouter)**：`OPENAI_API_KEY`环境变量（通过OpenRouter）
+  - **Anthropic (OpenRouter)**：`ANTHROPIC_API_KEY`环境变量（通过OpenRouter）
 
 ### 🛠️ 安装
 
@@ -326,14 +404,14 @@ editor-assistant brief \
   paper=paper.pdf \
   news=https://example.com/related-news \
   news=context.md \
-  --model deepseek-r1-latest --debug
+  --model deepseek-r1 --debug
 ```
 
 **生成研究大纲（仅单来源，paper）：**
 
 ```bash
 editor-assistant outline https://arxiv.org/paper.pdf
-editor-assistant outline paper.pdf --model deepseek-r1-latest
+editor-assistant outline paper.pdf --model deepseek-r1
 ```
 
 **生成双语对照中文翻译（仅单来源，paper）：**
@@ -341,7 +419,7 @@ editor-assistant outline paper.pdf --model deepseek-r1-latest
 ```bash
 editor-assistant translate https://arxiv.org/paper.pdf
 editor-assistant translate document.pdf --model gemini-2.5-pro
-editor-assistant translate research.md --model deepseek-r1-latest --debug
+editor-assistant translate research.md --model deepseek-r1 --debug
 ```
 
 *注意：翻译功能同时生成纯中文版本和双语对照版本*
@@ -363,31 +441,51 @@ editor-assistant clean page.html --stdout
 
 ### 🤖 支持的模型
 
-#### Deepseek模型（通过火山引擎）
-- `deepseek-v3.1` - 最新通用模型（2025年发布）
-- `deepseek-r1` - 高级推理模型
-- `deepseek-r1-latest` - 最新推理模型（推荐）
-- `deepseek-v3` - 通用模型
-- `deepseek-v3-latest` - 最新通用模型
+#### 由火山引擎提供
 
-#### Gemini模型
-- `gemini-2.5-flash-lite` - 快速、轻量级模型
+##### Deepseek模型
+- `deepseek-v3.1` - 最新混合通用模型（2025年发布）
+- `deepseek-r1` - 推理模型
+- `deepseek-v3` - 基础模型
+
+##### Doubao模型
+- `doubao-seed-1.6` - 高级语言模型，支持256k上下文窗口
+
+##### Kimi模型
+- `kimi-k2` - 高级推理模型
+
+#### 由阿里云提供
+
+##### Qwen模型（阿里云）
+- `qwen-plus` - 具有思考能力的通用模型
+- `qwen3-max` - 最新的增强推理通用模型
+- `qwen3-max-preview` - Qwen3-Max预览版
+
+#### 由谷歌云提供
+
+##### Gemini模型 （google cloud）
 - `gemini-2.5-flash` - 平衡性能模型
 - `gemini-2.5-pro` - 高性能模型
 
-#### Kimi模型（通过火山引擎）
-- `kimi-k2` - 高级推理模型
+#### 由智谱提供
 
-#### Doubao模型（通过火山引擎）
-- `doubao-seed-1.6` - 高级语言模型，支持256k上下文窗口
+##### GLM模型
+- `glm-4.5` - 高性能模型（智谱AI）
 
-#### Qwen模型（通过阿里云）
-- `qwen-plus` - 具有思考能力的通用模型
-- `qwen-plus-latest` - 最新的增强推理通用模型
+#### 由openrouter提供
 
-#### GLM模型
-- `glm-4.5` - 高性能模型（通过智谱AI）
-- `glm-4.5-openrouter` - 高性能模型（通过OpenRouter）
+##### GLM模型
+- `glm-4.5-or` - 高性能模型（智谱，通过OpenRouter）
+
+##### OpenAI模型
+- `gpt-4o-or` - GPT-4 Omni模型，支持视觉功能
+- `gpt-4.1-or` - 最新GPT-4 Turbo模型
+- `gpt-5-or` - 下一代GPT-5模型
+
+##### Anthropic模型
+- `claude-sonnet-4-or` - 最新Claude Sonnet 4模型，支持200k上下文
+
+
 
 
 

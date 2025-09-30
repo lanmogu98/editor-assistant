@@ -1,5 +1,5 @@
 from .md_processesor import MDProcessor
-from .data_models import MDArticle, SourceType, Input, ProcessType
+from .data_models import MDArticle, InputType, Input, ProcessType
 from .md_converter import MarkdownConverter
 from .config.logging_config import setup_logging, progress, error
 import logging
@@ -13,7 +13,7 @@ class EditorAssistant:
         self.md_converter = MarkdownConverter()
     
     # LLM processor for multiple files
-    def process_multiple (self, inputs:list[Input], process_type:ProcessType):       
+    def process_multiple (self, inputs:list[Input], process_type:ProcessType, output_to_console=True):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -47,13 +47,16 @@ class EditorAssistant:
                 error (f"failed to convert {input.path}: {str(e)} to md")
                 return 
 
-        progress("Input formatted as markdown files ready for processing.")
+        progress("Input formatted as markdown and ready to process.")
         # process the md files
         try:
-            success = self.md_processor.process_mds (md_articles, process_type)
+            success = self.md_processor.process_mds (md_articles, process_type, output_to_console)
             if not success:
                 self.logger.warning (f"failed to process {md_articles[0].title}")
         except Exception as e:
             self.logger.warning (f"failed to process {md_articles[0].title}: {str(e)}")
          
         return 
+
+# TODO: add process interface for a single input (for task translate & online),
+# which requires no type specification.

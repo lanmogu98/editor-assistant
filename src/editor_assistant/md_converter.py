@@ -25,7 +25,7 @@ from typing import Optional
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
-from .data_models import MDArticle, SourceType
+from .data_models import MDArticle, InputType
 from .config.markitdown_formats import SUPPORTED_FORMATS
 from .config.logging_config import error, warning
 import logging
@@ -109,7 +109,7 @@ class MarkdownConverter:
         is_supported_file = Path(path).suffix.lower() in markitdown_supported_formats
         return is_supported_file
   
-    def convert_content(self, content_path: str, type: SourceType = SourceType.PAPER) -> Optional[MDArticle]:
+    def convert_content(self, content_path: str, type: InputType = InputType.PAPER) -> Optional[MDArticle]:
         """
         Process content from various sources and convert to a standard format.
         
@@ -168,11 +168,16 @@ class MarkdownConverter:
         else:
             output_dir = Path(content_path).parent
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        # format the title
+        if (md_article.title is not None) and ("/" in md_article.title):
+            md_article.title = md_article.title.replace("/", "-")
+
         # save the content and insert output path
         md_article.output_path = output_dir / f"{md_article.title}.md"
         with open(md_article.output_path, "w") as f:
             f.write(md_article.title) if md_article.title else None
-            f.write(f"\nsource: {md_article.source_path}\n")
+            f.write(f"\nsource: {md_article.source_path}\n\n")
             f.write(md_article.content)
 
         return md_article

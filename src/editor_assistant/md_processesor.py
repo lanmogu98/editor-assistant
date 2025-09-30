@@ -70,11 +70,11 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
             f"Please use a smaller document or split manually."
         )
     
-    if estimated_tokens < MINIMAL_TOKEN_ACCESPTED:
-        raise ContentTooSmallError(
-            f"Content size ({estimated_tokens:.0f} tokens) is suspiciously small, " 
-            f"Please make consult the raw input is properly converted or formatted."
-        )
+    # if estimated_tokens < MINIMAL_TOKEN_ACCESPTED:
+    #     raise ContentTooSmallError(
+    #         f"Content size ({estimated_tokens:.0f} tokens) is suspiciously small, " 
+    #         f"Please make consult the raw input is properly converted or formatted."
+    #     )
 
 LOGGER_LEVEL = logging.DEBUG
 
@@ -97,7 +97,7 @@ class MDProcessor:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(LOGGER_LEVEL)
     
-    def process_mds (self, md_articles: List[MDArticle], type: ProcessType) -> bool:
+    def process_mds (self, md_articles: List[MDArticle], type: ProcessType, output_to_console=True) -> bool:
         """
         Process a document to generate a summary using single-context processing.
         
@@ -124,18 +124,20 @@ class MDProcessor:
             except ContentTooLargeError as e:
                 error(f"Content too large: {md_article.title}: {str(e)}")
                 return False
-            except ContentTooSmallError as e:
-                warning(f"Content too small: {md_article.title}: {str(e)}")
-                user_message(f"Input markdown: \n{md_article.content}")
-                return False
+            # except ContentTooSmallError as e:
+            #     warning(f"Content too small: {md_article.title}: {str(e)}")
+            #     user_message(f"Input markdown: \n{md_article.content}")
+            #     return False
 
-        # Create output dir and save it to the result
-        title = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
+        # Create base title for the output files
+        title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
         if type == ProcessType.BRIEF and len(md_articles) > 1:
-            title = f"{title}-multi"
+            title_base = f"{title_base}-multi"
         time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        output_dir = (Path(md_articles[0].output_path).parent / 
-                    "llm_summaries" / title / self.model_name / time)
+        title = f"{title_base}_{type.value}_{self.model_name}_{time}"
+
+        # Create output directory for the output files
+        output_dir = (Path(md_articles[0].output_path).parent / "llm_generations")
         output_dir.mkdir(parents=True, exist_ok=True)
 
     
@@ -164,7 +166,8 @@ class MDProcessor:
         except ContentTooLargeError as e:
             error(f"Content too large: {str(e)}")
             return False
-        self._save_content(SaveType.PROMPT, f"{title}_{type.value}", prompt, output_dir)
+        # temporarily disable saving the prompt to speedup the process
+        # self._save_content(SaveType.PROMPT, title, prompt, output_dir)
 
         # Make LLM request and save the output
         try:
@@ -187,7 +190,8 @@ class MDProcessor:
             metadata_prefix = "\n".join(metadata_lines) + "\n\n" if metadata_lines else ""
             formatted_response = metadata_prefix + response
             
-            self._save_content(SaveType.RESPONSE, f"{title}_{type.value}_{self.model_name}", formatted_response, output_dir)
+            self._save_content(SaveType.RESPONSE, title, 
+                               formatted_response, output_dir, output_to_console)
         except Exception as e:
             error(f"Error saving response: {str(e)}")
             return False
@@ -204,8 +208,8 @@ class MDProcessor:
             except Exception as e:
                 error(f"Error adding metadata to bilingual content: {str(e)}")
             try:
-                self._save_content(SaveType.RESPONSE, f"bilingual_{title}_{type.value}_{self.model_name}", 
-                                   bilingual_content, output_dir, console_print=False)
+                self._save_content(SaveType.RESPONSE, f"bilingual_{title}", 
+                                   bilingual_content, output_dir)
                 progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}_{type.value}_{self.model_name}.md'}")                   
             except Exception as e:
                 error(f"Error saving bilingual content: {str(e)}")
@@ -228,9 +232,9 @@ class MDProcessor:
         """
         # TODO: debug setting is not working, need to fix it (in conflict with the global logging setting?)
         # Debug: Check types of input parameters
-        self.logger.debug(f"DEBUG: input type: {type(input)}, output type: {type(output)}")
-        self.logger.debug(f"DEBUG: input first 100 chars: {str(input)[:100]}")
-        self.logger.debug(f"DEBUG: output first 100 chars: {str(output)[:100]}")
+        #self.logger.debug(f"DEBUG: input type: {type(input)}, output type: {type(output)}")
+        #self.logger.debug(f"DEBUG: input first 100 chars: {str(input)[:100]}")
+        #self.logger.debug(f"DEBUG: output first 100 chars: {str(output)[:100]}")
 
         # split the input and output into lists of lines
         input_lines = input.strip().split("\n")
@@ -241,7 +245,7 @@ class MDProcessor:
         for i in range(len(input_lines)):
             try:
                 prefix = "" # change prefix to i for debugging when needed
-                bilingual_content += f"{prefix}{input_lines[i]}{output_lines[i]}\n"
+                bilingual_content += f"{prefix}{input_lines[i]}\n{output_lines[i]}\n"
             except Exception as e:
                 warning(f"Inconsistancy detected in the {i}th line of the bilingual content: {str(e)}")
                 print(f"Input line: {input_lines[i]}")
@@ -252,7 +256,7 @@ class MDProcessor:
 
     # save content to a file
     def _save_content(self, type:SaveType, content_name: str, content: str, 
-                      paper_output_dir: Path, console_print: bool = True) -> None:
+                      paper_output_dir: Path, console_print: bool = False) -> None:
         """
         Save a prompt to a file for inspection.
         
@@ -261,14 +265,14 @@ class MDProcessor:
             prompt: The prompt content
             paper_name: Name of the paper
         """
-        save_dir = paper_output_dir / type.value
+        save_dir = paper_output_dir
         try:
             os.makedirs(save_dir, exist_ok=True)
         except Exception as e:
             logging.error(f"Error creating directory: {str(e)}")
         
         try:
-            with open(f"{save_dir}/{content_name}.md", 'w', encoding='utf-8') as f:
+            with open(f"{save_dir}/{type.value}_{content_name}.md", 'w', encoding='utf-8') as f:
                 f.write(content)
             if type == SaveType.RESPONSE and console_print:
                 user_message(f"{content}")

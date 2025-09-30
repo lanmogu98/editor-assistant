@@ -81,38 +81,38 @@ test-bilingual:  ## Test bilingual translation functionality
 
 # Development workflow with different providers
 dev-test-gemini:  ## Quick test with Gemini models
-	editor-assistant outline --article paper:tests/fixtures/sample.pdf --model gemini-2.5-pro --debug
+	editor-assistant outline tests/fixtures/sample.pdf --model gemini-2.5-pro --debug
 
 dev-test-deepseek:  ## Quick test with Deepseek models
-	editor-assistant brief --article web:"https://example.com" --model deepseek-v3.1 --debug
+	editor-assistant brief news="https://example.com" --model deepseek-v3.1 --debug
 
 dev-test-doubao:  ## Quick test with Doubao models
-	editor-assistant translate --article paper:tests/fixtures/sample.pdf --model doubao-pro-32k
+	editor-assistant translate tests/fixtures/sample.pdf --model doubao-seed-1.6
 
 # Example usage
 example-brief:  ## Run example brief news generation (multi-source)
-	editor-assistant brief --article paper:"https://example.com" --model deepseek-v3.1 --debug
+	editor-assistant brief paper="https://example.com" --model deepseek-v3.1 --debug
 
 example-news:  ## Alias for example-brief (backward compatibility)
 	$(MAKE) example-brief
 
 example-outline:  ## Run example research outline
-	editor-assistant outline --article paper:example.pdf --model deepseek-r1-latest
+	editor-assistant outline example.pdf --model deepseek-r1
 
 example-translate:  ## Run example bilingual translation
-	editor-assistant translate --article paper:example.pdf --model gemini-2.5-pro --debug
+	editor-assistant translate example.pdf --model gemini-2.5-pro --debug
 
 example-translate-deepseek:  ## Run example translation with Deepseek
-	editor-assistant translate --article paper:example.pdf --model deepseek-v3.1
+	editor-assistant translate example.pdf --model deepseek-v3.1
 
 example-translate-doubao:  ## Run example translation with Doubao
-	editor-assistant translate --article paper:example.pdf --model doubao-pro-32k
+	editor-assistant translate example.pdf --model doubao-seed-1.6
 
-example-brief-multi-provider:  ## Run example brief with different providers
-	editor-assistant brief --article web:"https://example.com" --article paper:example.pdf --model deepseek-v3.1 --debug
+example-brief-multi-source:  ## Run example brief with different providers
+	editor-assistant brief news="https://example.com" paper=example.pdf --model deepseek-v3.1 --debug
 
 example-outline-gemini:  ## Run example outline with Gemini
-	editor-assistant outline --article paper:example.pdf --model gemini-2.5-pro --debug
+	editor-assistant outline example.pdf --model gemini-2.5-pro --debug
 
 example-convert:  ## Run example file conversion
 	editor-assistant convert example.pdf -o converted/
@@ -125,3 +125,13 @@ example-clean:  ## Run example HTML cleaning
 
 example-clean-local:  ## Clean local HTML file
 	editor-assistant clean example.html --stdout
+
+# CLI validation helpers
+validate-cli:  ## Test the new CLI syntax quickly
+	@echo "Testing new CLI syntax..."
+	editor-assistant brief --help
+	editor-assistant outline --help
+	editor-assistant translate --help
+
+models-list:  ## Show available models
+	@python -c "from src.editor_assistant.llm_client import LLMClient; print('Available models:'); [print(f'  {m}') for m in LLMClient.get_supported_models()]"

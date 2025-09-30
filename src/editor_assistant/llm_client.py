@@ -164,8 +164,7 @@ class LLMClient:
                         f"Failed to generate response after "
                         f"{max_retries} attempts: {str(e)}"
                     )
-                
-                warning(f"API request failed, retrying in {retry_delay} seconds...")
+                warning(f"API request failed ({str(e)}), retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
     
@@ -203,15 +202,15 @@ class LLMClient:
         report["total_process_time"] = token_usage["process_times"]["total_time"]
         report["total_cost"] = token_usage["cost"]["total_cost"]
         
-        # Save as JSON
-        token_dir = output_dir / "token_usage"
-        token_dir.mkdir(parents=True, exist_ok=True)
-        
-        with open(token_dir / "token_usage.json", 'w', encoding='utf-8') as f:
-            json.dump(report, f, indent=2)
+        # Create output directory for this paper
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # # Save as JSON
+        # with open(output_dir / "token_usage.json", 'w', encoding='utf-8') as f:
+        #     json.dump(report, f, indent=2)
         
         # Also save a human-readable summary
-        with open(token_dir / "token_usage.txt", 'w', encoding='utf-8') as f:
+        with open(output_dir / f"token_usage_{project_name}.txt", 'w', encoding='utf-8') as f:
             f.write(f"Token Usage Report for {project_name}\n")
             f.write(f"Generated on: {report['timestamp']}\n")
             f.write(f"Model: {report['model']} ({report['model_name']})\n\n")
@@ -250,4 +249,5 @@ class LLMClient:
         # Full report saved to file (mentioned only in debug mode)
         import logging
         logger = logging.getLogger(__name__)
-        logger.debug(f"Detailed token usage report saved to: {token_dir / 'token_usage.txt'}")
+        logger.debug(f"Detailed token usage report saved to: {output_dir / 'token_usage.txt'}")
+ 

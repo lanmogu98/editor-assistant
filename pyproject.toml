@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "editor_assistant"
-version = "0.1"
+version = "0.3"
 dependencies = [
     "markitdown",
     "requests",
@@ -19,10 +19,6 @@ dependencies = [
 [project.scripts]
 # Main CLI entry point
 editor-assistant = "editor_assistant.src.editor_assistant.cli:main"
-
-# Legacy entry points for backward compatibility  
-generate-news = "editor_assistant.src.editor_assistant.cli:generate_news"
-generate-outline = "editor_assistant.src.editor_assistant.cli:generate_outline"
 
 # Utility commands (kept for compatibility)
 any2md = "editor_assistant.src.editor_assistant.md_converter:main"
@@ -39,3 +35,7 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
 ]
+
+# include the config files and prompts in the package
+[tool.setuptools]
+package-data = { "editor_assistant" = ["config/*.yml", "config/prompts/*.txt"] }

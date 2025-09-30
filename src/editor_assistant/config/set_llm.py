@@ -7,31 +7,50 @@ from typing import Dict, Tuple, Optional, Any
 
 # --- LLMModel and ServiceProvider enums as a single source of truth of model switch ---
 class LLMModel(str, Enum):
+    # deepseek
     deepseek_v3_1 = "deepseek-v3.1"
     deepseek_r1 = "deepseek-r1"
-    deepseek_r1_latest = "deepseek-r1-latest"
     deepseek_v3 = "deepseek-v3"
-    deepseek_v3_latest = "deepseek-v3-latest"
+    deepseek_v3_2 = "deepseek-v3.2"
+    # gemini
     gemini_2_5_flash = "gemini-2.5-flash"
     gemini_2_5_pro = "gemini-2.5-pro"
-    gemini_2_5_flash_lite = "gemini-2.5-flash-lite"
     kimi_k2 = "kimi-k2"
+    # qwen
     qwen_plus = "qwen-plus"
-    qwen_plus_latest = "qwen-plus-latest"
+    qwen3_max_preview = "qwen3-max-preview"
+    qwen3_max = "qwen3-max"
+    # zhipu
     glm_4_5 = "glm-4.5"
-    glm_4_5_openrouter = "glm-4.5-openrouter"
+    glm_4_5_openrouter = "glm-4.5-or"
+    # doubao
     doubao_seed_1_6 = "doubao-seed-1.6"
+    # openai
+    gpt_5_openrouter = "gpt-5-or"
+    gpt_4o_openrouter = "gpt-4o-or"
+    gpt_4_1_openrouter = "gpt-4.1-or"
+    # anthropic
+    claude_sonnet_4_openrouter = "claude-sonnet-4-or"
 
 
 class ServiceProvider(str, Enum):
-    deepseek = "deepseek"
-    gemini = "gemini"
-    kimi = "kimi"
-    qwen = "qwen"
-    zhipu = "zhipu"
-    zhipu_openrouter = "zhipu-openrouter"
+    # volcengine
+    kimi_volcengine = "kimi-volcengine" 
+    deepseek_volcengine = "deepseek-volcengine" 
     doubao = "doubao"
-    
+    # google cloud
+    gemini = "gemini"
+    # alibaba 
+    qwen = "qwen"
+    # zhipu 
+    zhipu = "zhipu"
+    # openrouter
+    zhipu_openrouter = "zhipu-openrouter"
+    openai_openrouter = "openai-openrouter"
+    anthropic_openrouter = "anthropic-openrouter"
+    # deepseek
+    deepseek = "deepseek"
+
 # --- Pydantic Models for the configing of YAML structure ---
 class Pricing(BaseModel):
     input: float
@@ -66,7 +85,8 @@ def load_all_settings() -> Dict[ServiceProvider, ProviderSettings]:
     
     # Pydantic validates the entire structure at once
     return {ServiceProvider(k): ProviderSettings(**v) 
-            for k, v in config_data.items()}
+            for k, v in config_data.items() if not k.startswith("_")
+            }
 
 
 # --- Programmatically build mappings from the single source of truth ---

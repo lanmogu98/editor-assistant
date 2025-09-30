@@ -14,10 +14,17 @@
 #   In default, and as a highly recommend practice, the API key of each model is 
 #   stored in the environment variable.
 
+#-------------------------------------------------------------------------------
+# Shared endpoints for reuse across providers
+#-------------------------------------------------------------------------------
+_shared_endpoints:
+  volcengine: &volcengine_endpoint "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+  openrouter: &openrouter_endpoint "https://openrouter.ai/api/v1/chat/completions"
 
-deepseek:
-  api_key_env_var: "DEEPSEEK_API_KEY"
-  api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+
+deepseek-volcengine:
+  api_key_env_var: "DEEPSEEK_API_KEY_VOLC"
+  api_base_url: *volcengine_endpoint
   temperature: 0.4
   max_tokens: 16000
   context_window: 128000
@@ -27,17 +34,23 @@ deepseek:
       id: "deepseek-v3-1-250821"
       pricing: { input: 4.00, output: 12.00 }
     deepseek-r1:
-      id: "deepseek-r1-250120"
-      pricing: { input: 4.00, output: 16.00 }
-    deepseek-r1-latest:
       id: "deepseek-r1-250528"
-      pricing: { input: 4.00, output: 16.00 }
+      pricing: { input: 4.00, output: 12.00 }
     deepseek-v3:
-      id: "deepseek-v3-241226"
-      pricing: { input: 2.00, output: 8.00 }
-    deepseek-v3-latest:
       id: "deepseek-v3-250324"
       pricing: { input: 2.00, output: 8.00 }
+
+deepseek:
+  api_key_env_var: "DEEPSEEK_API_KEY"
+  api_base_url: "https://api.deepseek.com/chat/completions"
+  temperature: 0.4
+  max_tokens: 32000
+  context_window: 128000
+  pricing_currency: "$"
+  models:
+    deepseek-v3.2:
+      id: "deepseek-reasoner"
+      pricing: { input: 0.28, output: 0.42}
 
 gemini:
   api_key_env_var: "GEMINI_API_KEY"
@@ -47,9 +60,6 @@ gemini:
   context_window: 200000
   pricing_currency: "$"
   models:
-    gemini-2.5-flash-lite:
-      id: "gemini-2.5-flash-lite-preview-06-17"
-      pricing: { input: 0.10, output: 0.40 } 
     gemini-2.5-flash:
       id: "gemini-2.5-flash"
       pricing: { input: 0.30, output: 2.50 } 
@@ -57,9 +67,9 @@ gemini:
       id: "gemini-2.5-pro"
       pricing: { input: 1.25, output: 10.00 } # USD per 1M tokens 
 
-kimi:
-  api_key_env_var: "KIMI_API_KEY"
-  api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+kimi-volcengine:
+  api_key_env_var: "KIMI_API_KEY_VOLC"
+  api_base_url: *volcengine_endpoint
   temperature: 0.5
   max_tokens: 32000
   context_window: 128000
@@ -80,9 +90,12 @@ qwen:
     qwen-plus:
       id: "qwen-plus"
       pricing: {input: 0.80, output: 2.00} # with thinking model defaultly disabled
-    qwen-plus-latest:
-      id: "qwen-plus-latest"
-      pricing: {input: 0.80, output: 2.00} # with thinking model defaultly disabled
+    qwen3-max-preview:
+      id: "qwen3-max-preview"
+      pricing: {input: 0.60, output: 24.00} 
+    qwen3-max:
+      id: "qwen3-max"
+      pricing: {input: 0.60, output: 24.00} 
 
 zhipu:
   api_key_env_var: "ZHIPU_API_KEY"
@@ -98,7 +111,7 @@ zhipu:
 
 zhipu-openrouter:
   api_key_env_var: "ZHIPU_API_KEY_OPENROUTER"
-  api_base_url: "https://openrouter.ai/api/v1/chat/completions"
+  api_base_url: *openrouter_endpoint
   temperature: 0.6
   max_tokens: 96000
   context_window: 131100
@@ -109,13 +122,13 @@ zhipu-openrouter:
       only: ["z-ai"]
       allow_fallbacks: false
   models:
-    glm-4.5-openrouter:
+    glm-4.5-or:
       id: "z-ai/glm-4.5"
       pricing: {input: 0.60, output: 2.20}
 
 doubao:
   api_key_env_var: "DOUBAO_API_KEY"
-  api_base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+  api_base_url: *volcengine_endpoint
   temperature: 0.6
   max_tokens: 32000
   context_window: 256000
@@ -123,4 +136,34 @@ doubao:
   models:
     doubao-seed-1.6:
       id: "doubao-seed-1-6-250615"
-      pricing: {input: 0.80, output: 2}
+      pricing: {input: 0.80, output: 2.00}
+
+openai-openrouter:
+  api_key_env_var: "OPENAI_API_KEY"
+  api_base_url: *openrouter_endpoint
+  temperature: 0.6
+  max_tokens: 164000
+  context_window: 128000
+  pricing_currency: "$"
+  models:
+    gpt-4o-or:
+      id: "openai/gpt-4o"
+      pricing: {input: 2.5, output: 10.00}
+    gpt-4.1-or:
+      id: "openai/gpt-4.1"
+      pricing: {input: 2.00, output: 8.00}
+    gpt-5-or:
+      id: "openai/gpt-5"
+      pricing: {input: 1.25, output: 10.00}
+
+anthropic-openrouter:
+  api_key_env_var: "ANTHROPIC_API_KEY"
+  api_base_url: *openrouter_endpoint
+  temperature: 0.6
+  max_tokens: 64000
+  context_window: 200000
+  pricing_currency: "$"
+  models:
+    claude-sonnet-4-or:
+      id: "anthropic/claude-sonnet-4"
+      pricing: {input: 3.00, output: 15.00}

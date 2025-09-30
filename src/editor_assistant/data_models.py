@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 # for the input source data
-class SourceType(str, Enum):
+class InputType(str, Enum):
     """
     The type of source.
     """
@@ -19,7 +19,7 @@ class Input(BaseModel):
     """
     The type of input source.
     """
-    type: SourceType
+    type: InputType
     path: str
 
 # for the process type
@@ -36,7 +36,7 @@ class MDArticle(BaseModel):
     """
     A structure for a converted markdown article.
     """
-    type: SourceType
+    type: InputType
     content: Optional[str] = None
     title: Optional[str] = None
     authors: Optional[str] = None

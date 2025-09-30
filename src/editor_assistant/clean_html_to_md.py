@@ -7,7 +7,7 @@ and removing all the noise like ads, headers, footers, etc.
 
 import requests
 import time
-from .data_models import MDArticle, SourceType
+from .data_models import MDArticle, InputType
 import logging
 from typing import Optional
 from enum import Enum
@@ -92,7 +92,7 @@ class CleanHTML2Markdown:
         markdown_content = h2t.handle(article['content'])
 
         return MDArticle(
-            type=SourceType.PAPER,
+            type=InputType.PAPER,
             content=markdown_content,
             title=article['title'],
             authors=article['byline'],
@@ -142,7 +142,7 @@ class CleanHTML2Markdown:
         authors = metadata.get('authors', '') if metadata else ''
         
         return MDArticle(
-            type=SourceType.PAPER,
+            type=InputType.PAPER,
             content=markdown_content,
             title=title,
             authors=authors,

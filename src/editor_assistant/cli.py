@@ -10,16 +10,20 @@ import sys
 from pathlib import Path
 
 from .main import EditorAssistant
-from .data_models import ProcessType, Input, SourceType
+from .data_models import ProcessType, Input, InputType
 from .llm_client import LLMClient
 from .md_converter import MarkdownConverter
 from .clean_html_to_md import CleanHTML2Markdown
+
+
+DEFAULT_MODEL = "glm-4.5-or"
+
 
 def add_common_arguments(parser):
     """Add common arguments used across multiple commands."""
     parser.add_argument(
         "--model", 
-        default="deepseek-r1-latest",
+        default=DEFAULT_MODEL,
         choices=LLMClient.get_supported_models(),
         help="Model to use for generation"
     )
@@ -45,7 +49,7 @@ def parse_source_spec(spec: str) -> Input:
     if not path.strip():
         raise argparse.ArgumentTypeError("Path cannot be empty in 'type=path' format")
 
-    src_type = SourceType.PAPER if type_str == "paper" else SourceType.NEWS
+    src_type = InputType.PAPER if type_str == "paper" else InputType.NEWS
     return Input(type=src_type, path=path.strip())
 
 def cmd_generate_brief(args):
@@ -62,14 +66,14 @@ def cmd_generate_outline(args):
     """Generate research outlines from a single paper."""
     assistant = EditorAssistant(args.model, debug_mode=args.debug)
     # Create Input object for the paper
-    input_obj = Input(type=SourceType.PAPER, path=args.input_file)
+    input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.OUTLINE)
 
 def cmd_generate_translate(args):
     """Generate translation from a single paper."""
     assistant = EditorAssistant(args.model, debug_mode=args.debug)
     # Create Input object for the paper
-    input_obj = Input(type=SourceType.PAPER, path=args.input_file)
+    input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.TRANSLATE)
 
 def cmd_convert_to_md(args):
@@ -133,9 +137,9 @@ def create_parser():
 Examples:
   %(prog)s brief paper=https://arxiv.org/pdf/2508.08443
   %(prog)s brief paper=paper.pdf news=https://example.com/article \
-                 --model deepseek-r1-latest --debug
-  %(prog)s outline paper.pdf --model deepseek-r1-latest
-  %(prog)s translate paper.pdf --model deepseek-r1-latest
+                 --model deepseek-r1 --debug
+  %(prog)s outline paper.pdf --model deepseek-r1
+  %(prog)s translate paper.pdf --model deepseek-r1
   %(prog)s convert *.pdf -o ./markdown/
   %(prog)s clean https://example.com/page.html -o clean.md
 """
@@ -262,22 +266,6 @@ def main():
         print(f"✗ Error: {str(e)}")
         sys.exit(1)
 
-
-# Legacy entry points for backward compatibility
-def generate_news():
-    """Legacy entry point for generate_news command."""
-    # Convert old-style args to new CLI format
-    import sys
-    sys.argv = ['editor-assistant', 'brief'] + sys.argv[1:]
-    main()
-
-
-def generate_outline():
-    """Legacy entry point for generate_outline command."""
-    # Convert old-style args to new CLI format
-    import sys
-    sys.argv = ['editor-assistant', 'outline'] + sys.argv[1:]
-    main()
 
 
 if __name__ == "__main__":
