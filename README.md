@@ -211,7 +211,9 @@ assistant.process_multiple(
 #### GLM Models
 
 - `glm-4.5` - High-performance model (via Zhipu AI)
+- `glm-4.6` - High-performance model (via Zhipu AI)
 - `glm-4.5-or` - High-performance model (via OpenRouter)
+- `glm-4.6-or` - Latest model (via OpenRouter)
 
 #### OpenAI Models (via OpenRouter)
 
@@ -290,8 +292,8 @@ Several model names have been updated or removed:
 
 #### Default Model Change
 
-- **Old default**: `deepseek-r1-latest`
-- **New default**: `glm-4.5-or`
+- **Old default**: `glm-4.5-or`
+- **New default**: `glm-4.6-or`
 
 **Why?** Better balance of performance, cost, and reliability across different use cases.
 
@@ -471,11 +473,13 @@ editor-assistant clean page.html --stdout
 
 ##### GLM模型
 - `glm-4.5` - 高性能模型（智谱AI）
+- `glm-4.6` - 最新模型（智谱AI）
 
 #### 由openrouter提供
 
 ##### GLM模型
 - `glm-4.5-or` - 高性能模型（智谱，通过OpenRouter）
+- `glm-4.6-or` - 最新模型（智谱，通过OpenRouter）
 
 ##### OpenAI模型
 - `gpt-4o-or` - GPT-4 Omni模型，支持视觉功能
@@ -483,7 +487,7 @@ editor-assistant clean page.html --stdout
 - `gpt-5-or` - 下一代GPT-5模型
 
 ##### Anthropic模型
-- `claude-sonnet-4-or` - 最新Claude Sonnet 4模型，支持200k上下文
+- `claude-sonnet-4-or` - Claude Sonnet 4模型，支持200k上下文
 
 
 

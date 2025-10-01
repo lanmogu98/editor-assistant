@@ -7,7 +7,6 @@ import time
 import requests
 from datetime import datetime
 from typing import Dict, Any
-import json
 from pathlib import Path
 from .config.logging_config import warning
 

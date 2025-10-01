@@ -51,6 +51,9 @@ llm_summaries/
 samples/
 *.log
 webpage/
+batch_checkpoint*.db
+batch_results*/
+test_output/
 
 # Development and backup files
 backup/

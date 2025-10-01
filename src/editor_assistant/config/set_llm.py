@@ -24,6 +24,7 @@ class LLMModel(str, Enum):
     glm_4_5 = "glm-4.5"
     glm_4_6 = "glm-4.6"
     glm_4_5_openrouter = "glm-4.5-or"
+    glm_4_6_openrouter = "glm-4.6-or"
     # doubao
     doubao_seed_1_6 = "doubao-seed-1.6"
     # openai

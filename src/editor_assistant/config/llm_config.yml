@@ -127,7 +127,10 @@ zhipu-openrouter:
   models:
     glm-4.5-or:
       id: "z-ai/glm-4.5"
-      pricing: {input: 0.60, output: 2.20}
+      pricing: {input: 0.38, output: 1.60}
+    glm-4.6-or:
+      id: "z-ai/glm-4.6"
+      pricing: {input: 0.60, output: 2.00}
 
 doubao:
   api_key_env_var: "DOUBAO_API_KEY"
