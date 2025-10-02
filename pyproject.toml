@@ -18,11 +18,11 @@ dependencies = [
 
 [project.scripts]
 # Main CLI entry point
-editor-assistant = "editor_assistant.src.editor_assistant.cli:main"
+editor-assistant = "editor_assistant.cli:main"
 
 # Utility commands (kept for compatibility)
-any2md = "editor_assistant.src.editor_assistant.md_converter:main"
-html2md = "editor_assistant.src.editor_assistant.clean_html_to_md:main"
+any2md = "editor_assistant.md_converter:main"
+html2md = "editor_assistant.clean_html_to_md:main"
 
 [project.optional-dependencies]
 dev = [
