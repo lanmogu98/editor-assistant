@@ -62,6 +62,8 @@ dev_notes/
 
 # Documentation (agent-specific - not CLAUDE.md which is project instructions)
 GEMINI.md
+CLAUDE.md
+docs/
 
 # Testing (keep tests untracked for now)
 tests/
