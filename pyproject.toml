@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "editor_assistant"
 version = "0.3"
 dependencies = [
-    "markitdown[pdf]",
+    "markitdown[all]",
     "requests",
     "pydantic",
     "trafilatura",
