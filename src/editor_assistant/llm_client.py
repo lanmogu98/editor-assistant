@@ -204,11 +204,7 @@ class LLMClient:
         # Create output directory for this paper
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # # Save as JSON
-        # with open(output_dir / "token_usage.json", 'w', encoding='utf-8') as f:
-        #     json.dump(report, f, indent=2)
-        
-        # Also save a human-readable summary
+        # Save a human-readable summary
         with open(output_dir / f"token_usage_{project_name}.txt", 'w', encoding='utf-8') as f:
             f.write(f"Token Usage Report for {project_name}\n")
             f.write(f"Generated on: {report['timestamp']}\n")
