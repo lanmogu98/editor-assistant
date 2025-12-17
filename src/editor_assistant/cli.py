@@ -148,8 +148,8 @@ Examples:
     # Global options
     parser.add_argument(
         "--version",
-        action="version", 
-        version="%(prog)s 0.2.0"
+        action="version",
+        version="%(prog)s 0.3.0"
     )
     
     # Create subcommands

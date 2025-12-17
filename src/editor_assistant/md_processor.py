@@ -35,7 +35,7 @@ from .config.load_prompt import (
 CHAR_TOKEN_RATIO = 3.5
 
 # Minimal token count for a sound input whatsoever
-MINIMAL_TOKEN_ACCESPTED = 100
+MINIMAL_TOKEN_ACCEPTED = 100
 
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
@@ -69,12 +69,6 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
             f"model capacity ({available_tokens:.0f} tokens) for {llm_client.model_name}. "
             f"Please use a smaller document or split manually."
         )
-    
-    # if estimated_tokens < MINIMAL_TOKEN_ACCESPTED:
-    #     raise ContentTooSmallError(
-    #         f"Content size ({estimated_tokens:.0f} tokens) is suspiciously small, " 
-    #         f"Please make consult the raw input is properly converted or formatted."
-    #     )
 
 LOGGER_LEVEL = logging.DEBUG
 
@@ -124,10 +118,6 @@ class MDProcessor:
             except ContentTooLargeError as e:
                 error(f"Content too large: {md_article.title}: {str(e)}")
                 return False
-            # except ContentTooSmallError as e:
-            #     warning(f"Content too small: {md_article.title}: {str(e)}")
-            #     user_message(f"Input markdown: \n{md_article.content}")
-            #     return False
 
         # Create base title for the output files
         title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
@@ -166,8 +156,6 @@ class MDProcessor:
         except ContentTooLargeError as e:
             error(f"Content too large: {str(e)}")
             return False
-        # temporarily disable saving the prompt to speedup the process
-        # self._save_content(SaveType.PROMPT, title, prompt, output_dir)
 
         # Make LLM request and save the output
         try:
@@ -225,33 +213,22 @@ class MDProcessor:
         
         return True
     
-    # create a bilingual markdown file
-    def _create_bilingual_content(self, input:str, output:str) -> str:
-        """
-        Create a bilingual markdown file.
-        """
-        # TODO: debug setting is not working, need to fix it (in conflict with the global logging setting?)
-        # Debug: Check types of input parameters
-        #self.logger.debug(f"DEBUG: input type: {type(input)}, output type: {type(output)}")
-        #self.logger.debug(f"DEBUG: input first 100 chars: {str(input)[:100]}")
-        #self.logger.debug(f"DEBUG: output first 100 chars: {str(output)[:100]}")
-
-        # split the input and output into lists of lines
+    def _create_bilingual_content(self, input: str, output: str) -> str:
+        """Create a bilingual markdown file with alternating source/translation lines."""
         input_lines = input.strip().split("\n")
         output_lines = output.strip().split("\n")
 
-        # create a bilingual string content, with the input and output lines alternated
-        bilingual_content = ""
+        # Use list append + join for O(n) performance instead of string concatenation
+        bilingual_lines = []
         for i in range(len(input_lines)):
             try:
-                prefix = "" # change prefix to i for debugging when needed
-                bilingual_content += f"{prefix}{input_lines[i]}\n{output_lines[i]}\n"
-            except Exception as e:
-                warning(f"Inconsistancy detected in the {i}th line of the bilingual content: {str(e)}")
-                print(f"Input line: {input_lines[i]}")
+                bilingual_lines.append(input_lines[i])
+                bilingual_lines.append(output_lines[i])
+            except IndexError:
+                warning(f"Line count mismatch at line {i}: input has {len(input_lines)} lines, output has {len(output_lines)} lines")
                 break
 
-        return bilingual_content
+        return "\n".join(bilingual_lines) + "\n"
 
 
     # save content to a file
@@ -278,38 +255,6 @@ class MDProcessor:
                 user_message(f"{content}")
         except Exception as e:
             logging.error(f"Error saving content: {str(e)}")
-    
-
-    # def _save_process_times_report(self, paper_name: str, 
-    #                                process_times: Dict[str, float], 
-    #                                paper_output_dir: Path) -> None:
-    #     """
-    #     Save a report of process times for the paper processing.
-        
-    #     Args:
-    #         paper_name: Name of the paper
-    #         process_times: Dictionary with process times for each step
-    #     """
-    #     # Create output directory for this paper
-    #     token_dir = paper_output_dir / "process_times"
-    #     token_dir.mkdir(parents=True, exist_ok=True)
-        
-    #     # Save as JSON
-    #     with open(token_dir / "process_times.json", 'w', encoding='utf-8') as f:
-    #         json.dump(process_times, f, indent=2)
-        
-    #     # Also save a human-readable summary
-    #     with open(token_dir / "process_times.txt", 'w', encoding='utf-8') as f:
-    #         f.write (f"Process Times Report for {paper_name}\n")
-    #         f.write (f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-    #         f.write ("Summary:\n")
-    #         f.write (f"  Total Process Time: {process_times['total']:.2f} seconds ({process_times['total']/60:.2f} minutes)\n\n")
-    #         f.write ("Detailed Times by Step:\n")
-    #         # Calculate percentages safely to avoid division by zero
-    #         analysis_pct = (process_times['analysis']/process_times['total']*100) if process_times['total'] > 0 else 0
-    #         translation_pct = (process_times['translation']/process_times['total']*100) if process_times['total'] > 0 else 0
-    #         f.write (f"  Analysis: {process_times['analysis']:.2f} seconds ({analysis_pct:.1f}%)\n")
-    #         f.write (f"  Translation: {process_times['translation']:.2f} seconds ({translation_pct:.1f}%)\n")
 
     def _make_api_request(self, prompt: str, request_name: str) -> Dict[str, Any]:
         """

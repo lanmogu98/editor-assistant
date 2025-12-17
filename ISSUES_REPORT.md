@@ -16,7 +16,7 @@ This document identifies key issues regarding **performance**, **maintenance**, 
 **Impact:** Processing multiple documents takes N times longer instead of parallel processing.
 
 ### 1.2 Inefficient Token Estimation
-**Location:** `md_processesor.py:35, 60`
+**Location:** `md_processor.py:35, 60`
 
 ```python
 CHAR_TOKEN_RATIO = 3.5  # Hardcoded for all models
@@ -71,7 +71,7 @@ with open(md_article.output_path, "w") as f:
 **Impact:** Unnecessary disk I/O for every document processed.
 
 ### 1.6 String Concatenation in Loop (O(n²))
-**Location:** `md_processesor.py:244-248`
+**Location:** `md_processor.py:244-248`
 
 ```python
 bilingual_content = ""
@@ -91,16 +91,16 @@ for i in range(len(input_lines)):
 ### 2.1 Typos in Code
 | Location | Issue |
 |----------|-------|
-| `md_processesor.py` (filename) | Should be `md_processor.py` |
-| `md_processesor.py:38` | `MINIMAL_TOKEN_ACCESPTED` should be `MINIMAL_TOKEN_ACCEPTED` |
+| `md_processor.py` (filename) | Should be `md_processor.py` |
+| `md_processor.py:38` | `MINIMAL_TOKEN_ACCESPTED` should be `MINIMAL_TOKEN_ACCEPTED` |
 
 ### 2.2 Hardcoded Magic Numbers
 
 | Value | Location | Description |
 |-------|----------|-------------|
-| `3.5` | `md_processesor.py:35` | Character-to-token ratio |
-| `10000` | `md_processesor.py:63` | Prompt overhead tokens |
-| `100` | `md_processesor.py:38` | Minimum token threshold |
+| `3.5` | `md_processor.py:35` | Character-to-token ratio |
+| `10000` | `md_processor.py:63` | Prompt overhead tokens |
+| `100` | `md_processor.py:38` | Minimum token threshold |
 | `3` | `llm_client.py:108` | Max retry attempts |
 | `1` | `llm_client.py:109` | Initial retry delay (seconds) |
 | `1000` | `content_validation.py:11` | Warning threshold chars |
@@ -112,7 +112,7 @@ Large blocks of commented code that should be removed or extracted to documentat
 
 | File | Lines |
 |------|-------|
-| `md_processesor.py` | 73-77, 127-130, 169-170, 283-312 |
+| `md_processor.py` | 73-77, 127-130, 169-170, 283-312 |
 | `llm_client.py` | 207-209 |
 | `clean_html_to_md.py` | 227-270 |
 | `md_converter.py` | 243-251 |
@@ -139,7 +139,7 @@ raise Exception(f"Error processing...")
 **Recommendation:** Standardize on a single error handling pattern.
 
 ### 2.5 Duplicate Error Handling
-**Location:** `md_processesor.py:199-216`
+**Location:** `md_processor.py:199-216`
 
 Three consecutive try/except blocks for related operations:
 ```python
@@ -172,7 +172,7 @@ md_article.output_path = output_dir / f"{md_article.title}.md"  # This is a Path
 
 | File | Level | Location |
 |------|-------|----------|
-| `md_processesor.py` | `DEBUG` | Line 79 |
+| `md_processor.py` | `DEBUG` | Line 79 |
 | `md_converter.py` | `INFO` | Line 33 |
 | `clean_html_to_md.py` | `DEBUG` | Line 32 |
 
@@ -210,7 +210,7 @@ MIN_CHARS_WARNING_THRESHOLD = 1000
 ```
 
 - File is just a stub with TODO comment
-- `ContentTooSmallError` exception defined in `md_processesor.py` but commented out everywhere
+- `ContentTooSmallError` exception defined in `md_processor.py` but commented out everywhere
 
 ### 2.11 Circular Import Workaround
 **Location:** `llm_client.py:242-243`
@@ -246,7 +246,7 @@ from .config.logging_config import user_message, progress
 ### 3.2 Tight Coupling Between Components
 **Examples:**
 ```python
-# md_processesor.py:95
+# md_processor.py:95
 self.llm_client = LLMClient(model_name)  # Direct instantiation
 
 # main.py:12-13
@@ -369,7 +369,7 @@ class ProcessType(str, Enum):
 Adding new types requires changes in:
 - `data_models.py` - Add enum value
 - `cli.py` - Add subcommand
-- `md_processesor.py` - Add match case
+- `md_processor.py` - Add match case
 - `load_prompt.py` - Add prompt loader function
 
 **Recommendation:** Implement a registry pattern or plugin system.
