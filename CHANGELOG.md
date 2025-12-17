@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 - **Typo:** Fixed `MINIMAL_TOKEN_ACCESPTED` → `MINIMAL_TOKEN_ACCEPTED`
 - **Version:** Synced CLI version to 0.3.0 to match pyproject.toml
 - **Code Style:** Fixed docstrings placed outside method definitions (`md_converter.py`)
+- **Code Quality:** Standardized error handling patterns across modules:
+  - `md_processor.py`: Replaced `logging.error()` with custom `error()` function for consistent user-facing messages
+  - `md_processor.py`: Use specific exceptions (`OSError`, `IOError`, `RuntimeError`) instead of generic `Exception`
+  - `md_converter.py`: Replaced generic `Exception` with `ConnectionError` for URL access errors
 
 ### Removed
 - ~40 lines of commented dead code from `md_processor.py`

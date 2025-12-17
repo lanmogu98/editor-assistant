@@ -75,24 +75,23 @@ class MarkdownConverter:
             req = urllib.request.Request(url, method='HEAD')
             req.add_header('User-Agent', 'Mozilla/5.0')
 
-            with urllib.request.urlopen(req, timeout=URL_HEAD_TIMEOUT_SECONDS) as response: 
+            with urllib.request.urlopen(req, timeout=URL_HEAD_TIMEOUT_SECONDS) as response:
                 # Check the status code (optional, but good practice)
                 if response.getcode () == 200:
                     content_type = response.headers.get ('Content-Type')
                     if content_type and (content_type.strip().lower().
-                       startswith ('text/html') or 
+                       startswith ('text/html') or
                        content_type.strip().lower().
                        startswith ('application/xhtml+xml')):
                         return True
                     else:
-                        self.logger.warning (f"URL '{url}' has Content-Type: {content_type} (not HTML)")
+                        self.logger.debug(f"URL '{url}' has Content-Type: {content_type} (not HTML)")
                         return False
                 else:
-                    raise Exception (f"Error accessing URL '{url}': {response.getcode()}")
-
+                    raise ConnectionError(f"Error accessing URL '{url}': HTTP {response.getcode()}")
 
         except urllib.error.URLError as e:
-            raise Exception(f"Error accessing URL '{url}': {e.reason}")
+            raise ConnectionError(f"Error accessing URL '{url}': {e.reason}")
 
     def _is_html_file(self, path: str) -> bool:
         """Check if a string is a path to an HTML file."""

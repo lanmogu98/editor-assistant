@@ -243,16 +243,18 @@ class MDProcessor:
         save_dir = paper_output_dir
         try:
             os.makedirs(save_dir, exist_ok=True)
-        except Exception as e:
-            logging.error(f"Error creating directory: {str(e)}")
-        
+        except OSError as e:
+            error(f"Error creating directory: {str(e)}")
+            raise
+
         try:
             with open(f"{save_dir}/{type.value}_{content_name}.md", 'w', encoding='utf-8') as f:
                 f.write(content)
             if type == SaveType.RESPONSE and console_print:
                 user_message(f"{content}")
-        except Exception as e:
-            logging.error(f"Error saving content: {str(e)}")
+        except IOError as e:
+            error(f"Error saving content: {str(e)}")
+            raise
 
     def _make_api_request(self, prompt: str, request_name: str) -> Dict[str, Any]:
         """
@@ -268,13 +270,13 @@ class MDProcessor:
         try:
             return self.llm_client.generate_response(prompt, request_name)
         except ConnectionError as e:
-            logging.error(f"Connection failed during {request_name}: {str(e)}")
+            error(f"Connection failed during {request_name}: {str(e)}")
             raise ConnectionError(f"Failed to connect to LLM service: {str(e)}") from e
         except ValueError as e:
-            logging.error(f"Invalid input for {request_name}: {str(e)}")
+            error(f"Invalid input for {request_name}: {str(e)}")
             raise ValueError(f"Invalid input for {request_name}: {str(e)}") from e
         except Exception as e:
-            logging.error(f"Unexpected error in {request_name}: {str(e)}")
-            raise Exception(f"Error generating response for {request_name}: {str(e)}") from e
+            error(f"Unexpected error in {request_name}: {str(e)}")
+            raise RuntimeError(f"Error generating response for {request_name}: {str(e)}") from e
 
 # CLI functionality moved to cli.py - this module now contains only core processing logic
