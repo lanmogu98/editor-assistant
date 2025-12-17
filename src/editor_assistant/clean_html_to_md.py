@@ -7,15 +7,13 @@ and removing all the noise like ads, headers, footers, etc.
 
 import requests
 from .data_models import MDArticle, InputType
+from .config.constants import DEFAULT_USER_AGENT, DEBUG_LOGGING_LEVEL
 import logging
 from typing import Optional
 from enum import Enum
 
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
+    "User-Agent": DEFAULT_USER_AGENT
 }
 
 class Converter(Enum):
@@ -27,7 +25,7 @@ class CleanHTML2Markdown:
     def __init__(self):
         self.h2t = self._init_html2text()
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(DEBUG_LOGGING_LEVEL)
 
     # initialize html2text
     def _init_html2text(self):

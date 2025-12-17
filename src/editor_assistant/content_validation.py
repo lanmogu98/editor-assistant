@@ -8,6 +8,6 @@ Educational Note: This implements a clean, practical validation approach:
 This design is much more user-friendly than complex multi-level validation.
 """
 
-MIN_CHARS_WARNING_THRESHOLD = 1000
+from .config.constants import MIN_CHARS_WARNING_THRESHOLD
 
 # TODO: implement the core logic here

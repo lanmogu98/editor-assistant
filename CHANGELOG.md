@@ -20,8 +20,18 @@ All notable changes to this project will be documented in this file.
 - ~3 lines of commented code from `llm_client.py`
 - Unused imports: `datetime` from md_converter.py, `time` and `json` from clean_html_to_md.py
 
+### Added
+- New `config/constants.py` module centralizing all magic numbers and configuration values
+- Basic test suite (`tests/test_basic.py`) with 21 unit tests covering imports, models, and functionality
+
 ### Changed
 - Updated imports in `main.py` to use renamed module
+- Refactored all modules to import constants from centralized `config/constants.py`:
+  - `md_processor.py`: CHAR_TOKEN_RATIO, MINIMAL_TOKEN_ACCEPTED, PROMPT_OVERHEAD_TOKENS, DEBUG_LOGGING_LEVEL
+  - `llm_client.py`: MAX_API_RETRIES, INITIAL_RETRY_DELAY_SECONDS
+  - `md_converter.py`: DEFAULT_LOGGING_LEVEL, URL_HEAD_TIMEOUT_SECONDS
+  - `clean_html_to_md.py`: DEFAULT_USER_AGENT, DEBUG_LOGGING_LEVEL
+  - `content_validation.py`: MIN_CHARS_WARNING_THRESHOLD
 
 ---
 

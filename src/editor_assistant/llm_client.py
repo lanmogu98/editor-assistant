@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Dict, Any
 from pathlib import Path
 from .config.logging_config import warning
+from .config.constants import MAX_API_RETRIES, INITIAL_RETRY_DELAY_SECONDS
 
 # set up the LLM model details
 from .config.set_llm import LLMModel, ALL_MODEL_DETAILS
@@ -105,10 +106,9 @@ class LLMClient:
         }
         
         # Implement retry logic with exponential backoff
-        max_retries = 3
-        retry_delay = 1
-        
-        for attempt in range(max_retries):
+        retry_delay = INITIAL_RETRY_DELAY_SECONDS
+
+        for attempt in range(MAX_API_RETRIES):
             try:
                 response = requests.post(self.api_url, headers=self.headers, json=data)
                 response.raise_for_status()
@@ -158,10 +158,10 @@ class LLMClient:
                 return response_text
             
             except requests.exceptions.RequestException as e:
-                if attempt == max_retries - 1:
+                if attempt == MAX_API_RETRIES - 1:
                     raise Exception(
                         f"Failed to generate response after "
-                        f"{max_retries} attempts: {str(e)}"
+                        f"{MAX_API_RETRIES} attempts: {str(e)}"
                     )
                 warning(f"API request failed ({str(e)}), retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)

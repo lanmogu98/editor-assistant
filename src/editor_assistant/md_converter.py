@@ -27,9 +27,8 @@ import urllib.error
 from .data_models import MDArticle, InputType
 from .config.markitdown_formats import SUPPORTED_FORMATS
 from .config.logging_config import error, warning
+from .config.constants import DEFAULT_LOGGING_LEVEL, URL_HEAD_TIMEOUT_SECONDS
 import logging
-
-LOGGING_LEVEL = logging.INFO
 
 markitdown_supported_formats = SUPPORTED_FORMATS["file_extentions"]
 
@@ -40,7 +39,7 @@ class MarkdownConverter:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(LOGGING_LEVEL)
+        self.logger.setLevel(DEFAULT_LOGGING_LEVEL)
         self._markitdown = None  # Lazy-loaded MarkItDown instance
 
     @property
@@ -76,7 +75,7 @@ class MarkdownConverter:
             req = urllib.request.Request(url, method='HEAD')
             req.add_header('User-Agent', 'Mozilla/5.0')
 
-            with urllib.request.urlopen(req, timeout=10) as response: 
+            with urllib.request.urlopen(req, timeout=URL_HEAD_TIMEOUT_SECONDS) as response: 
                 # Check the status code (optional, but good practice)
                 if response.getcode () == 200:
                     content_type = response.headers.get ('Content-Type')

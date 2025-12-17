@@ -17,6 +17,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 import os
 from .config.logging_config import error, progress, warning, user_message
+from .config.constants import (
+    CHAR_TOKEN_RATIO,
+    MINIMAL_TOKEN_ACCEPTED,
+    PROMPT_OVERHEAD_TOKENS,
+    DEBUG_LOGGING_LEVEL,
+)
 
 # for LLM processing
 from .llm_client import LLMClient
@@ -30,12 +36,6 @@ from .config.load_prompt import (
     load_news_generator_prompt,
     load_translation_prompt
 )
-
-# Conservative char/token ratio used throughout the application
-CHAR_TOKEN_RATIO = 3.5
-
-# Minimal token count for a sound input whatsoever
-MINIMAL_TOKEN_ACCEPTED = 100
 
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
@@ -56,12 +56,11 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
     Raises:
         ContentTooLargeError: If content is too large for the model
     """
-    # Estimate token count 
+    # Estimate token count
     estimated_tokens = len(content) / CHAR_TOKEN_RATIO
-    
+
     # Calculate available tokens (context - output - prompt overhead)
-    prompt_overhead = 10000  # Conservative estimate for prompt
-    available_tokens = (llm_client.context_window - prompt_overhead)
+    available_tokens = (llm_client.context_window - PROMPT_OVERHEAD_TOKENS)
     
     if estimated_tokens > available_tokens:
         raise ContentTooLargeError(
@@ -70,7 +69,6 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
             f"Please use a smaller document or split manually."
         )
 
-LOGGER_LEVEL = logging.DEBUG
 
 # Summarizer class for processing markdown content
 class MDProcessor:
@@ -89,7 +87,7 @@ class MDProcessor:
         self.llm_client = LLMClient(model_name)
         self.model_name = model_name
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(LOGGER_LEVEL)
+        self.logger.setLevel(DEBUG_LOGGING_LEVEL)
     
     def process_mds (self, md_articles: List[MDArticle], type: ProcessType, output_to_console=True) -> bool:
         """
