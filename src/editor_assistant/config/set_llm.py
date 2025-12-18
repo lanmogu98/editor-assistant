@@ -50,7 +50,7 @@ class ServiceProvider(str, Enum):
     openai_openrouter = "openai-openrouter"
     anthropic_openrouter = "anthropic-openrouter"
     # deepseek
-    # deepseek = "deepseek"
+    #deepseek = "deepseek"
 
 # --- Pydantic Models for the configing of YAML structure ---
 class Pricing(BaseModel):
