@@ -6,10 +6,10 @@ import logging
 from pathlib import Path
 
 class EditorAssistant:
-    def __init__(self, model_name, debug_mode=False):
+    def __init__(self, model_name, debug_mode=False, thinking_level=None):
         setup_logging(debug_mode)
         self.logger = logging.getLogger(__name__)
-        self.md_processor = MDProcessor(model_name)
+        self.md_processor = MDProcessor(model_name, thinking_level=thinking_level)
         self.md_converter = MarkdownConverter()
     
     # LLM processor for multiple files

@@ -55,10 +55,16 @@ deepseek-volcengine:
 gemini:
   api_key_env_var: "GEMINI_API_KEY"
   api_base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-  temperature: 0.5
+  temperature: 1.0  # Gemini 3 recommends default 1.0 to avoid looping issues
   max_tokens: 65536
-  context_window: 200000
+  context_window: 1000000  # Gemini 3 supports 1M token input
   pricing_currency: "$"
+  # Gemini 3 thinking configuration via OpenAI compatibility layer
+  # If not set, model uses dynamic thinking (defaults to "high" with auto-adjustment)
+  # Use CLI --thinking to override: low | medium | high | minimal
+  # See: https://ai.google.dev/gemini-api/docs/gemini-3
+  # request_overrides:
+  #   reasoning_effort: "high"  # Uncomment to force specific level
   models:
     gemini-3-flash:
       id: "gemini-3-flash-preview"

@@ -28,6 +28,13 @@ def add_common_arguments(parser):
         help="Model to use for generation"
     )
     parser.add_argument(
+        "--thinking",
+        choices=["low", "medium", "high"],
+        default=None,
+        help="Thinking/reasoning level for models that support it (Gemini 3+). "
+             "low=fast, medium=balanced, high=deep reasoning. Default: model decides."
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug mode with detailed logging"
@@ -54,7 +61,7 @@ def parse_source_spec(spec: str) -> Input:
 
 def cmd_generate_brief(args):
     """Generate brief news from one or more sources (multi-source supported)."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
 
     # Parse key=value sources into Input objects
     inputs = [parse_source_spec(source) for source in args.sources]
@@ -64,14 +71,14 @@ def cmd_generate_brief(args):
 
 def cmd_generate_outline(args):
     """Generate research outlines from a single paper."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.OUTLINE)
 
 def cmd_generate_translate(args):
     """Generate translation from a single paper."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.TRANSLATE)

@@ -77,14 +77,15 @@ class MDProcessor:
     Designed for 128k+ context window models that can handle entire documents in single requests.
     """
     
-    def __init__ (self, model_name: str):
+    def __init__ (self, model_name: str, thinking_level: str = None):
         """
         Initialize the summarizer.
         
         Args:
             model_name: Name of the LLM model to use
+            thinking_level: Optional thinking/reasoning level override (low, medium, high, minimal)
         """
-        self.llm_client = LLMClient(model_name)
+        self.llm_client = LLMClient(model_name, thinking_level=thinking_level)
         self.model_name = model_name
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(DEBUG_LOGGING_LEVEL)
