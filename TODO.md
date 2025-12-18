@@ -42,16 +42,17 @@
 - [x] 更新 DEVELOPER.md 相关文档
 - [x] 更新 CHANGELOG
 
-### 2. 分支: feature/gemini-thinking
+### ~~2. 分支: feature/gemini-thinking~~ ✅ 已完成
 **优先级: 中 | 预计工作量: 1-2天**
 
-- [ ] 研究 Gemini API 的 `thinkingBudget` 参数
-  - 确认 OpenAI 兼容格式是否支持
-  - 如果不支持，考虑是否需要 Google 原生 SDK
-- [ ] 在 CLI 添加 `--thinking` 或 `--thinking-budget` 参数
-- [ ] 修改 `LLMClient` 支持 thinking 模式
-- [ ] 测试 thinking 模式效果
-- [ ] 更新文档
+- [x] 研究 Gemini API 的 thinking 参数
+  - OpenAI 兼容层使用 `reasoning_effort` 映射到 `thinking_level`
+  - 支持 `low`, `medium`, `high`（`minimal` 仅原生 API 支持）
+  - 参考: https://ai.google.dev/gemini-api/docs/gemini-3
+- [x] 在 CLI 添加 `--thinking` 参数（`low`, `medium`, `high`）
+- [x] 修改 `LLMClient` 支持 thinking 模式（通过 `reasoning_effort`）
+- [x] 测试 thinking 模式效果（gemini-3-flash 测试通过）
+- [x] 更新 CHANGELOG
 
 ### 3. 分支: refactor/task-architecture
 **优先级: 高 | 预计工作量: 2-3天**

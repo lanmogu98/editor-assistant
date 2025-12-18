@@ -17,6 +17,12 @@ All notable changes to this project will be documented in this file.
 - Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
 
 ### Added
+- **Gemini 3 thinking mode support** - Control reasoning depth for Gemini 3 models:
+  - Added `--thinking` CLI parameter (`low`, `medium`, `high`)
+  - Default: model decides dynamically (no parameter sent)
+  - Maps to `reasoning_effort` in OpenAI-compatible format
+  - Priority: CLI argument > config file > model default
+  - See: https://ai.google.dev/gemini-api/docs/gemini-3
 - **Per-provider rate limiting** - Each provider can now have its own rate limit configuration:
   - Added `RateLimitSettings` model in `set_llm.py`
   - Added optional `rate_limit` field in `ProviderSettings`

@@ -99,14 +99,17 @@ class LLMClient:
     def get_supported_models():
         return [model.value for model in LLMModel]
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, thinking_level: str = None):
         """
         Initialize the LLM client for a specific model.
         The client automatically determines the service provider and settings.
         
         Args:
             model_name: The name of the model to use, as defined in the LLMModel enum.
+            thinking_level: Optional thinking/reasoning level override (low, medium, high, minimal).
+                          For Gemini 3+, maps to reasoning_effort in OpenAI-compatible format.
         """
+        self._thinking_level = thinking_level
         try:
             self.model_enum = LLMModel(model_name)
         except ValueError:
@@ -139,7 +142,11 @@ class LLMClient:
         }
         
         # set up the request overrides if there is any
-        self.request_overrides = provider_settings.request_overrides or {}
+        self.request_overrides = dict(provider_settings.request_overrides or {})
+        
+        # Apply thinking_level override if provided (for Gemini 3+ via OpenAI-compat)
+        if self._thinking_level:
+            self.request_overrides["reasoning_effort"] = self._thinking_level
         
         # Initialize token tracking
         self.token_usage = {
