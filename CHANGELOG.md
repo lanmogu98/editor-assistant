@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] - 2025-12-18
+
+### Added
+- **Streaming Output** - Real-time response display:
+  - Default: streaming enabled (content displays as it generates)
+  - `--no-stream` flag to disable and wait for complete response
+  - Works with all commands: `brief`, `outline`, `translate`, `process`
+  - Handles SSE parsing and token estimation for streaming responses
+
+---
+
 ## [0.3.2] - 2025-12-18
 
 ### Fixed

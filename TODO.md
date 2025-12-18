@@ -74,18 +74,19 @@
 - [x] 更新 README, DEVELOPER.md, CHANGELOG
 - [ ] 设计 ClassifyTask 结构化输出（Phase 2）
 
-### 5. 分支: feature/streaming
-**优先级: 中 | 预计工作量: 2-3天**
+### ~~5. 分支: feature/streaming~~ ✅ 已完成
+**优先级: 中 | 预计工作量: 1天**
 
-- [ ] 修改 `LLMClient` 支持流式输出
+- [x] 修改 `LLMClient` 支持流式输出
   - 使用 `stream=True` 参数
   - 实现 SSE 响应解析
-- [ ] 添加 CLI 参数 `--stream`
-- [ ] 处理流式输出的 token 统计
-- [ ] 测试各 provider 的流式支持
-- [ ] 更新文档
+  - Token 估算（当 API 未返回 usage 时）
+- [x] 添加 CLI 参数 `--no-stream`（默认开启流式）
+- [x] 处理流式输出的 token 统计
+- [x] 测试流式/非流式模式（deepseek-v3.2 通过）
+- [x] 更新文档
 
-### 5. 模型参数完善
+### 6. 模型参数完善
 **优先级: 低 | 预计工作量: 0.5天**
 
 - [ ] 在 `llm_config.yml` 添加 `input_max_tokens` 字段

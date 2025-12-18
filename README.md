@@ -154,8 +154,9 @@ editor-assistant process paper=paper.pdf news=news.md --tasks "brief,outline,tra
 
 ### Global Options
 
-- `--model`: Choose LLM model (default: glm-4.5-or)
+- `--model`: Choose LLM model (default: deepseek-v3.2)
 - `--thinking`: Reasoning level for Gemini 3+ models (`low`, `medium`, `high`). Default: model decides dynamically
+- `--no-stream`: Disable streaming output (default: streaming enabled)
 - `--debug`: Enable detailed debug logging with file output
 - `--version`: Show version information
 

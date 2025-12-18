@@ -499,6 +499,26 @@ Reference: https://ai.google.dev/gemini-api/docs/gemini-3
 
 ---
 
+### Streaming Output
+
+By default, streaming is enabled for real-time response display:
+
+```bash
+# Default: streaming enabled
+editor-assistant brief paper=paper.pdf
+
+# Disable streaming (wait for complete response)
+editor-assistant brief paper=paper.pdf --no-stream
+```
+
+**How it works:**
+- Uses Server-Sent Events (SSE) for OpenAI-compatible APIs
+- Content prints in real-time as it generates
+- Token usage estimated if not provided by API in stream mode
+- `--no-stream` applies to all tasks in multi-task mode
+
+---
+
 ### Multi-task Execution
 
 Process the same input with multiple tasks in one command:
