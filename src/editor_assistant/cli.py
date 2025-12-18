@@ -78,6 +78,7 @@ def cmd_generate_translate(args):
 
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
+    from urllib.parse import urlparse
     converter = MarkdownConverter()
     
     for input_path in args.input_paths:
@@ -85,6 +86,12 @@ def cmd_convert_to_md(args):
             # Determine output path
             if args.output:
                 output_path = Path(args.output)
+            elif input_path.startswith("http"):
+                # For URLs, generate a sanitized filename in current directory
+                parsed = urlparse(input_path)
+                # Use path component, replace slashes, remove leading/trailing underscores
+                filename = parsed.path.replace("/", "_").strip("_") or "output"
+                output_path = Path(f"{filename}.md")
             else:
                 input_file = Path(input_path)
                 output_path = input_file.parent / f"{input_file.stem}.md"
@@ -112,16 +119,35 @@ def cmd_convert_to_md(args):
 def cmd_clean_html(args):
     """Clean HTML and convert to markdown."""
     try:
-        result = CleanHTML2Markdown(
-            args.url_or_file,
-            args.output,
-            save_file=not args.stdout
-        )
+        converter = CleanHTML2Markdown()
+        result = converter.convert(args.url_or_file)
+        
+        if result is None:
+            print(f"✗ Failed to convert: {args.url_or_file}")
+            sys.exit(1)
         
         if args.stdout:
-            print(result)
+            print(result.content)
         else:
-            print(f"✓ Cleaned HTML saved to: {args.output}")
+            output_path = args.output
+            if not output_path:
+                # Generate output path from input
+                from pathlib import Path
+                if args.url_or_file.startswith("http"):
+                    # Extract filename from URL
+                    output_path = "clean_output.md"
+                else:
+                    input_file = Path(args.url_or_file)
+                    output_path = str(input_file.parent / f"{input_file.stem}_clean.md")
+            
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(f"# {result.title}\n\n")
+                if result.authors:
+                    f.write(f"**Authors:** {result.authors}\n\n")
+                f.write(f"**Source:** {result.source_path}\n\n")
+                f.write("---\n\n")
+                f.write(result.content)
+            print(f"✓ Cleaned HTML saved to: {output_path}")
             
     except Exception as e:
         print(f"✗ Error cleaning HTML: {str(e)}")
