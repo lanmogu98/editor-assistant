@@ -65,9 +65,10 @@ GEMINI.md
 CLAUDE.md
 docs/
 
-# Testing (keep tests untracked for now)
-tests/
-pytest.ini
+# Test output (keep test code tracked)
+test_output/
+htmlcov/
+.coverage
 
 # Helper scripts from setup sessions
 *.sh
