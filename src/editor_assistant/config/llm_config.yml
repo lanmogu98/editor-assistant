@@ -142,7 +142,7 @@ doubao:
       pricing: {input: 0.80, output: 2.00}
 
 openai-openrouter:
-  api_key_env_var: "OPENAI_API_KEY"
+  api_key_env_var: "OPENAI_API_KEY_OPENROUTER"
   api_base_url: *openrouter_endpoint
   temperature: 0.6
   max_tokens: 164000
@@ -160,7 +160,7 @@ openai-openrouter:
       pricing: {input: 1.25, output: 10.00}
 
 anthropic-openrouter:
-  api_key_env_var: "ANTHROPIC_API_KEY"
+  api_key_env_var: "ANTHROPIC_API_KEY_OPENROUTER"
   api_base_url: *openrouter_endpoint
   temperature: 0.6
   max_tokens: 64000
