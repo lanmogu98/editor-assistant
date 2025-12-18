@@ -6,18 +6,14 @@ and removing all the noise like ads, headers, footers, etc.
 """
 
 import requests
-import time
 from .data_models import MDArticle, InputType
+from .config.constants import DEFAULT_USER_AGENT, DEBUG_LOGGING_LEVEL
 import logging
 from typing import Optional
 from enum import Enum
-import json
 
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
+    "User-Agent": DEFAULT_USER_AGENT
 }
 
 class Converter(Enum):
@@ -29,7 +25,7 @@ class CleanHTML2Markdown:
     def __init__(self):
         self.h2t = self._init_html2text()
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(DEBUG_LOGGING_LEVEL)
 
     # initialize html2text
     def _init_html2text(self):
@@ -100,13 +96,13 @@ class CleanHTML2Markdown:
             converter="readabilipy",
         )
 
-    # convert html to markdown using trafilatura
     def _convert_by_trafilatura(self, path) -> Optional[MDArticle]:
+        """Convert HTML to markdown using trafilatura."""
         try:
-            import trafilatura
+            from trafilatura import bare_extraction
         except ImportError:
             raise ImportError(
-                "trafilatura is not installed."
+                "trafilatura is not installed. "
                 "Please install it with 'pip install trafilatura'."
             )
 
@@ -116,36 +112,26 @@ class CleanHTML2Markdown:
             self.logger.error(f"trafilatura failed to fetch content from {path}")
             return None
 
-        # extract the main content
-        markdown_content = trafilatura.extract(
-            html_content, 
-            output_format='markdown',
+        # Single extraction call for both content and metadata
+        result = bare_extraction(
+            html_content,
             include_images=True,
             include_tables=True,
             include_links=True,
-            include_comments=False
+            include_comments=False,
+            output_format='markdown',
+            with_metadata=True
         )
-        if not markdown_content:
+
+        if not result or not result.get('text'):
             self.logger.error(f"trafilatura failed to extract content from {path}")
             return None
 
-        # extract metadata
-        metadata_json = trafilatura.extract(
-                html_content, 
-                with_metadata=True,
-                output_format='json',
-                include_comments=False
-            )
-        
-        metadata = json.loads(metadata_json) if metadata_json else None
-        title = metadata.get('title', '') if metadata else ''
-        authors = metadata.get('authors', '') if metadata else ''
-        
         return MDArticle(
             type=InputType.PAPER,
-            content=markdown_content,
-            title=title,
-            authors=authors,
+            content=result.get('text', ''),
+            title=result.get('title', ''),
+            authors=result.get('author', ''),
             source_path=path,
             converter="trafilatura",
         )
@@ -194,79 +180,6 @@ def main():
     else:
         print(f"Failed to convert {args.path}")
 
-"""
-test helper functions
-"""
-def test_converter(url, export_path, converter_name):
-    converter = CleanHTML2Markdown()
-    result = converter.convert(url, converter_name)
-    if result:
-        with open(export_path, "w", encoding="utf-8") as f:
-            f.write(f"title: {result.title}\n")
-            f.write(f"url: {result.source_path}\n")
-            f.write(f"authors: {result.authors}\n")
-            f.write(result.content)
-    
-
-def direct_markitdown(url: str) :
-    from markitdown import MarkItDown
-    converter = MarkItDown()
-    return converter.convert(url).text_content
-
-
-
 
 if __name__ == "__main__":
-    nature_no_paywall_url = "https://www.nature.com/articles/d41586-025-01852-z"
-    nature_paywall_url = "https://www.nature.com/articles/d41586-025-00704-0"
-    ars_url = "https://arstechnica.com/science/2025/03/how-whale-urine-benefits-the-ocean-ecosystem/"
-
-    #test_converter(nature_no_paywall_url, "./samples/nature_no_paywall_readabilipy.md", Converter.READABILIPY)
-    test_converter(nature_no_paywall_url, "./samples/nature_no_paywall_trafilatura.md", Converter.TRAFILATURA)
-    """
-    import pandas as pd
-    from pathlib import Path
-    client_article_samples_path = "./samples/client_test_cases.xlsx"
-    df = pd.read_excel(client_article_samples_path)
-    export_path = Path("./samples") / "client_tests"
-    export_path.mkdir(parents=True, exist_ok=True)
-    
-    for _, row in df.iterrows():
-        client, url, html_path = row['client'], row['paper_url'], row['html_path']
-        if isinstance(url, str):
-            test_readabilipy(url, export_path / f"url_{client}.md")
-        if isinstance(html_path, str):
-            test_readabilipy(html_path, export_path / f"html_{client}.md")
-    print(f"{'='*50}")
-    """
-    """
-    print(">> extract_with_readability\n")
-    result2= extract_with_readability(url)
-    if result2:
-        print(f"time: {result2['time']}")
-        print(result2['title'])
-        print(result2['url'])
-        print(result2['markdown'])
-
-    print(f"{'='*50}")
-    
-    print(">> extract_with_trafilatura\n")
-    result3= extract_with_trafilatura(url)
-    if result3:
-        print(result3['markdown'])
-    print(f"{'='*50}")
-    print(">> extract_with_goose3\n")
-    result4= extract_with_goose3(url)
-    if result4:
-        print(result4['markdown'])
-    print(f"{'='*50}")
-    
-    print(">> extract_with_readabilipy\n")
-    result5 = extract_with_readabilipy(url)
-    if result5:
-        print(f"time: {result5['time']}\n")
-        print(f"title: {result5['title']}\n")
-        print(f"byline: {result5['byline']}\n")
-        print(f"url: {result5['url']}\n")
-        print(f"markdown:\n {result5['markdown']}\n")
-"""
+    main()

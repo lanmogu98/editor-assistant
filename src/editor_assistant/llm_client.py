@@ -4,14 +4,92 @@ LLM Client for interacting with the API.
 
 import os
 import time
+import hashlib
 import requests
+from collections import deque, OrderedDict
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
-from .config.logging_config import warning
+from .config.logging_config import warning, progress, user_message
+from .config.constants import (
+    MAX_API_RETRIES,
+    INITIAL_RETRY_DELAY_SECONDS,
+    MIN_REQUEST_INTERVAL_SECONDS,
+    MAX_REQUESTS_PER_MINUTE,
+    RATE_LIMIT_WARNINGS_ENABLED,
+    RESPONSE_CACHE_ENABLED,
+    RESPONSE_CACHE_MAX_SIZE,
+    RESPONSE_CACHE_TTL_SECONDS,
+)
 
 # set up the LLM model details
 from .config.set_llm import LLMModel, ALL_MODEL_DETAILS
+
+
+class ResponseCache:
+    """LRU cache for LLM responses with TTL support."""
+
+    def __init__(self, max_size: int = 100, ttl_seconds: int = 3600):
+        self._cache: OrderedDict[str, Tuple[str, float]] = OrderedDict()
+        self._max_size = max_size
+        self._ttl_seconds = ttl_seconds
+        self._hits = 0
+        self._misses = 0
+
+    def _make_key(self, prompt: str, model: str) -> str:
+        """Create a cache key from prompt and model."""
+        content = f"{model}:{prompt}"
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def get(self, prompt: str, model: str) -> Optional[str]:
+        """Get cached response if exists and not expired."""
+        key = self._make_key(prompt, model)
+
+        if key not in self._cache:
+            self._misses += 1
+            return None
+
+        response, timestamp = self._cache[key]
+
+        # Check TTL expiration
+        if self._ttl_seconds > 0:
+            if time.time() - timestamp > self._ttl_seconds:
+                del self._cache[key]
+                self._misses += 1
+                return None
+
+        # Move to end (most recently used)
+        self._cache.move_to_end(key)
+        self._hits += 1
+        return response
+
+    def set(self, prompt: str, model: str, response: str) -> None:
+        """Store response in cache."""
+        key = self._make_key(prompt, model)
+
+        # Remove oldest if at capacity
+        if len(self._cache) >= self._max_size:
+            self._cache.popitem(last=False)
+
+        self._cache[key] = (response, time.time())
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Return cache statistics."""
+        total = self._hits + self._misses
+        hit_rate = (self._hits / total * 100) if total > 0 else 0
+        return {
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": f"{hit_rate:.1f}%",
+            "size": len(self._cache),
+            "max_size": self._max_size,
+        }
+
+    def clear(self) -> None:
+        """Clear all cached entries."""
+        self._cache.clear()
+        self._hits = 0
+        self._misses = 0
 
 
 class LLMClient:
@@ -78,21 +156,81 @@ class LLMClient:
                 "total_cost": 0
             }
         }
-    
-    def generate_response(self, prompt: str, 
+
+        # Initialize rate limiting state
+        self._last_request_time = 0.0
+        self._request_timestamps = deque(maxlen=MAX_REQUESTS_PER_MINUTE)
+
+        # Initialize response cache
+        self._cache_enabled = RESPONSE_CACHE_ENABLED
+        self._cache = ResponseCache(
+            max_size=RESPONSE_CACHE_MAX_SIZE,
+            ttl_seconds=RESPONSE_CACHE_TTL_SECONDS
+        )
+
+    def _wait_for_rate_limit(self) -> None:
+        """
+        Wait if necessary to respect rate limits.
+
+        Enforces:
+        1. Minimum interval between requests
+        2. Maximum requests per minute
+        """
+        current_time = time.time()
+
+        # Check minimum interval between requests
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < MIN_REQUEST_INTERVAL_SECONDS:
+            wait_time = MIN_REQUEST_INTERVAL_SECONDS - time_since_last
+            if RATE_LIMIT_WARNINGS_ENABLED:
+                warning(f"Rate limiting: waiting {wait_time:.2f}s (min interval)")
+            time.sleep(wait_time)
+            current_time = time.time()
+
+        # Check per-minute rate limit
+        if MAX_REQUESTS_PER_MINUTE > 0:
+            # Remove timestamps older than 60 seconds
+            cutoff_time = current_time - 60
+            while self._request_timestamps and self._request_timestamps[0] < cutoff_time:
+                self._request_timestamps.popleft()
+
+            # If at limit, wait until oldest request expires
+            if len(self._request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
+                wait_time = self._request_timestamps[0] + 60 - current_time
+                if wait_time > 0:
+                    if RATE_LIMIT_WARNINGS_ENABLED:
+                        warning(f"Rate limiting: waiting {wait_time:.2f}s (per-minute limit)")
+                    time.sleep(wait_time)
+                    current_time = time.time()
+
+        # Record this request
+        self._last_request_time = current_time
+        self._request_timestamps.append(current_time)
+
+    def generate_response(self, prompt: str,
                           request_name: str = "unnamed_request") -> str:
         """
         Generate a response using the LLM API.
-        
+
         Args:
             prompt: The prompt to send to the API
             request_name: Name of the request for token tracking
-            
+
         Returns:
             Dictionary containing the response text and token usage
         """
+        # Check cache first (if enabled)
+        if self._cache_enabled:
+            cached_response = self._cache.get(prompt, self.model)
+            if cached_response is not None:
+                progress(f"Cache hit for {request_name}")
+                return cached_response
+
+        # Apply rate limiting before making request
+        self._wait_for_rate_limit()
+
         start_time = time.time()
-        
+
         # Build request data (all providers use OpenAI-compatible format)
         data = {
             "model": self.model,
@@ -105,10 +243,9 @@ class LLMClient:
         }
         
         # Implement retry logic with exponential backoff
-        max_retries = 3
-        retry_delay = 1
-        
-        for attempt in range(max_retries):
+        retry_delay = INITIAL_RETRY_DELAY_SECONDS
+
+        for attempt in range(MAX_API_RETRIES):
             try:
                 response = requests.post(self.api_url, headers=self.headers, json=data)
                 response.raise_for_status()
@@ -154,14 +291,18 @@ class LLMClient:
                     "name": request_name,
                     "process_time": process_time
                 })
-                
+
+                # Store in cache (if enabled)
+                if self._cache_enabled:
+                    self._cache.set(prompt, self.model, response_text)
+
                 return response_text
             
             except requests.exceptions.RequestException as e:
-                if attempt == max_retries - 1:
+                if attempt == MAX_API_RETRIES - 1:
                     raise Exception(
                         f"Failed to generate response after "
-                        f"{max_retries} attempts: {str(e)}"
+                        f"{MAX_API_RETRIES} attempts: {str(e)}"
                     )
                 warning(f"API request failed ({str(e)}), retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
@@ -170,12 +311,25 @@ class LLMClient:
     def get_token_usage(self) -> Dict[str, Any]:
         """
         Get the current token usage statistics.
-        
+
         Returns:
             Dictionary with token usage statistics
         """
         return self.token_usage
-    
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """
+        Get cache statistics.
+
+        Returns:
+            Dictionary with cache hit/miss stats
+        """
+        return self._cache.get_stats()
+
+    def clear_cache(self) -> None:
+        """Clear the response cache."""
+        self._cache.clear()
+
     def save_token_usage_report(self, project_name: str, output_dir: Path) -> None:
         """
         Save a report of token usage for the paper processing.
@@ -204,11 +358,7 @@ class LLMClient:
         # Create output directory for this paper
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # # Save as JSON
-        # with open(output_dir / "token_usage.json", 'w', encoding='utf-8') as f:
-        #     json.dump(report, f, indent=2)
-        
-        # Also save a human-readable summary
+        # Save a human-readable summary
         with open(output_dir / f"token_usage_{project_name}.txt", 'w', encoding='utf-8') as f:
             f.write(f"Token Usage Report for {project_name}\n")
             f.write(f"Generated on: {report['timestamp']}\n")
@@ -239,9 +389,6 @@ class LLMClient:
                 f.write(f"    Output Cost: {self.pricing_currency}{req['output_cost']:.6f}\n")
                 f.write(f"    Total Cost: {self.pricing_currency}{req['total_cost']:.6f}\n\n")
 
-        # Import here to avoid circular imports
-        from .config.logging_config import user_message, progress
-        
         # Show concise summary using logging system
         progress(f"Token usage: {total_tokens} tokens ({self.pricing_currency}{token_usage['cost']['total_cost']:.4f}) in {token_usage['process_times']['total_time']:.1f}s")
         

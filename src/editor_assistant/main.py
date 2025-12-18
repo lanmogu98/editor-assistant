@@ -1,4 +1,4 @@
-from .md_processesor import MDProcessor
+from .md_processor import MDProcessor
 from .data_models import MDArticle, InputType, Input, ProcessType
 from .md_converter import MarkdownConverter
 from .config.logging_config import setup_logging, progress, error

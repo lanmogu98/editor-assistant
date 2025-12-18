@@ -42,7 +42,10 @@ class MDArticle(BaseModel):
     authors: Optional[str] = None
     converter: Optional[str] = None
     source_path: Optional[str] = None
-    output_path: Optional[str] = None
+    output_path: Optional[Path] = None
+
+    class Config:
+        arbitrary_types_allowed = True  # Allow Path type
 
 
 class SaveType(str, Enum):
