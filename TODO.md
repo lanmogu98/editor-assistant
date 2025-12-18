@@ -66,7 +66,15 @@
 - [x] 添加示例：更新 DEVELOPER.md "Adding a New Task Type" 章节
 - [x] 更新 CHANGELOG
 
-### 4. 分支: feature/streaming
+### ~~4. 分支: feature/multi-task~~ ✅ 已完成
+**优先级: 高 | 预计工作量: 0.5天**
+
+- [x] CLI 添加 `process` 命令，支持 `--tasks` 参数
+- [x] 实现串行多任务执行（同一输入执行多个任务）
+- [x] 更新 README, DEVELOPER.md, CHANGELOG
+- [ ] 设计 ClassifyTask 结构化输出（Phase 2）
+
+### 5. 分支: feature/streaming
 **优先级: 中 | 预计工作量: 2-3天**
 
 - [ ] 修改 `LLMClient` 支持流式输出

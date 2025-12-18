@@ -145,6 +145,13 @@ editor-assistant clean "https://example.com/page.html" -o clean.md
 editor-assistant clean page.html --stdout
 ```
 
+**Multi-task Processing (serial execution):**
+
+```bash
+editor-assistant process paper=paper.pdf --tasks "brief,outline"
+editor-assistant process paper=paper.pdf news=news.md --tasks "brief,outline,translate"
+```
+
 ### Global Options
 
 - `--model`: Choose LLM model (default: glm-4.5-or)

@@ -4,6 +4,7 @@ from .md_converter import MarkdownConverter
 from .config.logging_config import setup_logging, progress, error
 import logging
 from pathlib import Path
+from typing import Union
 
 class EditorAssistant:
     def __init__(self, model_name, debug_mode=False, thinking_level=None):
@@ -13,14 +14,17 @@ class EditorAssistant:
         self.md_converter = MarkdownConverter()
     
     # LLM processor for multiple files
-    def process_multiple (self, inputs:list[Input], process_type:ProcessType, output_to_console=True):       
+    def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
             return
 
+        # Normalize task name (support both ProcessType enum and string)
+        task_name = process_type.value if isinstance(process_type, ProcessType) else process_type
+
         # show clean progress message to user
-        progress(f"Start to {process_type.value} with {self.md_processor.llm_client.model_name}")
+        progress(f"Start to {task_name} with {self.md_processor.llm_client.model_name}")
 
         # initialize the md content list
         md_articles = []
@@ -50,11 +54,11 @@ class EditorAssistant:
         progress("Input formatted as markdown and ready to process.")
         # process the md files
         try:
-            success = self.md_processor.process_mds (md_articles, process_type, output_to_console)
+            success = self.md_processor.process_mds(md_articles, task_name, output_to_console)
             if not success:
-                self.logger.warning (f"failed to process {md_articles[0].title}")
+                self.logger.warning(f"failed to process {md_articles[0].title}")
         except Exception as e:
-            self.logger.warning (f"failed to process {md_articles[0].title}: {str(e)}")
+            self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
          
         return 
 
