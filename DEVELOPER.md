@@ -392,6 +392,43 @@ MIN_REQUEST_INTERVAL_SECONDS = 0.5  # Default min interval
 MAX_REQUESTS_PER_MINUTE = 60        # Default max RPM
 ```
 
+### Gemini 3 Thinking Mode
+
+Control reasoning depth for Gemini 3+ models:
+
+**CLI usage:**
+```bash
+# Let model decide dynamically (default)
+editor-assistant brief paper=paper.pdf --model gemini-3-flash
+
+# Force specific thinking level
+editor-assistant brief paper=paper.pdf --model gemini-3-flash --thinking low
+editor-assistant brief paper=paper.pdf --model gemini-3-pro --thinking high
+```
+
+**Thinking levels (via OpenAI-compatible `reasoning_effort`):**
+
+| Level | Description |
+|-------|-------------|
+| `low` | Minimize latency, simple tasks |
+| `medium` | Balanced (Flash only) |
+| `high` | Deep reasoning, complex tasks |
+| (default) | Model decides dynamically |
+
+**Config file override** (in `llm_config.yml`):
+```yaml
+gemini:
+  # ... other settings ...
+  request_overrides:
+    reasoning_effort: "high"  # Force all requests to use high
+```
+
+**Priority:** CLI `--thinking` > config `request_overrides` > model default
+
+Reference: https://ai.google.dev/gemini-api/docs/gemini-3
+
+---
+
 ### Response Caching
 
 Enable for repeated prompts:

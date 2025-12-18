@@ -148,6 +148,7 @@ editor-assistant clean page.html --stdout
 ### Global Options
 
 - `--model`: Choose LLM model (default: glm-4.5-or)
+- `--thinking`: Reasoning level for Gemini 3+ models (`low`, `medium`, `high`). Default: model decides dynamically
 - `--debug`: Enable detailed debug logging with file output
 - `--version`: Show version information
 
