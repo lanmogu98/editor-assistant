@@ -98,10 +98,11 @@
 
 ## 📋 用户提出的原始需求（供参考）
 
-1. **Gemini thinking 模式** - 区分 thinking/non-thinking，CLI 可配置
+1. **Gemini thinking 模式** - ✅ 已完成
 2. **OpenRouter 模型测试** - ✅ 已完成
-3. **流式输出支持** - 待完成
-4. **代码模块重构** - 更好支持功能扩展，多任务合并调用
+3. **流式输出支持** - ✅ 已完成
+4. **代码模块重构** - ✅ 已完成（Task 架构 + 多任务执行）
+5. **测试模块重构** - ✅ 已完成（单元测试 + 集成测试）
 5. **模型参数完善** - input_max, output_max, context_window 的整合
 6. **Rate limit per provider** - 每个模型单独控制
 7. **Cache 模块说明** - ✅ 已在 DEVELOPER.md 文档中说明

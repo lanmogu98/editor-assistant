@@ -590,3 +590,139 @@ type: short description
 - chore: maintenance
 ```
 
+---
+
+## Testing
+
+### Test Structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures and pytest config
+├── fixtures/                # Test data and sample files
+│   ├── test_urls.py         # Real-world test URLs
+│   ├── md_input.py          # Sample MDArticle fixtures
+│   └── sample_data/         # PDF and markdown files
+├── unit/                    # Fast tests with mocks (no API calls)
+│   ├── test_data_models.py  # Data model tests
+│   ├── test_tasks.py        # Task system tests
+│   ├── test_llm_client.py   # LLM client tests
+│   └── test_md_processor.py # Processor tests
+└── integration/             # Tests with real API calls
+    ├── test_llm_api.py      # LLM API integration
+    ├── test_tasks_api.py    # Task execution tests
+    └── test_cli.py          # CLI end-to-end tests
+```
+
+### Running Tests
+
+```bash
+# Run all unit tests (fast, no API calls)
+pytest tests/unit/ -v
+
+# Run specific test file
+pytest tests/unit/test_tasks.py -v
+
+# Run integration tests (costs money!)
+pytest tests/integration/ -v
+
+# Using the test runner script
+python scripts/run_tests.py unit        # Unit tests only
+python scripts/run_tests.py integration # Integration tests
+python scripts/run_tests.py coverage    # With coverage report
+python scripts/run_tests.py quick       # Essential tests only
+```
+
+### Test Markers
+
+| Marker | Description |
+|--------|-------------|
+| `@pytest.mark.unit` | Fast unit tests with mocks |
+| `@pytest.mark.integration` | Tests with real API calls |
+| `@pytest.mark.slow` | Tests taking > 5 seconds |
+| `@pytest.mark.expensive` | Tests that cost significant money |
+
+```bash
+# Run only unit tests
+pytest -m "unit"
+
+# Skip slow tests
+pytest -m "not slow"
+
+# Run integration but skip expensive
+pytest tests/integration/ -m "not expensive"
+```
+
+### Writing New Tests
+
+#### Unit Test Example
+
+```python
+import pytest
+from editor_assistant.data_models import MDArticle, InputType
+
+class TestMyFeature:
+    
+    @pytest.mark.unit
+    def test_basic_functionality(self, mock_llm_client):
+        """Test with mocked LLM client (no API call)."""
+        # mock_llm_client is provided by conftest.py
+        result = my_function(mock_llm_client)
+        assert result is not None
+```
+
+#### Integration Test Example
+
+```python
+import pytest
+import os
+
+# Skip if API key not set
+pytestmark = pytest.mark.skipif(
+    not os.getenv("DEEPSEEK_API_KEY"),
+    reason="DEEPSEEK_API_KEY not set"
+)
+
+class TestAPIIntegration:
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_real_api_call(self, budget_model_name):
+        """Test with real API (costs money)."""
+        from editor_assistant.llm_client import LLMClient
+        client = LLMClient(budget_model_name)
+        response = client.generate_response("Test prompt")
+        assert len(response) > 0
+```
+
+### Test Fixtures
+
+Key fixtures from `conftest.py`:
+
+| Fixture | Description |
+|---------|-------------|
+| `temp_dir` | Temporary directory for test outputs |
+| `sample_paper_content` | Shannon paper content as string |
+| `sample_paper_article` | MDArticle with paper content |
+| `mock_llm_client` | Mocked LLM client for unit tests |
+| `mock_llm_response` | Standard mock response text |
+| `budget_model_name` | Cheapest model name for integration tests |
+| `real_llm_client` | Real LLM client (integration only) |
+
+### Test Data
+
+Test URLs in `tests/fixtures/test_urls.py`:
+
+```python
+from tests.fixtures.test_urls import (
+    PAPER_HTML_LONG,  # Long arxiv paper (HTML)
+    PAPER_PDF_LONG,   # Long arxiv paper (PDF)
+    NEWS_BLOG,        # Blog post
+    NEWS_SHORT,       # Short news article
+)
+```
+
+Sample files in `tests/fixtures/sample_data/`:
+- `A Mathematical Theory of Communication.md/.pdf` - Shannon's classic paper
+- `Weaver_Warren_1949_The_Mathematics_of_Communication.md/.pdf` - Related essay
+

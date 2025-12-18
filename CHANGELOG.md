@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.4] - 2025-12-18
+
+### Changed
+- **Test Module Refactor** - Rebuilt test suite from scratch:
+  - Unit tests (46 tests): `tests/unit/` - Fast, mocked, no API calls
+  - Integration tests: `tests/integration/` - Real API calls
+  - Test fixtures: `tests/fixtures/` with sample data
+  - New markers: `unit`, `integration`, `slow`, `expensive`
+  - Updated `scripts/run_tests.py` for easy test execution
+  - Removed `tests/` from `.gitignore` to track test code
+
+---
+
 ## [0.3.3] - 2025-12-18
 
 ### Added
