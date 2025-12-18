@@ -36,6 +36,12 @@ def add_common_arguments(parser):
              "low=fast, medium=balanced, high=deep reasoning. Default: model decides."
     )
     parser.add_argument(
+        "--no-stream",
+        action="store_true",
+        dest="no_stream",
+        help="Disable streaming output (default: streaming enabled)"
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug mode with detailed logging"
@@ -62,7 +68,8 @@ def parse_source_spec(spec: str) -> Input:
 
 def cmd_generate_brief(args):
     """Generate brief news from one or more sources (multi-source supported)."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
+    stream = not getattr(args, 'no_stream', False)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
 
     # Parse key=value sources into Input objects
     inputs = [parse_source_spec(source) for source in args.sources]
@@ -72,14 +79,16 @@ def cmd_generate_brief(args):
 
 def cmd_generate_outline(args):
     """Generate research outlines from a single paper."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
+    stream = not getattr(args, 'no_stream', False)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.OUTLINE)
 
 def cmd_generate_translate(args):
     """Generate translation from a single paper."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
+    stream = not getattr(args, 'no_stream', False)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.TRANSLATE)
@@ -87,7 +96,8 @@ def cmd_generate_translate(args):
 
 def cmd_process_multi_task(args):
     """Process input with multiple tasks (serial execution)."""
-    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
+    stream = not getattr(args, 'no_stream', False)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     
     # Parse sources into Input objects
     inputs = [parse_source_spec(source) for source in args.sources]

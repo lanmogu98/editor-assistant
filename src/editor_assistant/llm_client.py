@@ -222,16 +222,18 @@ class LLMClient:
         self._request_timestamps.append(current_time)
 
     def generate_response(self, prompt: str,
-                          request_name: str = "unnamed_request") -> str:
+                          request_name: str = "unnamed_request",
+                          stream: bool = False) -> str:
         """
         Generate a response using the LLM API.
 
         Args:
             prompt: The prompt to send to the API
             request_name: Name of the request for token tracking
+            stream: If True, stream the response and print in real-time
 
         Returns:
-            Dictionary containing the response text and token usage
+            The response text
         """
         # Check cache first (if enabled)
         if self._cache_enabled:
@@ -253,6 +255,7 @@ class LLMClient:
             ],
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "stream": stream,
             **self.request_overrides
         }
         
@@ -261,50 +264,10 @@ class LLMClient:
 
         for attempt in range(MAX_API_RETRIES):
             try:
-                response = requests.post(self.api_url, headers=self.headers, json=data)
-                response.raise_for_status()
-                
-                result = response.json()
-                
-                # Extract response text (all providers use OpenAI-compatible format)
-                response_text = result["choices"][0]["message"]["content"]
-                # Track token usage
-                input_tokens = result.get("usage", {}).get("prompt_tokens", 0)
-                output_tokens = result.get("usage", {}).get("completion_tokens", 0)
-                
-                # Calculate costs
-                input_cost = (input_tokens / 1_000_000) * self.pricing.input
-                output_cost = (output_tokens / 1_000_000) * self.pricing.output
-                total_cost = input_cost + output_cost
-                
-                # Track process time
-                end_time = time.time()
-                process_time = end_time - start_time
-                
-                # Update token usage tracking
-                self.token_usage["total_input_tokens"] += input_tokens
-                self.token_usage["total_output_tokens"] += output_tokens
-                self.token_usage["process_times"]["total_time"] += process_time
-                self.token_usage["cost"]["input_cost"] += input_cost
-                self.token_usage["cost"]["output_cost"] += output_cost
-                self.token_usage["cost"]["total_cost"] += total_cost
-                
-                self.token_usage["requests"].append({
-                    "name": request_name,
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "total_tokens": input_tokens + output_tokens,
-                    "process_time": process_time,
-                    "input_cost": input_cost,
-                    "output_cost": output_cost,
-                    "total_cost": total_cost,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                })
-                
-                self.token_usage["process_times"]["request_times"].append({
-                    "name": request_name,
-                    "process_time": process_time
-                })
+                if stream:
+                    response_text = self._stream_response(data, start_time, request_name)
+                else:
+                    response_text = self._non_stream_response(data, start_time, request_name)
 
                 # Store in cache (if enabled)
                 if self._cache_enabled:
@@ -321,6 +284,126 @@ class LLMClient:
                 warning(f"API request failed ({str(e)}), retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
+
+    def _non_stream_response(self, data: dict, start_time: float, request_name: str) -> str:
+        """Handle non-streaming API response."""
+        response = requests.post(self.api_url, headers=self.headers, json=data)
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        # Extract response text
+        response_text = result["choices"][0]["message"]["content"]
+        
+        # Track token usage
+        input_tokens = result.get("usage", {}).get("prompt_tokens", 0)
+        output_tokens = result.get("usage", {}).get("completion_tokens", 0)
+        
+        self._track_usage(input_tokens, output_tokens, start_time, request_name)
+        
+        return response_text
+
+    def _stream_response(self, data: dict, start_time: float, request_name: str) -> str:
+        """Handle streaming API response with real-time output."""
+        import json
+        import sys
+        
+        response = requests.post(
+            self.api_url, 
+            headers=self.headers, 
+            json=data, 
+            stream=True
+        )
+        response.raise_for_status()
+        
+        full_content = []
+        input_tokens = 0
+        output_tokens = 0
+        
+        for line in response.iter_lines():
+            if not line:
+                continue
+            
+            line_text = line.decode('utf-8')
+            
+            # Skip SSE prefix
+            if line_text.startswith('data: '):
+                line_text = line_text[6:]
+            
+            # Skip [DONE] marker
+            if line_text.strip() == '[DONE]':
+                break
+            
+            try:
+                chunk = json.loads(line_text)
+                
+                # Extract content delta
+                if 'choices' in chunk and len(chunk['choices']) > 0:
+                    delta = chunk['choices'][0].get('delta', {})
+                    content = delta.get('content', '')
+                    
+                    if content:
+                        full_content.append(content)
+                        # Print in real-time
+                        print(content, end='', flush=True)
+                
+                # Some APIs return usage in the final chunk
+                if 'usage' in chunk and chunk['usage'] is not None:
+                    input_tokens = chunk['usage'].get('prompt_tokens', 0)
+                    output_tokens = chunk['usage'].get('completion_tokens', 0)
+                    
+            except json.JSONDecodeError:
+                continue
+        
+        # Print newline after streaming completes
+        print()
+        
+        response_text = ''.join(full_content)
+        
+        # Estimate tokens if not provided (for APIs that don't return usage in stream)
+        if output_tokens == 0:
+            output_tokens = len(response_text) // 4  # Rough estimate
+        
+        self._track_usage(input_tokens, output_tokens, start_time, request_name)
+        
+        return response_text
+
+    def _track_usage(self, input_tokens: int, output_tokens: int, 
+                     start_time: float, request_name: str) -> None:
+        """Track token usage and costs."""
+        # Calculate costs
+        input_cost = (input_tokens / 1_000_000) * self.pricing.input
+        output_cost = (output_tokens / 1_000_000) * self.pricing.output
+        total_cost = input_cost + output_cost
+        
+        # Track process time
+        end_time = time.time()
+        process_time = end_time - start_time
+        
+        # Update token usage tracking
+        self.token_usage["total_input_tokens"] += input_tokens
+        self.token_usage["total_output_tokens"] += output_tokens
+        self.token_usage["process_times"]["total_time"] += process_time
+        self.token_usage["cost"]["input_cost"] += input_cost
+        self.token_usage["cost"]["output_cost"] += output_cost
+        self.token_usage["cost"]["total_cost"] += total_cost
+        
+        self.token_usage["requests"].append({
+            "name": request_name,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": input_tokens + output_tokens,
+            "process_time": process_time,
+            "input_cost": input_cost,
+            "output_cost": output_cost,
+            "total_cost": total_cost,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        
+        self.token_usage["process_times"]["request_times"].append({
+            "name": request_name,
+            "process_time": process_time
+        })
     
     def get_token_usage(self) -> Dict[str, Any]:
         """

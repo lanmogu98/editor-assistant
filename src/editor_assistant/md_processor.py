@@ -73,16 +73,18 @@ class MDProcessor:
     Designed for 128k+ context window models that can handle entire documents in single requests.
     """
     
-    def __init__ (self, model_name: str, thinking_level: str = None):
+    def __init__(self, model_name: str, thinking_level: str = None, stream: bool = True):
         """
-        Initialize the summarizer.
+        Initialize the processor.
         
         Args:
             model_name: Name of the LLM model to use
             thinking_level: Optional thinking/reasoning level override (low, medium, high, minimal)
+            stream: Whether to use streaming output (default: True)
         """
         self.llm_client = LLMClient(model_name, thinking_level=thinking_level)
         self.model_name = model_name
+        self.stream = stream
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(DEBUG_LOGGING_LEVEL)
     
@@ -95,7 +97,7 @@ class MDProcessor:
         Args:
             md_articles: The list of MDArticle objects to process
             task_type: Task type (ProcessType enum or string name)
-            output_to_console: Whether to print output to console
+            output_to_console: Whether to print output to console (ignored if streaming)
             
         Returns:
             bool: True if successful, False otherwise
@@ -154,7 +156,7 @@ class MDProcessor:
         # Make LLM request
         try:
             progress(f"Processing document with {len(prompt)} characters...")
-            response = self._make_api_request(prompt, task_name)
+            response = self._make_api_request(prompt, task_name, stream=self.stream)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             return False
@@ -174,13 +176,15 @@ class MDProcessor:
             return False
 
         # Save all outputs
+        # Note: if streaming, content was already printed in real-time
+        should_print = output_to_console and not self.stream
         try:
             for output_name, content in outputs.items():
                 formatted_content = metadata_prefix + content
                 
                 if output_name == "main":
                     self._save_content(SaveType.RESPONSE, title, 
-                                       formatted_content, output_dir, output_to_console)
+                                       formatted_content, output_dir, should_print)
                 else:
                     # Additional outputs (e.g., bilingual)
                     self._save_content(SaveType.RESPONSE, f"{output_name}_{title}",
@@ -226,19 +230,20 @@ class MDProcessor:
             error(f"Error saving content: {str(e)}")
             raise
 
-    def _make_api_request(self, prompt: str, request_name: str) -> Dict[str, Any]:
+    def _make_api_request(self, prompt: str, request_name: str, stream: bool = False) -> str:
         """
         Make an API request to the LLM client.
         
         Args:
             prompt: The prompt to send
             request_name: Name of the request for tracking
+            stream: Whether to use streaming output
             
         Returns:
-            Dictionary with the response and metadata
+            The response text
         """
         try:
-            return self.llm_client.generate_response(prompt, request_name)
+            return self.llm_client.generate_response(prompt, request_name, stream=stream)
         except ConnectionError as e:
             error(f"Connection failed during {request_name}: {str(e)}")
             raise ConnectionError(f"Failed to connect to LLM service: {str(e)}") from e

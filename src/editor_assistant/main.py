@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Union
 
 class EditorAssistant:
-    def __init__(self, model_name, debug_mode=False, thinking_level=None):
+    def __init__(self, model_name, debug_mode=False, thinking_level=None, stream=True):
         setup_logging(debug_mode)
         self.logger = logging.getLogger(__name__)
-        self.md_processor = MDProcessor(model_name, thinking_level=thinking_level)
+        self.md_processor = MDProcessor(model_name, thinking_level=thinking_level, stream=stream)
         self.md_converter = MarkdownConverter()
     
     # LLM processor for multiple files
