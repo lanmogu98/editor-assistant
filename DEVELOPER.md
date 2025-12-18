@@ -159,7 +159,77 @@ editor-assistant brief paper=test.pdf --model your-model-name
 
 ## Adding a New Task Type
 
-Adding a new task type requires changes in 4 files:
+With the new pluggable task system, adding a new task is simple:
+
+### Step 1: Create Task Class
+
+Create `tasks/your_task.py`:
+
+```python
+from typing import List, Dict
+from .base import Task, TaskRegistry
+from ..data_models import MDArticle
+from ..config.load_prompt import load_your_task_prompt
+
+@TaskRegistry.register("your-task")
+class YourTask(Task):
+    name = "your-task"
+    description = "Description of your task"
+    supports_multi_input = False  # or True for multi-source tasks
+    
+    def validate(self, articles: List[MDArticle]) -> tuple[bool, str]:
+        if len(articles) != 1:
+            return False, "This task requires exactly one article"
+        return True, ""
+    
+    def build_prompt(self, articles: List[MDArticle]) -> str:
+        return load_your_task_prompt(content=articles[0].content)
+    
+    def post_process(self, response: str, articles: List[MDArticle]) -> Dict[str, str]:
+        # Return {"main": response} for single output
+        # Return {"main": response, "extra": extra_content} for multiple outputs
+        return {"main": response}
+```
+
+### Step 2: Register in `__init__.py`
+
+Edit `tasks/__init__.py`:
+
+```python
+from .your_task import YourTask
+
+__all__ = [
+    # ... existing exports ...
+    "YourTask",
+]
+```
+
+### Step 3: Add CLI Command
+
+Edit `cli.py`:
+
+```python
+def cmd_your_task(args):
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
+    input_obj = Input(type=InputType.PAPER, path=args.input_file)
+    assistant.process_multiple([input_obj], "your-task")  # Use task name string
+
+# In create_parser():
+your_parser = subparsers.add_parser("your-task", help="Your task description")
+your_parser.add_argument("input_file", help="Input file path")
+add_common_arguments(your_parser)
+your_parser.set_defaults(func=cmd_your_task)
+```
+
+### Step 4: Create Prompt Template
+
+Create `config/prompts/your_task.txt` and add loader in `config/load_prompt.py`.
+
+---
+
+### Legacy Approach (deprecated)
+
+The old approach required changes in 4 files:
 
 ### Step 1: Add ProcessType Enum
 

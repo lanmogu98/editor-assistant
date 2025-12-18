@@ -54,17 +54,17 @@
 - [x] 测试 thinking 模式效果（gemini-3-flash 测试通过）
 - [x] 更新 CHANGELOG
 
-### 3. 分支: refactor/task-architecture
+### ~~3. 分支: refactor/task-architecture~~ ✅ 已完成
 **优先级: 高 | 预计工作量: 2-3天**
 
-- [ ] 设计新的任务架构
-  - 可插拔的任务注册系统
-  - 支持单输入/多输入任务
-  - 支持多任务合并调用（一次 prompt 多个输出）
-- [ ] 实现 TaskRegistry 或 Plugin 系统
-- [ ] 重构现有任务（brief, outline, translate）
-- [ ] 添加示例：如何创建新任务
-- [ ] 更新 DEVELOPER.md
+- [x] 设计新的任务架构
+  - 可插拔的任务注册系统 (`TaskRegistry` + `@register` 装饰器)
+  - 支持单输入/多输入任务 (`supports_multi_input` 属性)
+  - 支持多任务输出 (`post_process` 返回 `Dict[str, str]`)
+- [x] 实现 TaskRegistry 系统 (`tasks/base.py`)
+- [x] 重构现有任务（`brief.py`, `outline.py`, `translate.py`）
+- [x] 添加示例：更新 DEVELOPER.md "Adding a New Task Type" 章节
+- [x] 更新 CHANGELOG
 
 ### 4. 分支: feature/streaming
 **优先级: 中 | 预计工作量: 2-3天**
