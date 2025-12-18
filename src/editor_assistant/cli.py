@@ -16,7 +16,7 @@ from .md_converter import MarkdownConverter
 from .clean_html_to_md import CleanHTML2Markdown
 
 
-DEFAULT_MODEL = "glm-4.6-or"
+DEFAULT_MODEL = "deepseek-v3.2"
 
 
 def add_common_arguments(parser):
