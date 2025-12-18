@@ -30,7 +30,12 @@ All notable changes to this project will be documented in this file.
   - Minimum interval between requests (configurable via `MIN_REQUEST_INTERVAL_SECONDS`)
   - Per-minute request limit (configurable via `MAX_REQUESTS_PER_MINUTE`)
   - Warning messages when rate limiting is applied (configurable via `RATE_LIMIT_WARNINGS_ENABLED`)
-- Test suite (`tests/test_basic.py`) expanded to 34 unit tests covering imports, models, functionality, and rate limiting
+- **Response caching** for LLM responses to avoid redundant API calls (`llm_client.py`):
+  - LRU cache with configurable max size (`RESPONSE_CACHE_MAX_SIZE`)
+  - TTL-based expiration (`RESPONSE_CACHE_TTL_SECONDS`)
+  - Disabled by default (`RESPONSE_CACHE_ENABLED=False`), enable for repeated prompts
+  - Cache statistics via `get_cache_stats()` and `clear_cache()` methods
+- Test suite (`tests/test_basic.py`) expanded to 40 unit tests covering imports, models, functionality, rate limiting, and caching
 
 ### Changed
 - Updated imports in `main.py` to use renamed module

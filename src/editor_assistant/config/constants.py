@@ -54,6 +54,21 @@ RATE_LIMIT_WARNINGS_ENABLED = True
 
 
 # =============================================================================
+# RESPONSE CACHING
+# =============================================================================
+
+# Enable response caching for identical prompts.
+# When enabled, identical prompts return cached responses without API calls.
+RESPONSE_CACHE_ENABLED = False
+
+# Maximum number of cached responses (LRU eviction when exceeded).
+RESPONSE_CACHE_MAX_SIZE = 100
+
+# Cache entry time-to-live in seconds (0 = no expiration).
+RESPONSE_CACHE_TTL_SECONDS = 3600  # 1 hour
+
+
+# =============================================================================
 # CONTENT VALIDATION
 # =============================================================================
 
