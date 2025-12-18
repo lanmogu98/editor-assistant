@@ -38,6 +38,22 @@ INITIAL_RETRY_DELAY_SECONDS = 1
 
 
 # =============================================================================
+# RATE LIMITING
+# =============================================================================
+
+# Minimum interval between API requests (in seconds).
+# This prevents hitting per-second rate limits.
+MIN_REQUEST_INTERVAL_SECONDS = 0.5
+
+# Maximum requests per minute (per client instance).
+# Set to 0 to disable per-minute limiting.
+MAX_REQUESTS_PER_MINUTE = 60
+
+# Enable rate limit warning messages.
+RATE_LIMIT_WARNINGS_ENABLED = True
+
+
+# =============================================================================
 # CONTENT VALIDATION
 # =============================================================================
 

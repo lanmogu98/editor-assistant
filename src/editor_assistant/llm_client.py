@@ -5,11 +5,18 @@ LLM Client for interacting with the API.
 import os
 import time
 import requests
+from collections import deque
 from datetime import datetime
 from typing import Dict, Any
 from pathlib import Path
 from .config.logging_config import warning
-from .config.constants import MAX_API_RETRIES, INITIAL_RETRY_DELAY_SECONDS
+from .config.constants import (
+    MAX_API_RETRIES,
+    INITIAL_RETRY_DELAY_SECONDS,
+    MIN_REQUEST_INTERVAL_SECONDS,
+    MAX_REQUESTS_PER_MINUTE,
+    RATE_LIMIT_WARNINGS_ENABLED,
+)
 
 # set up the LLM model details
 from .config.set_llm import LLMModel, ALL_MODEL_DETAILS
@@ -79,19 +86,65 @@ class LLMClient:
                 "total_cost": 0
             }
         }
-    
-    def generate_response(self, prompt: str, 
+
+        # Initialize rate limiting state
+        self._last_request_time = 0.0
+        self._request_timestamps = deque(maxlen=MAX_REQUESTS_PER_MINUTE)
+
+    def _wait_for_rate_limit(self) -> None:
+        """
+        Wait if necessary to respect rate limits.
+
+        Enforces:
+        1. Minimum interval between requests
+        2. Maximum requests per minute
+        """
+        current_time = time.time()
+
+        # Check minimum interval between requests
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < MIN_REQUEST_INTERVAL_SECONDS:
+            wait_time = MIN_REQUEST_INTERVAL_SECONDS - time_since_last
+            if RATE_LIMIT_WARNINGS_ENABLED:
+                warning(f"Rate limiting: waiting {wait_time:.2f}s (min interval)")
+            time.sleep(wait_time)
+            current_time = time.time()
+
+        # Check per-minute rate limit
+        if MAX_REQUESTS_PER_MINUTE > 0:
+            # Remove timestamps older than 60 seconds
+            cutoff_time = current_time - 60
+            while self._request_timestamps and self._request_timestamps[0] < cutoff_time:
+                self._request_timestamps.popleft()
+
+            # If at limit, wait until oldest request expires
+            if len(self._request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
+                wait_time = self._request_timestamps[0] + 60 - current_time
+                if wait_time > 0:
+                    if RATE_LIMIT_WARNINGS_ENABLED:
+                        warning(f"Rate limiting: waiting {wait_time:.2f}s (per-minute limit)")
+                    time.sleep(wait_time)
+                    current_time = time.time()
+
+        # Record this request
+        self._last_request_time = current_time
+        self._request_timestamps.append(current_time)
+
+    def generate_response(self, prompt: str,
                           request_name: str = "unnamed_request") -> str:
         """
         Generate a response using the LLM API.
-        
+
         Args:
             prompt: The prompt to send to the API
             request_name: Name of the request for token tracking
-            
+
         Returns:
             Dictionary containing the response text and token usage
         """
+        # Apply rate limiting before making request
+        self._wait_for_rate_limit()
+
         start_time = time.time()
         
         # Build request data (all providers use OpenAI-compatible format)

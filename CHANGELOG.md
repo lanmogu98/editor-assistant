@@ -26,7 +26,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - New `config/constants.py` module centralizing all magic numbers and configuration values
-- Basic test suite (`tests/test_basic.py`) with 21 unit tests covering imports, models, and functionality
+- **Rate limiting** in LLM client to prevent API bans (`llm_client.py`):
+  - Minimum interval between requests (configurable via `MIN_REQUEST_INTERVAL_SECONDS`)
+  - Per-minute request limit (configurable via `MAX_REQUESTS_PER_MINUTE`)
+  - Warning messages when rate limiting is applied (configurable via `RATE_LIMIT_WARNINGS_ENABLED`)
+- Test suite (`tests/test_basic.py`) expanded to 34 unit tests covering imports, models, functionality, and rate limiting
 
 ### Changed
 - Updated imports in `main.py` to use renamed module
