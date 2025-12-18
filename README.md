@@ -181,18 +181,13 @@ assistant.process_multiple(
 
 #### Deepseek Models (via Volcengine)
 
-- `deepseek-v3.1` - Latest general-purpose model (2025 release)
+- `deepseek-v3.2` - Latest general-purpose model (2025 release)
 - `deepseek-r1` - Advanced reasoning model
-- `deepseek-v3` - General-purpose model
-
-#### Deepseek Models (Native API)
-
-- `deepseek-v3.2` - Next-generation reasoning model with enhanced capabilities
 
 #### Gemini Models
 
-- `gemini-2.5-flash` - Balanced performance model
-- `gemini-2.5-pro` - High-performance model
+- `gemini-3-flash` - Balanced performance model
+- `gemini-3-pro` - High-performance model
 
 #### Kimi Models (via Volcengine)
 
