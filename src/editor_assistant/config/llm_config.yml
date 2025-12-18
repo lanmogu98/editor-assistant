@@ -10,6 +10,9 @@
 #    - pricing_currency: the currency of the pricing.
 #    - max_tokens: the maximum number of tokens the model can generate.
 #    - context_window: the maximum number of tokens the model can process.
+#    - rate_limit (optional): per-provider rate limiting configuration
+#        - min_interval_seconds: minimum time between requests (default: 0.5)
+#        - max_requests_per_minute: max requests per minute, 0 = unlimited (default: 60)
 #   
 #   In default, and as a highly recommend practice, the API key of each model is 
 #   stored in the environment variable.
@@ -166,6 +169,10 @@ anthropic-openrouter:
   max_tokens: 64000
   context_window: 200000
   pricing_currency: "$"
+  # Example: per-provider rate limiting (optional, uses defaults if not specified)
+  rate_limit:
+    min_interval_seconds: 1.0  # Claude is expensive, slow down requests
+    max_requests_per_minute: 30
   models:
     claude-sonnet-4-or:
       id: "anthropic/claude-sonnet-4"

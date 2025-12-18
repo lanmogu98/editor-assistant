@@ -373,11 +373,23 @@ except BlockedPublisherError as e:
 
 ### Rate Limiting
 
-The `LLMClient` handles rate limiting automatically. Configure in `constants.py`:
+The `LLMClient` handles rate limiting automatically. 
+
+**Per-provider configuration** (in `llm_config.yml`):
+
+```yaml
+your-provider:
+  # ... other settings ...
+  rate_limit:
+    min_interval_seconds: 1.0  # Min time between requests
+    max_requests_per_minute: 30  # Max requests per minute (0 = unlimited)
+```
+
+**Global defaults** (in `constants.py`, used when provider doesn't specify):
 
 ```python
-MIN_REQUEST_INTERVAL_SECONDS = 0.5  # Min time between requests
-MAX_REQUESTS_PER_MINUTE = 60        # Max requests per minute (0 = unlimited)
+MIN_REQUEST_INTERVAL_SECONDS = 0.5  # Default min interval
+MAX_REQUESTS_PER_MINUTE = 60        # Default max RPM
 ```
 
 ### Response Caching

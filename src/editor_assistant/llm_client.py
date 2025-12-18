@@ -157,9 +157,16 @@ class LLMClient:
             }
         }
 
-        # Initialize rate limiting state
+        # Initialize rate limiting state from provider config or use defaults
+        if provider_settings.rate_limit:
+            self._min_interval = provider_settings.rate_limit.min_interval_seconds
+            self._max_rpm = provider_settings.rate_limit.max_requests_per_minute
+        else:
+            self._min_interval = MIN_REQUEST_INTERVAL_SECONDS
+            self._max_rpm = MAX_REQUESTS_PER_MINUTE
+        
         self._last_request_time = 0.0
-        self._request_timestamps = deque(maxlen=MAX_REQUESTS_PER_MINUTE)
+        self._request_timestamps = deque(maxlen=self._max_rpm if self._max_rpm > 0 else 100)
 
         # Initialize response cache
         self._cache_enabled = RESPONSE_CACHE_ENABLED
@@ -173,29 +180,29 @@ class LLMClient:
         Wait if necessary to respect rate limits.
 
         Enforces:
-        1. Minimum interval between requests
-        2. Maximum requests per minute
+        1. Minimum interval between requests (per-provider configurable)
+        2. Maximum requests per minute (per-provider configurable)
         """
         current_time = time.time()
 
         # Check minimum interval between requests
         time_since_last = current_time - self._last_request_time
-        if time_since_last < MIN_REQUEST_INTERVAL_SECONDS:
-            wait_time = MIN_REQUEST_INTERVAL_SECONDS - time_since_last
+        if time_since_last < self._min_interval:
+            wait_time = self._min_interval - time_since_last
             if RATE_LIMIT_WARNINGS_ENABLED:
                 warning(f"Rate limiting: waiting {wait_time:.2f}s (min interval)")
             time.sleep(wait_time)
             current_time = time.time()
 
         # Check per-minute rate limit
-        if MAX_REQUESTS_PER_MINUTE > 0:
+        if self._max_rpm > 0:
             # Remove timestamps older than 60 seconds
             cutoff_time = current_time - 60
             while self._request_timestamps and self._request_timestamps[0] < cutoff_time:
                 self._request_timestamps.popleft()
 
             # If at limit, wait until oldest request expires
-            if len(self._request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
+            if len(self._request_timestamps) >= self._max_rpm:
                 wait_time = self._request_timestamps[0] + 60 - current_time
                 if wait_time > 0:
                     if RATE_LIMIT_WARNINGS_ENABLED:

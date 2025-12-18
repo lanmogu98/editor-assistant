@@ -17,6 +17,11 @@ All notable changes to this project will be documented in this file.
 - Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
 
 ### Added
+- **Per-provider rate limiting** - Each provider can now have its own rate limit configuration:
+  - Added `RateLimitSettings` model in `set_llm.py`
+  - Added optional `rate_limit` field in `ProviderSettings`
+  - `LLMClient` reads rate limits from provider config, falls back to global defaults
+  - Example configuration added to `anthropic-openrouter` in `llm_config.yml`
 - `DEVELOPER.md` - Comprehensive developer guide with:
   - Architecture overview and data flow diagram
   - Module reference table

@@ -32,21 +32,15 @@
 
 ## 🔄 待完成
 
-### 1. 分支: feature/rate-limit-per-provider
+### ~~1. 分支: feature/rate-limit-per-provider~~ ✅ 已完成
 **优先级: 高 | 预计工作量: 1天**
 
-- [ ] 修改 `llm_config.yml` 添加 per-provider rate limit 配置
-  ```yaml
-  provider:
-    rate_limit:
-      min_interval_seconds: 0.5
-      max_requests_per_minute: 60
-  ```
-- [ ] 修改 `ProviderSettings` Pydantic 模型支持 rate_limit 字段
-- [ ] 修改 `LLMClient` 从 provider 配置读取 rate limit
-- [ ] 测试不同 provider 的 rate limit 独立生效
-- [ ] 更新 DEVELOPER.md 相关文档
-- [ ] 更新 CHANGELOG
+- [x] 修改 `llm_config.yml` 添加 per-provider rate limit 配置
+- [x] 修改 `ProviderSettings` Pydantic 模型支持 rate_limit 字段
+- [x] 修改 `LLMClient` 从 provider 配置读取 rate limit
+- [x] 测试不同 provider 的 rate limit 独立生效
+- [x] 更新 DEVELOPER.md 相关文档
+- [x] 更新 CHANGELOG
 
 ### 2. 分支: feature/gemini-thinking
 **优先级: 中 | 预计工作量: 1-2天**

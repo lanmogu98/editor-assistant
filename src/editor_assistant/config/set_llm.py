@@ -61,6 +61,10 @@ class ModelDetails(BaseModel):
     id: str  # The actual model ID for the API call
     pricing: Pricing
 
+class RateLimitSettings(BaseModel):
+    """Per-provider rate limiting configuration."""
+    min_interval_seconds: float = 0.5  # Minimum time between requests
+    max_requests_per_minute: int = 60  # Max requests per minute (0 = unlimited)
 
 class ProviderSettings(BaseModel):
     api_key_env_var: str
@@ -72,6 +76,8 @@ class ProviderSettings(BaseModel):
     models: Dict[LLMModel, ModelDetails]
     # provider specific overrides
     request_overrides: Optional[Dict[str, Any]] = None
+    # per-provider rate limiting (uses defaults from constants.py if not specified)
+    rate_limit: Optional[RateLimitSettings] = None
 
 
 # --- Function to load the single config file ---
