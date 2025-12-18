@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2025-12-18
+
+### Fixed
+- **CLI:** Fixed `cmd_clean_html()` API mismatch - was calling `CleanHTML2Markdown` as function instead of class (`cli.py`)
+- **CLI:** Fixed `cmd_convert_to_md()` URL path handling - URLs now generate valid local filenames instead of invalid paths like `https:/...` (`cli.py`)
+- **Config:** Fixed empty `deepseek` provider in `llm_config.yml` causing Pydantic validation error (models were all commented out)
+- **Config:** Updated OpenRouter API key environment variable names to use `*_OPENROUTER` suffix pattern for consistency:
+  - `OPENAI_API_KEY` → `OPENAI_API_KEY_OPENROUTER`
+  - `ANTHROPIC_API_KEY` → `ANTHROPIC_API_KEY_OPENROUTER`
+
+### Tested
+- Verified `gpt-4.1-or` (GPT-4.1 via OpenRouter) works correctly
+- Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
+
+---
+
 ## [0.3.1] - 2025-12-17
 
 ### Fixed
