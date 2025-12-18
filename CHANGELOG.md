@@ -17,6 +17,10 @@ All notable changes to this project will be documented in this file.
 - Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
 
 ### Added
+- **Multi-task Serial Execution** - Process same input with multiple tasks:
+  - New `process` command with `--tasks` parameter
+  - Support comma-separated task list (e.g., `--tasks brief,outline`)
+  - Each task runs serially on the same converted input
 - **Pluggable Task System** - Extensible task architecture:
   - New `tasks/` module with `TaskRegistry` for dynamic task registration
   - `Task` base class with `validate()`, `build_prompt()`, `post_process()` methods

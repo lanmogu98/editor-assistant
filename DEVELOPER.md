@@ -499,6 +499,29 @@ Reference: https://ai.google.dev/gemini-api/docs/gemini-3
 
 ---
 
+### Multi-task Execution
+
+Process the same input with multiple tasks in one command:
+
+```bash
+# Serial execution: input converted once, then processed by each task
+editor-assistant process paper=paper.pdf --tasks "brief,outline"
+
+# Multi-source with multi-task
+editor-assistant process paper=paper.pdf news=article.md --tasks "brief,outline,translate"
+```
+
+**How it works:**
+1. Input files converted to markdown once
+2. Each task executed serially on the same markdown content
+3. Outputs saved separately per task
+
+**Use cases:**
+- Generate both brief and outline from same paper
+- Batch processing for editorial workflows
+
+---
+
 ### Response Caching
 
 Enable for repeated prompts:
