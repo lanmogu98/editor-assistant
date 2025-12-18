@@ -18,44 +18,44 @@ This document provides technical documentation for developers contributing to Ed
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                           CLI Layer                              │
-│                          (cli.py)                                │
+│                           CLI Layer                             │
+│                          (cli.py)                               │
 │  Commands: brief, outline, translate, convert, clean            │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Orchestration Layer                         │
-│                         (main.py)                                │
-│                     EditorAssistant class                        │
+│                      Orchestration Layer                        │
+│                         (main.py)                               │
+│                     EditorAssistant class                       │
 └───────────────┬─────────────────────────────┬───────────────────┘
                 │                             │
                 ▼                             ▼
-┌───────────────────────────┐   ┌─────────────────────────────────┐
-│    Content Conversion      │   │       Content Processing         │
-│    (md_converter.py)       │   │       (md_processor.py)          │
-│    - PDF, DOCX, HTML       │   │       - Prompt building          │
-│    - URL fetching          │   │       - LLM interaction          │
-│    - Format detection      │   │       - Output formatting        │
-└───────────────┬────────────┘   └───────────────┬─────────────────┘
-                │                                 │
-                ▼                                 ▼
-┌───────────────────────────┐   ┌─────────────────────────────────┐
+┌────────────────────────────┐     ┌──────────────────────────────────┐
+│    Content Conversion      │     │       Content Processing         │
+│    (md_converter.py)       │     │       (md_processor.py)          │
+│    - PDF, DOCX, HTML       │ --> │       - Prompt building          │
+│    - URL fetching          │     │       - LLM interaction          │
+│    - Format detection      │     │       - Output formatting        │
+└───────────────┬────────────┘     └───────────────┬──────────────────┘
+                │                                  │
+                ▼                                  ▼
+┌────────────────────────────┐   ┌──────────────────────────────────┐
 │   HTML Cleaning            │   │         LLM Client               │
 │   (clean_html_to_md.py)    │   │       (llm_client.py)            │
 │   - Readabilipy            │   │       - API calls                │
 │   - Trafilatura            │   │       - Rate limiting            │
 │                            │   │       - Response caching         │
 └────────────────────────────┘   │       - Token tracking           │
-                                 └───────────────┬─────────────────┘
+                                 └───────────────┬──────────────────┘
                                                  │
                                                  ▼
                                  ┌─────────────────────────────────┐
-                                 │        Config Layer              │
-                                 │        (config/)                 │
-                                 │  - llm_config.yml (models)       │
-                                 │  - constants.py (settings)       │
-                                 │  - prompts/ (templates)          │
+                                 │        Config Layer             │
+                                 │        (config/)                │
+                                 │  - llm_config.yml (models)      │
+                                 │  - constants.py (settings)      │
+                                 │  - prompts/ (templates)         │
                                  └─────────────────────────────────┘
 ```
 
@@ -651,7 +651,24 @@ pytest -m "not slow"
 
 # Run integration but skip expensive
 pytest tests/integration/ -m "not expensive"
+
+# Run storage tests specifically
+pytest tests/unit/test_storage.py -v
 ```
+
+### Test Categories
+
+| Test File | Purpose | API Calls |
+|-----------|---------|-----------|
+| `test_data_models.py` | Data model validation | No |
+| `test_tasks.py` | Task registry and validation | No |
+| `test_llm_client.py` | LLM client initialization | No |
+| `test_md_processor.py` | Processing pipeline | No |
+| `test_storage.py` | Database operations (39 tests) | No |
+| `test_llm_api.py` | Real LLM API calls | Yes |
+| `test_tasks_api.py` | Tasks with real APIs | Yes |
+| `test_cli.py` | CLI command execution | Yes |
+| `test_storage_integration.py` | Storage with real runs | Yes |
 
 ### Writing New Tests
 
@@ -725,4 +742,146 @@ from tests.fixtures.test_urls import (
 Sample files in `tests/fixtures/sample_data/`:
 - `A Mathematical Theory of Communication.md/.pdf` - Shannon's classic paper
 - `Weaver_Warren_1949_The_Mathematics_of_Communication.md/.pdf` - Related essay
+
+---
+
+## Storage Module
+
+The storage module provides SQLite-based persistence for run history, enabling tracking, querying, and analysis of all processing runs.
+
+### Database Location
+
+Default: `~/.editor_assistant/runs.db`
+
+Override with environment variable:
+```bash
+export EDITOR_ASSISTANT_DB_DIR=/custom/path
+```
+
+### Schema Overview
+
+```
+inputs (independent, deduplication via content_hash)
+    │
+    ├── N:M ──► run_inputs ◄── N:1 ── runs
+    │                              │
+    │                              ├── 1:N ── outputs
+    │                              │
+    │                              └── 1:1 ── token_usage
+```
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `inputs` | Stores unique inputs with content hash for deduplication |
+| `runs` | Run metadata (task, model, status, timestamp) |
+| `run_inputs` | Many-to-many relationship between runs and inputs |
+| `outputs` | Generated outputs (text or JSON) |
+| `token_usage` | Token counts and costs per run |
+
+### CLI Commands
+
+```bash
+# List recent runs
+editor-assistant history
+editor-assistant history -n 50              # Show last 50
+editor-assistant history --search "arxiv"   # Search by title
+
+# Usage statistics
+editor-assistant stats                      # Last 7 days
+editor-assistant stats -d 30                # Last 30 days
+
+# Run details
+editor-assistant show 1                     # Show run #1
+editor-assistant show 1 --output            # Include full output
+```
+
+### Programmatic Usage
+
+```python
+from editor_assistant.storage import RunRepository
+
+repo = RunRepository()
+
+# Get recent runs
+runs = repo.get_recent_runs(limit=20)
+
+# Get run details
+details = repo.get_run_details(run_id=1)
+
+# Get statistics
+stats = repo.get_stats(days=7)
+
+# Search by title
+matches = repo.search_by_title("quantum", limit=10)
+```
+
+### Environment Variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `EDITOR_ASSISTANT_TEST_DB_DIR` | **Test database** (highest priority) | - |
+| `EDITOR_ASSISTANT_DB_DIR` | Production override | - |
+| (none) | Default production | `~/.editor_assistant/` |
+
+**Test/Production Isolation**:
+- `conftest.py` automatically sets `EDITOR_ASSISTANT_TEST_DB_DIR` for all tests
+- Production CLI never sees this variable (different process)
+- Tests cannot accidentally pollute production database
+
+### GUI Tools
+
+Recommended tools for viewing the SQLite database:
+
+- **DB Browser for SQLite**: `brew install --cask db-browser-for-sqlite`
+- **TablePlus**: `brew install --cask tableplus`
+- **datasette**: `pip install datasette && datasette ~/.editor_assistant/runs.db`
+
+### Example Queries
+
+```sql
+-- All runs for a specific paper (by content hash)
+SELECT r.*, i.title FROM runs r
+JOIN run_inputs ri ON r.id = ri.run_id
+JOIN inputs i ON ri.input_id = i.id
+WHERE i.content_hash = 'abc123...';
+
+-- Compare models on the same input
+SELECT r.model, r.timestamp, o.content
+FROM runs r
+JOIN run_inputs ri ON r.id = ri.run_id
+JOIN inputs i ON ri.input_id = i.id
+JOIN outputs o ON r.id = o.run_id
+WHERE i.title LIKE '%quantum%' AND o.output_type = 'main';
+
+-- Cost summary by model (last 30 days)
+SELECT r.model, 
+       COUNT(*) as runs,
+       SUM(t.cost_input + t.cost_output) as total_cost
+FROM runs r
+JOIN token_usage t ON r.id = t.run_id
+WHERE r.timestamp > datetime('now', '-30 days')
+GROUP BY r.model ORDER BY total_cost DESC;
+```
+
+### Testing the Storage Module
+
+```bash
+# Run all 39 storage unit tests
+pytest tests/unit/test_storage.py -v
+
+# Test specific categories
+pytest tests/unit/test_storage.py -k "TestManyToManyRelationship"
+pytest tests/unit/test_storage.py -k "TestCurrencyHandling"
+pytest tests/unit/test_storage.py -k "TestEdgeCases"
+```
+
+Key test scenarios covered:
+- **Input deduplication**: Same content → same input ID
+- **Many-to-many relationships**: One input → multiple runs, one run → multiple inputs
+- **Currency handling**: Different models can have different pricing currencies
+- **Cascade deletes**: Deleting a run removes related outputs and token usage
+- **Edge cases**: Unicode, empty content, long content, special characters
+- **Concurrency**: Concurrent reads, concurrent writes (with expected SQLite limitations)
 

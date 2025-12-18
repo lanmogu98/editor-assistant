@@ -33,6 +33,9 @@ from .data_models import MDArticle, ProcessType, SaveType
 # for the pluggable task system
 from .tasks import TaskRegistry, Task
 
+# for storage
+from .storage import RunRepository
+
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
     pass
@@ -84,9 +87,13 @@ class MDProcessor:
         """
         self.llm_client = LLMClient(model_name, thinking_level=thinking_level)
         self.model_name = model_name
+        self.thinking_level = thinking_level
         self.stream = stream
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(DEBUG_LOGGING_LEVEL)
+        
+        # Initialize storage repository
+        self.repository = RunRepository()
     
     def process_mds(self, md_articles: List[MDArticle], 
                      task_type: Union[ProcessType, str], 
@@ -128,6 +135,9 @@ class MDProcessor:
                 error(f"Content too large: {md_article.title}: {str(e)}")
                 return False
 
+        # Create run record in database
+        run_id = self._create_run_record(md_articles, task_name)
+
         # Create base title for the output files
         title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
         if task.supports_multi_input and len(md_articles) > 1:
@@ -159,6 +169,7 @@ class MDProcessor:
             response = self._make_api_request(prompt, task_name, stream=self.stream)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
+            self._update_run_status(run_id, "failed", str(e))
             return False
 
         # Build metadata prefix
@@ -173,6 +184,7 @@ class MDProcessor:
             outputs = task.post_process(response, md_articles)
         except Exception as e:
             error(f"Post-processing failed: {e}")
+            self._update_run_status(run_id, "failed", str(e))
             return False
 
         # Save all outputs
@@ -182,23 +194,32 @@ class MDProcessor:
             for output_name, content in outputs.items():
                 formatted_content = metadata_prefix + content
                 
+                # Save to file
                 if output_name == "main":
                     self._save_content(SaveType.RESPONSE, title, 
                                        formatted_content, output_dir, should_print)
                 else:
-                    # Additional outputs (e.g., bilingual)
                     self._save_content(SaveType.RESPONSE, f"{output_name}_{title}",
                                        formatted_content, output_dir, False)
                     progress(f"{output_name} output saved to {output_dir / f'{output_name}_{title}.md'}")
+                
+                # Save to database
+                self._save_output_to_db(run_id, output_name, content)
+                
         except Exception as e:
             error(f"Error saving response: {str(e)}")
+            self._update_run_status(run_id, "failed", str(e))
             return False
 
-        # Save token usage report
+        # Save token usage to file and database
         try:
             self.llm_client.save_token_usage_report(title, output_dir)
+            self._save_token_usage_to_db(run_id)
         except Exception as e:
             warning(f"Unable to save token usage report: {str(e)}")
+        
+        # Mark run as successful
+        self._update_run_status(run_id, "success")
         
         return True
 
@@ -253,5 +274,84 @@ class MDProcessor:
         except Exception as e:
             error(f"Unexpected error in {request_name}: {str(e)}")
             raise RuntimeError(f"Error generating response for {request_name}: {str(e)}") from e
+
+    # =========================================================================
+    # Database Helper Methods
+    # =========================================================================
+    
+    def _create_run_record(self, md_articles: List[MDArticle], task_name: str) -> int:
+        """
+        Create a run record in the database.
+        
+        Args:
+            md_articles: List of input articles
+            task_name: Task name
+        
+        Returns:
+            Run ID
+        """
+        try:
+            # Get or create input records
+            input_ids = []
+            for article in md_articles:
+                input_id = self.repository.get_or_create_input(
+                    input_type=article.type.value,
+                    source_path=article.source_path or "",
+                    title=article.title or "Untitled",
+                    content=article.content or ""
+                )
+                input_ids.append(input_id)
+            
+            # Create run record
+            run_id = self.repository.create_run(
+                task=task_name,
+                model=self.model_name,
+                input_ids=input_ids,
+                thinking_level=self.thinking_level,
+                stream=self.stream,
+                currency=self.llm_client.pricing_currency
+            )
+            
+            return run_id
+        except Exception as e:
+            self.logger.warning(f"Failed to create run record: {e}")
+            return -1  # Return invalid ID, processing will continue
+    
+    def _update_run_status(self, run_id: int, status: str, error_message: str = None) -> None:
+        """Update run status in database."""
+        if run_id < 0:
+            return  # Skip if run record creation failed
+        try:
+            self.repository.update_run_status(run_id, status, error_message)
+        except Exception as e:
+            self.logger.warning(f"Failed to update run status: {e}")
+    
+    def _save_output_to_db(self, run_id: int, output_type: str, content: str) -> None:
+        """Save output to database."""
+        if run_id < 0:
+            return
+        try:
+            # Determine content type (json if starts with { or [)
+            content_type = "json" if content.strip().startswith(("{", "[")) else "text"
+            self.repository.add_output(run_id, output_type, content, content_type)
+        except Exception as e:
+            self.logger.warning(f"Failed to save output to database: {e}")
+    
+    def _save_token_usage_to_db(self, run_id: int) -> None:
+        """Save token usage to database."""
+        if run_id < 0:
+            return
+        try:
+            usage = self.llm_client.get_token_usage()
+            self.repository.add_token_usage(
+                run_id=run_id,
+                input_tokens=usage.get("total_input_tokens", 0),
+                output_tokens=usage.get("total_output_tokens", 0),
+                cost_input=usage.get("cost", {}).get("input_cost", 0),
+                cost_output=usage.get("cost", {}).get("output_cost", 0),
+                process_time=usage.get("process_times", {}).get("total_time", 0)
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to save token usage to database: {e}")
 
 # CLI functionality moved to cli.py - this module now contains only core processing logic

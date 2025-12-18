@@ -15,6 +15,7 @@ from .llm_client import LLMClient
 from .md_converter import MarkdownConverter
 from .clean_html_to_md import CleanHTML2Markdown
 from .config.logging_config import progress
+from .storage import RunRepository
 
 
 DEFAULT_MODEL = "deepseek-v3.2"
@@ -187,6 +188,143 @@ def cmd_clean_html(args):
         print(f"✗ Error cleaning HTML: {str(e)}")
         sys.exit(1)
 
+
+# =========================================================================
+# History and Stats Commands
+# =========================================================================
+
+def cmd_history(args):
+    """Show run history."""
+    repo = RunRepository()
+    
+    if args.search:
+        runs = repo.search_by_title(args.search, limit=args.limit)
+        print(f"\n📋 Runs matching '{args.search}':\n")
+    else:
+        runs = repo.get_recent_runs(limit=args.limit)
+        print(f"\n📋 Recent {len(runs)} runs:\n")
+    
+    if not runs:
+        print("  No runs found.")
+        return
+    
+    # Print header
+    print(f"{'ID':>5} │ {'Time':^19} │ {'Task':<10} │ {'Model':<18} │ {'Status':<8} │ {'Cost':>8} │ Input")
+    print("─" * 100)
+    
+    for run in runs:
+        run_id = run.get('id', 0)
+        timestamp = run.get('timestamp', '')[:19] if run.get('timestamp') else ''
+        task = run.get('task', '')[:10]
+        model = run.get('model', '')[:18]
+        status = run.get('status', '')[:8]
+        cost = run.get('total_cost', 0) or 0
+        currency = run.get('currency', '$') or '$'
+        titles = run.get('input_titles', '') or 'Unknown'
+        titles = titles[:30] + '...' if len(titles) > 30 else titles
+        
+        status_icon = "✓" if status == "success" else "✗" if status == "failed" else "○"
+        print(f"{run_id:>5} │ {timestamp} │ {task:<10} │ {model:<18} │ {status_icon} {status:<6} │ {currency}{cost:>6.4f} │ {titles}")
+    
+    print()
+
+
+def cmd_stats(args):
+    """Show usage statistics."""
+    repo = RunRepository()
+    stats = repo.get_stats(days=args.days)
+    
+    print(f"\n📊 Usage Statistics (last {stats['period_days']} days)\n")
+    print(f"Total Runs: {stats['total_runs']}")
+    print(f"Success Rate: {stats['success_rate']:.1%}")
+    
+    # By status
+    print(f"\n📈 By Status:")
+    for status, count in stats.get('by_status', {}).items():
+        icon = "✓" if status == "success" else "✗" if status == "failed" else "○"
+        print(f"  {icon} {status}: {count}")
+    
+    # By model
+    print(f"\n🤖 By Model:")
+    if stats.get('by_model'):
+        for item in stats['by_model']:
+            model = item.get('model', 'Unknown')
+            runs = item.get('runs', 0)
+            cost = item.get('total_cost', 0) or 0
+            tokens = item.get('total_tokens', 0) or 0
+            print(f"  {model}: {runs} runs, {tokens:,} tokens, ${cost:.4f}")
+    else:
+        print("  No data")
+    
+    # By task
+    print(f"\n📝 By Task:")
+    if stats.get('by_task'):
+        for item in stats['by_task']:
+            task = item.get('task', 'Unknown')
+            runs = item.get('runs', 0)
+            print(f"  {task}: {runs} runs")
+    else:
+        print("  No data")
+    
+    print()
+
+
+def cmd_show_run(args):
+    """Show details of a specific run."""
+    repo = RunRepository()
+    run = repo.get_run_details(args.run_id)
+    
+    if not run:
+        print(f"✗ Run #{args.run_id} not found")
+        sys.exit(1)
+    
+    print(f"\n📄 Run #{run['id']} Details\n")
+    print(f"  Timestamp: {run.get('timestamp', 'Unknown')}")
+    print(f"  Task:      {run.get('task', 'Unknown')}")
+    print(f"  Model:     {run.get('model', 'Unknown')}")
+    print(f"  Status:    {run.get('status', 'Unknown')}")
+    if run.get('thinking_level'):
+        print(f"  Thinking:  {run.get('thinking_level')}")
+    print(f"  Stream:    {'Yes' if run.get('stream') else 'No'}")
+    if run.get('error_message'):
+        print(f"  Error:     {run.get('error_message')}")
+    
+    # Inputs
+    print(f"\n📥 Inputs ({len(run.get('inputs', []))}):")
+    for inp in run.get('inputs', []):
+        print(f"  • [{inp.get('type', '')}] {inp.get('title', 'Untitled')}")
+        print(f"    Source: {inp.get('source_path', 'Unknown')}")
+    
+    # Token usage
+    usage = run.get('token_usage')
+    currency = run.get('currency', '$') or '$'
+    if usage:
+        print(f"\n💰 Token Usage:")
+        print(f"  Input:  {usage.get('input_tokens', 0):,} tokens ({currency}{usage.get('cost_input', 0):.4f})")
+        print(f"  Output: {usage.get('output_tokens', 0):,} tokens ({currency}{usage.get('cost_output', 0):.4f})")
+        total_cost = (usage.get('cost_input', 0) or 0) + (usage.get('cost_output', 0) or 0)
+        print(f"  Total:  {currency}{total_cost:.4f}")
+        print(f"  Time:   {usage.get('process_time', 0):.1f}s")
+    
+    # Outputs
+    outputs = run.get('outputs', [])
+    print(f"\n📤 Outputs ({len(outputs)}):")
+    for out in outputs:
+        out_type = out.get('output_type', 'unknown')
+        content_type = out.get('content_type', 'text')
+        content = out.get('content', '')
+        preview = content[:200] + '...' if len(content) > 200 else content
+        preview = preview.replace('\n', ' ')
+        
+        print(f"  • {out_type} ({content_type})")
+        if args.output:
+            print(f"\n{content}\n")
+        else:
+            print(f"    Preview: {preview}")
+    
+    print()
+
+
 def create_parser():
     """Create the main argument parser with subcommands."""
     parser = argparse.ArgumentParser(
@@ -321,6 +459,59 @@ Examples:
     )
     clean_parser.set_defaults(func=cmd_clean_html)
     
+    # =========================================================================
+    # History and Stats Commands
+    # =========================================================================
+    
+    # History command
+    history_parser = subparsers.add_parser(
+        "history",
+        help="View run history",
+        description="List recent runs from the database"
+    )
+    history_parser.add_argument(
+        "-n", "--limit",
+        type=int,
+        default=20,
+        help="Number of runs to show (default: 20)"
+    )
+    history_parser.add_argument(
+        "--search",
+        help="Search by input title"
+    )
+    history_parser.set_defaults(func=cmd_history)
+    
+    # Stats command
+    stats_parser = subparsers.add_parser(
+        "stats",
+        help="View usage statistics",
+        description="Show usage statistics and costs"
+    )
+    stats_parser.add_argument(
+        "-d", "--days",
+        type=int,
+        default=7,
+        help="Number of days to include (default: 7)"
+    )
+    stats_parser.set_defaults(func=cmd_stats)
+    
+    # Show command
+    show_parser = subparsers.add_parser(
+        "show",
+        help="Show details of a specific run",
+        description="Display detailed information about a run"
+    )
+    show_parser.add_argument(
+        "run_id",
+        type=int,
+        help="Run ID to show"
+    )
+    show_parser.add_argument(
+        "--output",
+        action="store_true",
+        help="Include full output content"
+    )
+    show_parser.set_defaults(func=cmd_show_run)
     
     return parser
 
