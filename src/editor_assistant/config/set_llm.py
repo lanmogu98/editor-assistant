@@ -8,13 +8,12 @@ from typing import Dict, Tuple, Optional, Any
 # --- LLMModel and ServiceProvider enums as a single source of truth of model switch ---
 class LLMModel(str, Enum):
     # deepseek
-    deepseek_v3_1 = "deepseek-v3.1"
     deepseek_r1 = "deepseek-r1"
-    deepseek_v3 = "deepseek-v3"
     deepseek_v3_2 = "deepseek-v3.2"
     # gemini
-    gemini_2_5_flash = "gemini-2.5-flash"
-    gemini_2_5_pro = "gemini-2.5-pro"
+    gemini_3_flash = "gemini-3-flash"
+    gemini_3_pro = "gemini-3-pro"
+    # kimi
     kimi_k2 = "kimi-k2"
     # qwen
     qwen_plus = "qwen-plus"
@@ -51,7 +50,7 @@ class ServiceProvider(str, Enum):
     openai_openrouter = "openai-openrouter"
     anthropic_openrouter = "anthropic-openrouter"
     # deepseek
-    deepseek = "deepseek"
+    # deepseek = "deepseek"
 
 # --- Pydantic Models for the configing of YAML structure ---
 class Pricing(BaseModel):
