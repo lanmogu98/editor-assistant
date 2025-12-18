@@ -184,21 +184,15 @@ class MDProcessor:
         
         # Create bilingual content if translation is requested
         if type == ProcessType.TRANSLATE:
-            try:    
-                bilingual_content = self._create_bilingual_content(md_articles[0].content, response)
-            except Exception as e:
-                error(f"Error creating bilingual content: {str(e)}")                                                      
             try:
+                bilingual_content = self._create_bilingual_content(md_articles[0].content, response)
                 if metadata_lines:
                     bilingual_content = "\n".join(metadata_lines) + "\n\n" + bilingual_content
-            except Exception as e:
-                error(f"Error adding metadata to bilingual content: {str(e)}")
-            try:
-                self._save_content(SaveType.RESPONSE, f"bilingual_{title}", 
+                self._save_content(SaveType.RESPONSE, f"bilingual_{title}",
                                    bilingual_content, output_dir)
-                progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}_{type.value}_{self.model_name}.md'}")                   
+                progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}.md'}")
             except Exception as e:
-                error(f"Error saving bilingual content: {str(e)}")
+                error(f"Error processing bilingual content: {str(e)}")
                 return False
 
 

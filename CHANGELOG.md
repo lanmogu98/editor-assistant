@@ -16,6 +16,8 @@ All notable changes to this project will be documented in this file.
   - `md_processor.py`: Replaced `logging.error()` with custom `error()` function for consistent user-facing messages
   - `md_processor.py`: Use specific exceptions (`OSError`, `IOError`, `RuntimeError`) instead of generic `Exception`
   - `md_converter.py`: Replaced generic `Exception` with `ConnectionError` for URL access errors
+- **Code Quality:** Consolidated 3 consecutive try/except blocks for bilingual content into single block (`md_processor.py:186-196`)
+- **Type Hints:** Fixed `MDArticle.output_path` type from `Optional[str]` to `Optional[Path]` to match actual usage (`data_models.py`)
 
 ### Removed
 - ~40 lines of commented dead code from `md_processor.py`
@@ -35,7 +37,7 @@ All notable changes to this project will be documented in this file.
   - TTL-based expiration (`RESPONSE_CACHE_TTL_SECONDS`)
   - Disabled by default (`RESPONSE_CACHE_ENABLED=False`), enable for repeated prompts
   - Cache statistics via `get_cache_stats()` and `clear_cache()` methods
-- Test suite (`tests/test_basic.py`) expanded to 40 unit tests covering imports, models, functionality, rate limiting, and caching
+- Test suite (`tests/test_basic.py`) expanded to 41 unit tests covering imports, models, functionality, rate limiting, caching, and type hints
 
 ### Changed
 - Updated imports in `main.py` to use renamed module
