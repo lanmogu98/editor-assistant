@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.5] - 2025-12-18
+
+### Added
+- **SQLite Storage Module** - Centralized run history and statistics:
+  - New `storage/` module with SQLite database (`~/.editor_assistant/runs.db`)
+  - Automatic tracking of all runs, inputs, outputs, and token usage
+  - Input deduplication via content hash (same content = same input record)
+  - Many-to-many relationship: one input can be used in multiple runs
+  - Support for JSON outputs (for future structured tasks like classification)
+  
+- **New CLI Commands**:
+  - `editor-assistant history` - List recent runs with cost summary
+  - `editor-assistant history -n 50` - Show last N runs
+  - `editor-assistant history --search "arxiv"` - Search by input title
+  - `editor-assistant stats` - Usage statistics (last 7 days by default)
+  - `editor-assistant stats -d 30` - Statistics for custom period
+  - `editor-assistant show <run_id>` - Detailed view of a specific run
+  - `editor-assistant show <run_id> --output` - Include full output content
+
+### Changed
+- `MDProcessor` now automatically records all runs to SQLite database
+- Error tracking: failed runs are recorded with error messages
+- Currency symbol now matches model's pricing currency (¥ for CNY, $ for USD)
+
+### Fixed
+- **Test/Production Database Isolation**:
+  - Two separate environment variables: `EDITOR_ASSISTANT_TEST_DB_DIR` (test) and `EDITOR_ASSISTANT_DB_DIR` (prod)
+  - `conftest.py` sets test variable; production never sees it (different process)
+  - Added 53 unit tests for storage module including isolation boundary tests
+
+---
+
 ## [0.3.4] - 2025-12-18
 
 ### Changed

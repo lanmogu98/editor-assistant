@@ -152,6 +152,18 @@ editor-assistant process paper=paper.pdf --tasks "brief,outline"
 editor-assistant process paper=paper.pdf news=news.md --tasks "brief,outline,translate"
 ```
 
+**View Run History and Statistics:**
+
+```bash
+editor-assistant history                    # List recent runs
+editor-assistant history -n 50              # Show last 50 runs
+editor-assistant history --search "arxiv"   # Search by title
+editor-assistant stats                      # Show usage statistics (last 7 days)
+editor-assistant stats -d 30                # Show stats for last 30 days
+editor-assistant show 1                     # Show details of run #1
+editor-assistant show 1 --output            # Show full output content
+```
+
 ### Global Options
 
 - `--model`: Choose LLM model (default: deepseek-v3.2)

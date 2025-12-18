@@ -32,6 +32,33 @@ def pytest_configure(config):
 
 
 # ============================================================================
+# DATABASE ISOLATION - CRITICAL SAFETY MEASURE
+# ============================================================================
+# This fixture runs automatically for ALL tests in the entire test session.
+# It ensures that NO test can ever touch the production database.
+
+@pytest.fixture(scope="session", autouse=True)
+def isolate_database_from_production(tmp_path_factory):
+    """
+    CRITICAL: Force ALL tests to use a temporary database directory.
+    
+    Uses EDITOR_ASSISTANT_TEST_DB_DIR (separate from production env var).
+    This prevents any test from accidentally touching ~/.editor_assistant/
+    """
+    # Create a session-wide temp directory for the database
+    test_db_dir = tmp_path_factory.mktemp("test_editor_assistant")
+    
+    # Use the TEST-specific environment variable (not the production one)
+    os.environ["EDITOR_ASSISTANT_TEST_DB_DIR"] = str(test_db_dir)
+    
+    yield test_db_dir
+    
+    # Clean up after all tests
+    if "EDITOR_ASSISTANT_TEST_DB_DIR" in os.environ:
+        del os.environ["EDITOR_ASSISTANT_TEST_DB_DIR"]
+
+
+# ============================================================================
 # PATH FIXTURES
 # ============================================================================
 

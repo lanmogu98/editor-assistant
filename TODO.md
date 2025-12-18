@@ -94,6 +94,104 @@
 - [ ] 更新验证逻辑使用正确的输入限制
 - [ ] 更新文档说明各参数含义
 
+### 7. 分支: feature/sqlite-storage
+**优先级: 高 | 预计工作量: 2-3天**
+
+**问题背景：**
+- 当前输出分散在各个输入文件目录中，难以追溯和管理
+- 无法查询历史运行记录、聚合统计成本、对比不同模型结果
+- 测试结果（程序、模型、产品设计）回顾非常不便
+
+**方案：使用 SQLite 本地数据库统一存储**
+
+**数据模型设计（多对多关系）：**
+
+```sql
+-- 输入表（独立存储，支持去重和复用）
+CREATE TABLE inputs (
+    id INTEGER PRIMARY KEY,
+    type TEXT,                  -- paper, news
+    source_path TEXT,
+    title TEXT,
+    content_hash TEXT UNIQUE,   -- MD5 用于去重
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 运行记录
+CREATE TABLE runs (
+    id INTEGER PRIMARY KEY,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    task TEXT,                  -- brief, outline, translate
+    model TEXT,                 -- deepseek-v3.2, gemini-3-flash
+    thinking_level TEXT,        -- low, medium, high, null
+    stream BOOLEAN,
+    status TEXT,                -- success, failed
+    error_message TEXT
+);
+
+-- 关联表（多对多：同一输入可以跑多次，一次可以有多个输入）
+CREATE TABLE run_inputs (
+    run_id INTEGER REFERENCES runs(id),
+    input_id INTEGER REFERENCES inputs(id),
+    PRIMARY KEY (run_id, input_id)
+);
+
+-- 输出结果
+CREATE TABLE outputs (
+    id INTEGER PRIMARY KEY,
+    run_id INTEGER REFERENCES runs(id),
+    output_type TEXT,           -- main, bilingual, classification
+    content_type TEXT,          -- text, json
+    content TEXT
+);
+
+-- Token 使用和成本
+CREATE TABLE token_usage (
+    id INTEGER PRIMARY KEY,
+    run_id INTEGER REFERENCES runs(id),
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    cost_input REAL,
+    cost_output REAL,
+    process_time REAL
+);
+```
+
+**实现步骤：**
+- [x] 创建 `storage/` 模块
+  - `database.py` - 数据库初始化和连接管理
+  - `repository.py` - CRUD 操作封装
+- [x] 数据库位置：`~/.editor_assistant/runs.db`
+- [x] 修改 `MDProcessor` 在处理完成后写入数据库
+- [x] 添加 CLI 查询命令
+  - `editor-assistant history` - 列出历史运行
+  - `editor-assistant stats` - 统计信息（按模型/任务/时间）
+  - `editor-assistant show <run_id>` - 查看特定运行详情
+- [x] 更新文档（DEVELOPER.md, README.md）
+
+**预期查询能力：**
+```sql
+-- 这篇论文被测试过几次？用了哪些模型？
+SELECT i.title, COUNT(DISTINCT r.id) as runs, GROUP_CONCAT(DISTINCT r.model) as models
+FROM inputs i JOIN run_inputs ri ON i.id = ri.input_id JOIN runs r ON ri.run_id = r.id
+WHERE i.content_hash = 'xxx' GROUP BY i.id;
+
+-- 统计本周各模型成本
+SELECT r.model, SUM(t.cost_input + t.cost_output) as total_cost
+FROM runs r JOIN token_usage t ON r.id = t.run_id
+WHERE r.timestamp > date('now', '-7 days') GROUP BY r.model;
+
+-- 对比同一论文不同模型的输出
+SELECT r.model, r.timestamp, o.content
+FROM runs r JOIN run_inputs ri ON r.id = ri.run_id JOIN inputs i ON ri.input_id = i.id
+JOIN outputs o ON r.id = o.run_id
+WHERE i.title = 'XXX' AND o.output_type = 'main';
+```
+
+**可视化工具：**
+- 推荐：DB Browser for SQLite、TablePlus
+- 或：`pip install datasette && datasette ~/.editor_assistant/runs.db`
+
 ---
 
 ## 📋 用户提出的原始需求（供参考）
