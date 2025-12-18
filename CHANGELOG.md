@@ -16,6 +16,16 @@ All notable changes to this project will be documented in this file.
 - Verified `gpt-4.1-or` (GPT-4.1 via OpenRouter) works correctly
 - Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
 
+### Added
+- `DEVELOPER.md` - Comprehensive developer guide with:
+  - Architecture overview and data flow diagram
+  - Module reference table
+  - Step-by-step guide for adding new LLM models
+  - Step-by-step guide for adding new task types
+  - Configuration system documentation
+  - Testing guide
+  - Common patterns (error handling, validation, caching)
+
 ---
 
 ## [0.3.1] - 2025-12-17
