@@ -14,6 +14,7 @@ from .data_models import ProcessType, Input, InputType
 from .llm_client import LLMClient
 from .md_converter import MarkdownConverter
 from .clean_html_to_md import CleanHTML2Markdown
+from .config.logging_config import progress
 
 
 DEFAULT_MODEL = "deepseek-v3.2"
@@ -82,6 +83,22 @@ def cmd_generate_translate(args):
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
     assistant.process_multiple([input_obj], ProcessType.TRANSLATE)
+
+
+def cmd_process_multi_task(args):
+    """Process input with multiple tasks (serial execution)."""
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking)
+    
+    # Parse sources into Input objects
+    inputs = [parse_source_spec(source) for source in args.sources]
+    
+    # Parse tasks (comma-separated)
+    task_names = [t.strip() for t in args.tasks.split(",")]
+    
+    # Execute each task serially
+    for task_name in task_names:
+        progress(f"Executing task: {task_name}")
+        assistant.process_multiple(inputs, task_name)
 
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
@@ -231,6 +248,25 @@ Examples:
     )
     add_common_arguments(translate_parser)
     translate_parser.set_defaults(func=cmd_generate_translate)
+    
+    # Multi-task process command
+    process_parser = subparsers.add_parser(
+        "process",
+        help="Process input with multiple tasks",
+        description="Execute multiple tasks on the same input (serial execution)"
+    )
+    process_parser.add_argument(
+        "sources",
+        nargs="+",
+        help="Sources in format 'type=path' (e.g., paper=file.pdf news=url.com)"
+    )
+    process_parser.add_argument(
+        "--tasks",
+        required=True,
+        help="Comma-separated list of tasks to execute (e.g., 'brief,outline')"
+    )
+    add_common_arguments(process_parser)
+    process_parser.set_defaults(func=cmd_process_multi_task)
     
     # Format conversion command
     convert_parser = subparsers.add_parser(
