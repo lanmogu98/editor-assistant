@@ -10,7 +10,7 @@ from collections import deque, OrderedDict
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
-from .config.logging_config import warning, progress
+from .config.logging_config import warning, progress, user_message
 from .config.constants import (
     MAX_API_RETRIES,
     INITIAL_RETRY_DELAY_SECONDS,
@@ -389,9 +389,6 @@ class LLMClient:
                 f.write(f"    Output Cost: {self.pricing_currency}{req['output_cost']:.6f}\n")
                 f.write(f"    Total Cost: {self.pricing_currency}{req['total_cost']:.6f}\n\n")
 
-        # Import here to avoid circular imports
-        from .config.logging_config import user_message, progress
-        
         # Show concise summary using logging system
         progress(f"Token usage: {total_tokens} tokens ({self.pricing_currency}{token_usage['cost']['total_cost']:.4f}) in {token_usage['process_times']['total_time']:.1f}s")
         

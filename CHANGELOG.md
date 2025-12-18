@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
   - Blocked publisher list management (add/remove/get)
   - `BlockedPublisherError` and `ContentValidationError` exceptions
   - Configurable via `MIN_CHARS_WARNING_THRESHOLD` constant
+- **Circular Import:** Fixed circular import workaround in `llm_client.py` by moving `user_message` to top-level imports
 
 ### Removed
 - ~40 lines of commented dead code from `md_processor.py`
