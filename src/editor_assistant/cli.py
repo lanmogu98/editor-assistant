@@ -333,13 +333,21 @@ def create_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Generate content
   %(prog)s brief paper=https://arxiv.org/pdf/2508.08443
-  %(prog)s brief paper=paper.pdf news=https://example.com/article \
-                 --model deepseek-r1 --debug
   %(prog)s outline paper.pdf --model deepseek-r1
-  %(prog)s translate paper.pdf --model deepseek-r1
+  %(prog)s translate paper.pdf --model gemini-2.5-flash --thinking high
+  %(prog)s process paper.pdf --tasks brief,outline --no-stream
+  
+  # Convert and clean
   %(prog)s convert *.pdf -o ./markdown/
   %(prog)s clean https://example.com/page.html -o clean.md
+  
+  # View history and stats
+  %(prog)s history -n 20
+  %(prog)s history --search "quantum"
+  %(prog)s stats -d 30
+  %(prog)s show 1 --output
 """
     )
     
@@ -347,7 +355,7 @@ Examples:
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 0.3.0"
+        version="%(prog)s 0.4.0"
     )
     
     # Create subcommands

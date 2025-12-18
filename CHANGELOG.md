@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.5] - 2025-12-18
+## [0.4.0] - 2025-12-18
+
+Major release with SQLite storage, streaming output, and improved testing.
 
 ### Added
 - **SQLite Storage Module** - Centralized run history and statistics:
@@ -13,76 +15,27 @@ All notable changes to this project will be documented in this file.
   - Support for JSON outputs (for future structured tasks like classification)
   
 - **New CLI Commands**:
-  - `editor-assistant history` - List recent runs with cost summary
-  - `editor-assistant history -n 50` - Show last N runs
-  - `editor-assistant history --search "arxiv"` - Search by input title
-  - `editor-assistant stats` - Usage statistics (last 7 days by default)
-  - `editor-assistant stats -d 30` - Statistics for custom period
-  - `editor-assistant show <run_id>` - Detailed view of a specific run
-  - `editor-assistant show <run_id> --output` - Include full output content
+  - `editor-assistant history [-n N] [--search PATTERN]` - List recent runs
+  - `editor-assistant stats [-d DAYS]` - Usage statistics
+  - `editor-assistant show RUN_ID [--output]` - Run details
 
-### Changed
-- `MDProcessor` now automatically records all runs to SQLite database
-- Error tracking: failed runs are recorded with error messages
-- Currency symbol now matches model's pricing currency (¥ for CNY, $ for USD)
-
-### Fixed
-- **Test/Production Database Isolation**:
-  - Two separate environment variables: `EDITOR_ASSISTANT_TEST_DB_DIR` (test) and `EDITOR_ASSISTANT_DB_DIR` (prod)
-  - `conftest.py` sets test variable; production never sees it (different process)
-  - Added 53 unit tests for storage module including isolation boundary tests
-
----
-
-## [0.3.4] - 2025-12-18
-
-### Changed
-- **Test Module Refactor** - Rebuilt test suite from scratch:
-  - Unit tests (46 tests): `tests/unit/` - Fast, mocked, no API calls
-  - Integration tests: `tests/integration/` - Real API calls
-  - Test fixtures: `tests/fixtures/` with sample data
-  - New markers: `unit`, `integration`, `slow`, `expensive`
-  - Updated `scripts/run_tests.py` for easy test execution
-  - Removed `tests/` from `.gitignore` to track test code
-
----
-
-## [0.3.3] - 2025-12-18
-
-### Added
 - **Streaming Output** - Real-time response display:
   - Default: streaming enabled (content displays as it generates)
   - `--no-stream` flag to disable and wait for complete response
   - Works with all commands: `brief`, `outline`, `translate`, `process`
-  - Handles SSE parsing and token estimation for streaming responses
 
----
-
-## [0.3.2] - 2025-12-18
-
-### Fixed
-- **CLI:** Fixed `cmd_clean_html()` API mismatch - was calling `CleanHTML2Markdown` as function instead of class (`cli.py`)
-- **CLI:** Fixed `cmd_convert_to_md()` URL path handling - URLs now generate valid local filenames instead of invalid paths like `https:/...` (`cli.py`)
-- **Config:** Fixed empty `deepseek` provider in `llm_config.yml` causing Pydantic validation error (models were all commented out)
-- **Config:** Updated OpenRouter API key environment variable names to use `*_OPENROUTER` suffix pattern for consistency:
-  - `OPENAI_API_KEY` → `OPENAI_API_KEY_OPENROUTER`
-  - `ANTHROPIC_API_KEY` → `ANTHROPIC_API_KEY_OPENROUTER`
-
-### Tested
-- Verified `gpt-4.1-or` (GPT-4.1 via OpenRouter) works correctly
-- Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
-
-### Added
-- **Multi-task Serial Execution** - Process same input with multiple tasks:
+- **Multi-task Serial Execution**:
   - New `process` command with `--tasks` parameter
   - Support comma-separated task list (e.g., `--tasks brief,outline`)
   - Each task runs serially on the same converted input
+
 - **Pluggable Task System** - Extensible task architecture:
   - New `tasks/` module with `TaskRegistry` for dynamic task registration
   - `Task` base class with `validate()`, `build_prompt()`, `post_process()` methods
   - Existing tasks (`brief`, `outline`, `translate`) refactored as Task subclasses
   - Tasks can now produce multiple outputs (e.g., translate → main + bilingual)
   - Updated `DEVELOPER.md` with simplified "Adding a New Task Type" guide
+
 - **Gemini 3 thinking mode support** - Control reasoning depth for Gemini 3 models:
   - Added `--thinking` CLI parameter (`low`, `medium`, `high`)
   - Default: model decides dynamically (no parameter sent)
@@ -102,6 +55,23 @@ All notable changes to this project will be documented in this file.
   - Configuration system documentation
   - Testing guide
   - Common patterns (error handling, validation, caching)
+
+### Changed
+- `MDProcessor` now automatically records all runs to SQLite database
+- Error tracking: failed runs are recorded with error messages
+- Currency symbol now matches model's pricing currency (¥ for CNY, $ for USD)
+- Test Module rebuilt from scratch with proper structure:
+  - Unit tests: `tests/unit/` - Fast, mocked, no API calls
+  - Integration tests: `tests/integration/` - Real API calls
+  - Test fixtures: `tests/fixtures/` with sample data
+  - New markers: `unit`, `integration`, `slow`, `expensive`
+
+### Fixed
+- **CLI:** Fixed `cmd_clean_html()` API mismatch
+- **CLI:** Fixed `cmd_convert_to_md()` URL path handling
+- **Test/Production Database Isolation**:
+  - Two separate environment variables: `EDITOR_ASSISTANT_TEST_DB_DIR` (test) and `EDITOR_ASSISTANT_DB_DIR` (prod)
+  - `conftest.py` sets test variable; production never sees it
 
 ---
 
