@@ -17,6 +17,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 import os
 from .config.logging_config import error, progress, warning, user_message
+from .config.constants import (
+    CHAR_TOKEN_RATIO,
+    MINIMAL_TOKEN_ACCEPTED,
+    PROMPT_OVERHEAD_TOKENS,
+    DEBUG_LOGGING_LEVEL,
+)
 
 # for LLM processing
 from .llm_client import LLMClient
@@ -30,12 +36,6 @@ from .config.load_prompt import (
     load_news_generator_prompt,
     load_translation_prompt
 )
-
-# Conservative char/token ratio used throughout the application
-CHAR_TOKEN_RATIO = 3.5
-
-# Minimal token count for a sound input whatsoever
-MINIMAL_TOKEN_ACCESPTED = 100
 
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
@@ -56,12 +56,11 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
     Raises:
         ContentTooLargeError: If content is too large for the model
     """
-    # Estimate token count 
+    # Estimate token count
     estimated_tokens = len(content) / CHAR_TOKEN_RATIO
-    
+
     # Calculate available tokens (context - output - prompt overhead)
-    prompt_overhead = 10000  # Conservative estimate for prompt
-    available_tokens = (llm_client.context_window - prompt_overhead)
+    available_tokens = (llm_client.context_window - PROMPT_OVERHEAD_TOKENS)
     
     if estimated_tokens > available_tokens:
         raise ContentTooLargeError(
@@ -69,14 +68,7 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
             f"model capacity ({available_tokens:.0f} tokens) for {llm_client.model_name}. "
             f"Please use a smaller document or split manually."
         )
-    
-    # if estimated_tokens < MINIMAL_TOKEN_ACCESPTED:
-    #     raise ContentTooSmallError(
-    #         f"Content size ({estimated_tokens:.0f} tokens) is suspiciously small, " 
-    #         f"Please make consult the raw input is properly converted or formatted."
-    #     )
 
-LOGGER_LEVEL = logging.DEBUG
 
 # Summarizer class for processing markdown content
 class MDProcessor:
@@ -95,7 +87,7 @@ class MDProcessor:
         self.llm_client = LLMClient(model_name)
         self.model_name = model_name
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(LOGGER_LEVEL)
+        self.logger.setLevel(DEBUG_LOGGING_LEVEL)
     
     def process_mds (self, md_articles: List[MDArticle], type: ProcessType, output_to_console=True) -> bool:
         """
@@ -124,10 +116,6 @@ class MDProcessor:
             except ContentTooLargeError as e:
                 error(f"Content too large: {md_article.title}: {str(e)}")
                 return False
-            # except ContentTooSmallError as e:
-            #     warning(f"Content too small: {md_article.title}: {str(e)}")
-            #     user_message(f"Input markdown: \n{md_article.content}")
-            #     return False
 
         # Create base title for the output files
         title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
@@ -166,8 +154,6 @@ class MDProcessor:
         except ContentTooLargeError as e:
             error(f"Content too large: {str(e)}")
             return False
-        # temporarily disable saving the prompt to speedup the process
-        # self._save_content(SaveType.PROMPT, title, prompt, output_dir)
 
         # Make LLM request and save the output
         try:
@@ -198,21 +184,15 @@ class MDProcessor:
         
         # Create bilingual content if translation is requested
         if type == ProcessType.TRANSLATE:
-            try:    
-                bilingual_content = self._create_bilingual_content(md_articles[0].content, response)
-            except Exception as e:
-                error(f"Error creating bilingual content: {str(e)}")                                                      
             try:
+                bilingual_content = self._create_bilingual_content(md_articles[0].content, response)
                 if metadata_lines:
                     bilingual_content = "\n".join(metadata_lines) + "\n\n" + bilingual_content
-            except Exception as e:
-                error(f"Error adding metadata to bilingual content: {str(e)}")
-            try:
-                self._save_content(SaveType.RESPONSE, f"bilingual_{title}", 
+                self._save_content(SaveType.RESPONSE, f"bilingual_{title}",
                                    bilingual_content, output_dir)
-                progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}_{type.value}_{self.model_name}.md'}")                   
+                progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}.md'}")
             except Exception as e:
-                error(f"Error saving bilingual content: {str(e)}")
+                error(f"Error processing bilingual content: {str(e)}")
                 return False
 
 
@@ -225,33 +205,22 @@ class MDProcessor:
         
         return True
     
-    # create a bilingual markdown file
-    def _create_bilingual_content(self, input:str, output:str) -> str:
-        """
-        Create a bilingual markdown file.
-        """
-        # TODO: debug setting is not working, need to fix it (in conflict with the global logging setting?)
-        # Debug: Check types of input parameters
-        #self.logger.debug(f"DEBUG: input type: {type(input)}, output type: {type(output)}")
-        #self.logger.debug(f"DEBUG: input first 100 chars: {str(input)[:100]}")
-        #self.logger.debug(f"DEBUG: output first 100 chars: {str(output)[:100]}")
-
-        # split the input and output into lists of lines
+    def _create_bilingual_content(self, input: str, output: str) -> str:
+        """Create a bilingual markdown file with alternating source/translation lines."""
         input_lines = input.strip().split("\n")
         output_lines = output.strip().split("\n")
 
-        # create a bilingual string content, with the input and output lines alternated
-        bilingual_content = ""
+        # Use list append + join for O(n) performance instead of string concatenation
+        bilingual_lines = []
         for i in range(len(input_lines)):
             try:
-                prefix = "" # change prefix to i for debugging when needed
-                bilingual_content += f"{prefix}{input_lines[i]}\n{output_lines[i]}\n"
-            except Exception as e:
-                warning(f"Inconsistancy detected in the {i}th line of the bilingual content: {str(e)}")
-                print(f"Input line: {input_lines[i]}")
+                bilingual_lines.append(input_lines[i])
+                bilingual_lines.append(output_lines[i])
+            except IndexError:
+                warning(f"Line count mismatch at line {i}: input has {len(input_lines)} lines, output has {len(output_lines)} lines")
                 break
 
-        return bilingual_content
+        return "\n".join(bilingual_lines) + "\n"
 
 
     # save content to a file
@@ -268,48 +237,18 @@ class MDProcessor:
         save_dir = paper_output_dir
         try:
             os.makedirs(save_dir, exist_ok=True)
-        except Exception as e:
-            logging.error(f"Error creating directory: {str(e)}")
-        
+        except OSError as e:
+            error(f"Error creating directory: {str(e)}")
+            raise
+
         try:
             with open(f"{save_dir}/{type.value}_{content_name}.md", 'w', encoding='utf-8') as f:
                 f.write(content)
             if type == SaveType.RESPONSE and console_print:
                 user_message(f"{content}")
-        except Exception as e:
-            logging.error(f"Error saving content: {str(e)}")
-    
-
-    # def _save_process_times_report(self, paper_name: str, 
-    #                                process_times: Dict[str, float], 
-    #                                paper_output_dir: Path) -> None:
-    #     """
-    #     Save a report of process times for the paper processing.
-        
-    #     Args:
-    #         paper_name: Name of the paper
-    #         process_times: Dictionary with process times for each step
-    #     """
-    #     # Create output directory for this paper
-    #     token_dir = paper_output_dir / "process_times"
-    #     token_dir.mkdir(parents=True, exist_ok=True)
-        
-    #     # Save as JSON
-    #     with open(token_dir / "process_times.json", 'w', encoding='utf-8') as f:
-    #         json.dump(process_times, f, indent=2)
-        
-    #     # Also save a human-readable summary
-    #     with open(token_dir / "process_times.txt", 'w', encoding='utf-8') as f:
-    #         f.write (f"Process Times Report for {paper_name}\n")
-    #         f.write (f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-    #         f.write ("Summary:\n")
-    #         f.write (f"  Total Process Time: {process_times['total']:.2f} seconds ({process_times['total']/60:.2f} minutes)\n\n")
-    #         f.write ("Detailed Times by Step:\n")
-    #         # Calculate percentages safely to avoid division by zero
-    #         analysis_pct = (process_times['analysis']/process_times['total']*100) if process_times['total'] > 0 else 0
-    #         translation_pct = (process_times['translation']/process_times['total']*100) if process_times['total'] > 0 else 0
-    #         f.write (f"  Analysis: {process_times['analysis']:.2f} seconds ({analysis_pct:.1f}%)\n")
-    #         f.write (f"  Translation: {process_times['translation']:.2f} seconds ({translation_pct:.1f}%)\n")
+        except IOError as e:
+            error(f"Error saving content: {str(e)}")
+            raise
 
     def _make_api_request(self, prompt: str, request_name: str) -> Dict[str, Any]:
         """
@@ -325,13 +264,13 @@ class MDProcessor:
         try:
             return self.llm_client.generate_response(prompt, request_name)
         except ConnectionError as e:
-            logging.error(f"Connection failed during {request_name}: {str(e)}")
+            error(f"Connection failed during {request_name}: {str(e)}")
             raise ConnectionError(f"Failed to connect to LLM service: {str(e)}") from e
         except ValueError as e:
-            logging.error(f"Invalid input for {request_name}: {str(e)}")
+            error(f"Invalid input for {request_name}: {str(e)}")
             raise ValueError(f"Invalid input for {request_name}: {str(e)}") from e
         except Exception as e:
-            logging.error(f"Unexpected error in {request_name}: {str(e)}")
-            raise Exception(f"Error generating response for {request_name}: {str(e)}") from e
+            error(f"Unexpected error in {request_name}: {str(e)}")
+            raise RuntimeError(f"Error generating response for {request_name}: {str(e)}") from e
 
 # CLI functionality moved to cli.py - this module now contains only core processing logic
