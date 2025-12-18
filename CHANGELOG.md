@@ -18,6 +18,11 @@ All notable changes to this project will be documented in this file.
   - `md_converter.py`: Replaced generic `Exception` with `ConnectionError` for URL access errors
 - **Code Quality:** Consolidated 3 consecutive try/except blocks for bilingual content into single block (`md_processor.py:186-196`)
 - **Type Hints:** Fixed `MDArticle.output_path` type from `Optional[str]` to `Optional[Path]` to match actual usage (`data_models.py`)
+- **Incomplete Module:** Implemented `content_validation.py` module (was just a stub):
+  - Two-stage validation: blocked publisher check (hard stop) + content length check (warning)
+  - Blocked publisher list management (add/remove/get)
+  - `BlockedPublisherError` and `ContentValidationError` exceptions
+  - Configurable via `MIN_CHARS_WARNING_THRESHOLD` constant
 
 ### Removed
 - ~40 lines of commented dead code from `md_processor.py`
@@ -37,7 +42,7 @@ All notable changes to this project will be documented in this file.
   - TTL-based expiration (`RESPONSE_CACHE_TTL_SECONDS`)
   - Disabled by default (`RESPONSE_CACHE_ENABLED=False`), enable for repeated prompts
   - Cache statistics via `get_cache_stats()` and `clear_cache()` methods
-- Test suite (`tests/test_basic.py`) expanded to 41 unit tests covering imports, models, functionality, rate limiting, caching, and type hints
+- Test suite (`tests/test_basic.py`) expanded to 48 unit tests covering imports, models, functionality, rate limiting, caching, type hints, and content validation
 
 ### Changed
 - Updated imports in `main.py` to use renamed module
