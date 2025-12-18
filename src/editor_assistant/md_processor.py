@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-Document Summarizer
+Document Processor
 
-Processes markdown content using large language models with 128k+ context windows
-to generate comprehensive summaries in a single request.
+Processes markdown content using large language models with 128k+ context windows.
+Uses a pluggable task system for extensibility.
 
 Workflow:
 1. Validate content size against model context window
-2. Analyze the entire document with an LLM to generate a comprehensive summary
-3. Translate the summary to Chinese
+2. Load and validate the appropriate task
+3. Build prompt and make LLM request
+4. Post-process and save outputs
 """
 
 import logging
 import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Union
 import os
 from .config.logging_config import error, progress, warning, user_message
 from .config.constants import (
     CHAR_TOKEN_RATIO,
-    MINIMAL_TOKEN_ACCEPTED,
     PROMPT_OVERHEAD_TOKENS,
     DEBUG_LOGGING_LEVEL,
 )
@@ -30,12 +30,8 @@ from .llm_client import LLMClient
 # for data models
 from .data_models import MDArticle, ProcessType, SaveType
 
-# for the prompts of the summarizing tasks
-from .config.load_prompt import (
-    load_research_outliner_prompt,
-    load_news_generator_prompt,
-    load_translation_prompt
-)
+# for the pluggable task system
+from .tasks import TaskRegistry, Task
 
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
@@ -90,24 +86,36 @@ class MDProcessor:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(DEBUG_LOGGING_LEVEL)
     
-    def process_mds (self, md_articles: List[MDArticle], type: ProcessType, output_to_console=True) -> bool:
+    def process_mds(self, md_articles: List[MDArticle], 
+                     task_type: Union[ProcessType, str], 
+                     output_to_console: bool = True) -> bool:
         """
-        Process a document to generate a summary using single-context processing.
+        Process documents using the pluggable task system.
         
         Args:
-            md_articles: The list of MDArticle objects to summarize
-            type: Type of process (outline, news, translate)
+            md_articles: The list of MDArticle objects to process
+            task_type: Task type (ProcessType enum or string name)
+            output_to_console: Whether to print output to console
             
         Returns:
             bool: True if successful, False otherwise
         """
+        # Resolve task type to string
+        task_name = task_type.value if isinstance(task_type, ProcessType) else task_type
         
-        # Enforce single-article for outline/translate; allow multi-source for brief
-        if type == ProcessType.OUTLINE and len(md_articles) != 1:
-            error("Outline requires exactly one article (type=paper)")
+        # Get the task class from registry
+        task_cls = TaskRegistry.get(task_name)
+        if task_cls is None:
+            error(f"Unknown task type: {task_name}. Available: {TaskRegistry.list_tasks()}")
             return False
-        if type == ProcessType.TRANSLATE and len(md_articles) != 1:
-            error("Translate requires exactly one article")
+        
+        # Instantiate task
+        task: Task = task_cls()
+        
+        # Validate inputs
+        is_valid, err_msg = task.validate(md_articles)
+        if not is_valid:
+            error(f"Validation failed for {task_name}: {err_msg}")
             return False
 
         # Check content size before processing
@@ -120,108 +128,75 @@ class MDProcessor:
 
         # Create base title for the output files
         title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
-        if type == ProcessType.BRIEF and len(md_articles) > 1:
+        if task.supports_multi_input and len(md_articles) > 1:
             title_base = f"{title_base}-multi"
-        time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        title = f"{title_base}_{type.value}_{self.model_name}_{time}"
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        title = f"{title_base}{task.get_output_suffix()}_{self.model_name}_{timestamp}"
 
-        # Create output directory for the output files
+        # Create output directory
         output_dir = (Path(md_articles[0].output_path).parent / "llm_generations")
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    
-        # Generate the prompt
-        prompt = None
+        # Build prompt using task
         try:
-            match type:
-                case ProcessType.OUTLINE:
-                    prompt = load_research_outliner_prompt(
-                        content=md_articles[0].content # only one article for outline
-                        )
-                case ProcessType.BRIEF:
-                    # Pass MDArticle list directly; template handles type casting
-                    prompt = load_news_generator_prompt(articles=md_articles)
-                case ProcessType.TRANSLATE:
-                    prompt = load_translation_prompt(
-                        content=md_articles[0].content
-                    )
+            prompt = task.build_prompt(md_articles)
         except Exception as e:
-            error(f"Fails to load prompt: str{e}")  
+            error(f"Failed to build prompt: {e}")
             return False
           
         # Check prompt size
         try:
             check_content_size(prompt, self.llm_client)
         except ContentTooLargeError as e:
-            error(f"Content too large: {str(e)}")
+            error(f"Prompt too large: {str(e)}")
             return False
 
-        # Make LLM request and save the output
+        # Make LLM request
         try:
             progress(f"Processing document with {len(prompt)} characters...")
-            response = self._make_api_request(prompt, type.value)
-        
+            response = self._make_api_request(prompt, task_name)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             return False
 
-        # Prepend metadata from articles
+        # Build metadata prefix
         metadata_lines = []
+        for article in md_articles:
+            metadata_lines.append(f"Title: {article.title or 'Untitled'}")
+            metadata_lines.append(f"Source: {article.source_path or 'Unknown Source'}")
+        metadata_prefix = "\n".join(metadata_lines) + "\n\n" if metadata_lines else ""
 
+        # Post-process response using task
         try:
-            for article in md_articles:
-                art_title = article.title or "Untitled"
-                art_source = article.source_path or "Unknown Source"
-                metadata_lines.append(f"Title: {art_title}")
-                metadata_lines.append(f"Source: {art_source}")
-            metadata_prefix = "\n".join(metadata_lines) + "\n\n" if metadata_lines else ""
-            formatted_response = metadata_prefix + response
-            
-            self._save_content(SaveType.RESPONSE, title, 
-                               formatted_response, output_dir, output_to_console)
+            outputs = task.post_process(response, md_articles)
+        except Exception as e:
+            error(f"Post-processing failed: {e}")
+            return False
+
+        # Save all outputs
+        try:
+            for output_name, content in outputs.items():
+                formatted_content = metadata_prefix + content
+                
+                if output_name == "main":
+                    self._save_content(SaveType.RESPONSE, title, 
+                                       formatted_content, output_dir, output_to_console)
+                else:
+                    # Additional outputs (e.g., bilingual)
+                    self._save_content(SaveType.RESPONSE, f"{output_name}_{title}",
+                                       formatted_content, output_dir, False)
+                    progress(f"{output_name} output saved to {output_dir / f'{output_name}_{title}.md'}")
         except Exception as e:
             error(f"Error saving response: {str(e)}")
             return False
-        
-        # Create bilingual content if translation is requested
-        if type == ProcessType.TRANSLATE:
-            try:
-                bilingual_content = self._create_bilingual_content(md_articles[0].content, response)
-                if metadata_lines:
-                    bilingual_content = "\n".join(metadata_lines) + "\n\n" + bilingual_content
-                self._save_content(SaveType.RESPONSE, f"bilingual_{title}",
-                                   bilingual_content, output_dir)
-                progress(f"bilingual content generated and saved to {output_dir / f'bilingual_{title}.md'}")
-            except Exception as e:
-                error(f"Error processing bilingual content: {str(e)}")
-                return False
-
-
 
         # Save token usage report
         try:
             self.llm_client.save_token_usage_report(title, output_dir)
         except Exception as e:
-            warning (f"Unable to save token usage report: {str(e)}")
+            warning(f"Unable to save token usage report: {str(e)}")
         
         return True
-    
-    def _create_bilingual_content(self, input: str, output: str) -> str:
-        """Create a bilingual markdown file with alternating source/translation lines."""
-        input_lines = input.strip().split("\n")
-        output_lines = output.strip().split("\n")
-
-        # Use list append + join for O(n) performance instead of string concatenation
-        bilingual_lines = []
-        for i in range(len(input_lines)):
-            try:
-                bilingual_lines.append(input_lines[i])
-                bilingual_lines.append(output_lines[i])
-            except IndexError:
-                warning(f"Line count mismatch at line {i}: input has {len(input_lines)} lines, output has {len(output_lines)} lines")
-                break
-
-        return "\n".join(bilingual_lines) + "\n"
 
 
     # save content to a file

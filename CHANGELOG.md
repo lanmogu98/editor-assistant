@@ -17,6 +17,12 @@ All notable changes to this project will be documented in this file.
 - Verified `claude-sonnet-4-or` (Claude Sonnet 4 via OpenRouter) works correctly
 
 ### Added
+- **Pluggable Task System** - Extensible task architecture:
+  - New `tasks/` module with `TaskRegistry` for dynamic task registration
+  - `Task` base class with `validate()`, `build_prompt()`, `post_process()` methods
+  - Existing tasks (`brief`, `outline`, `translate`) refactored as Task subclasses
+  - Tasks can now produce multiple outputs (e.g., translate → main + bilingual)
+  - Updated `DEVELOPER.md` with simplified "Adding a New Task Type" guide
 - **Gemini 3 thinking mode support** - Control reasoning depth for Gemini 3 models:
   - Added `--thinking` CLI parameter (`low`, `medium`, `high`)
   - Default: model decides dynamically (no parameter sent)
