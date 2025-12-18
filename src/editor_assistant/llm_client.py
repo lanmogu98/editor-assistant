@@ -361,6 +361,13 @@ class LLMClient:
         response_text = ''.join(full_content)
         
         # Estimate tokens if not provided (for APIs that don't return usage in stream)
+        if input_tokens == 0:
+            # Estimate input tokens from prompt
+            prompt_content = ""
+            for msg in data.get("messages", []):
+                prompt_content += msg.get("content", "")
+            input_tokens = len(prompt_content) // 4  # Rough estimate: ~4 chars per token
+        
         if output_tokens == 0:
             output_tokens = len(response_text) // 4  # Rough estimate
         
