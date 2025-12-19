@@ -5,7 +5,7 @@ from .config.logging_config import setup_logging, progress, error, warning, user
 import logging
 import asyncio
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional, Tuple
 
 class EditorAssistant:
     def __init__(self, model_name, debug_mode=False, thinking_level=None, stream=True):
@@ -14,6 +14,35 @@ class EditorAssistant:
         self.md_processor = MDProcessor(model_name, thinking_level=thinking_level, stream=stream)
         self.md_converter = MarkdownConverter()
     
+    async def _process_input_to_article(self, input: Input) -> Tuple[Optional[MDArticle], Optional[str]]:
+        """Helper to convert/read input to MDArticle (Async via thread pool)."""
+        try:
+            if input.path.endswith(".md"):
+                # File I/O in thread
+                def read_md():
+                    with open(input.path, 'r', encoding='utf-8') as f:
+                        return f.read()
+                
+                content = await asyncio.to_thread(read_md)
+                return MDArticle(
+                    type=input.type,
+                    content=content,
+                    title=Path(input.path).stem,
+                    source_path=input.path,
+                    output_path=input.path,
+                ), None
+            else:
+                # Conversion in thread (CPU/IO bound)
+                md_article = await asyncio.to_thread(
+                    self.md_converter.convert_content, input.path, type=input.type
+                )
+                if md_article:
+                    return md_article, None
+                else:
+                    return None, "conversion returned None"
+        except Exception as e:
+            return None, str(e)
+
     # LLM processor for multiple files (Async)
     async def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True, save_files=False):       
         # early return if no paths are provided
@@ -27,43 +56,20 @@ class EditorAssistant:
         # show clean progress message to user
         progress(f"Start to {task_name} with {self.md_processor.llm_client.model_name}")
 
-        # initialize the md content list
+        # Step 1: Pre-process inputs (Convert/Read) - Parallel
+        progress(f"Converting/Reading {len(inputs)} inputs in parallel...")
+        
+        conversion_tasks = [self._process_input_to_article(inp) for inp in inputs]
+        conversion_results = await asyncio.gather(*conversion_tasks)
+
         md_articles = []
         failed_inputs = []
 
-        # Step 1: Pre-process inputs (Convert/Read) - Synchronous for now (Phase 2 optimization: async thread pool)
-        # Note: We keep this sync for simplicity in this phase, or we can use to_thread.
-        # Given conversion can be slow, let's just keep it simple sequential for conversion, parallel for LLM.
-        # Why? Because LLM is the main bottleneck (30s+), conversion is usually seconds.
-        for input in inputs:
-            # if the path is a markdown file, read the content and create an MDArticle object
-            md_article = None
-            if input.path.endswith(".md"):
-                try:
-                    with open(input.path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    md_article = MDArticle(
-                        type=input.type,
-                        content=content,
-                        title=Path(input.path).stem,
-                        source_path=input.path,
-                        output_path=input.path,
-                    )
-                    md_articles.append(md_article)
-                except Exception as e:
-                    failed_inputs.append((input.path, str(e)))
-                continue
-            
-            # if the path is not a markdown file, convert it to markdown
-            try:
-                md_article = self.md_converter.convert_content(input.path, type=input.type)
-                if md_article:
-                    md_articles.append(md_article)
-                else:
-                    failed_inputs.append((input.path, "conversion returned None"))
-            except Exception as e:
-                failed_inputs.append((input.path, str(e)))
-                continue
+        for i, (article, err_msg) in enumerate(conversion_results):
+            if article:
+                md_articles.append(article)
+            else:
+                failed_inputs.append((inputs[i].path, err_msg))
 
         if failed_inputs and not md_articles:
             error(f"All inputs failed to convert: {failed_inputs}")
@@ -75,29 +81,12 @@ class EditorAssistant:
                 f"{len(failed_inputs)} input(s) failed conversion; continuing with remaining."
             )
 
-        progress("Input formatted as markdown and ready to process.")
+        progress("Inputs ready. Starting parallel processing...")
         
         # process the md files concurrently
         # Logic: We launch a task for each article.
         tasks = []
         for article in md_articles:
-            # Wrap single article in list because process_mds expects list
-            # We process them individually to maximize concurrency (1 input = 1 task)
-            # unless the task inherently supports multi-input aggregation (like summary of multiple papers).
-            # But the current architecture (MDProcessor.process_mds) takes a list of articles.
-            # If the Task supports multi-input (e.g. compare 2 papers), we should pass them together?
-            # Let's check Task.supports_multi_input.
-            
-            # Check task capability
-            # We need to instantiate the task temporarily to check property? Or assume single-doc for now?
-            # Existing logic was: process_mds takes list.
-            # If we want to process N docs in parallel, we should spawn N tasks, each calling process_mds([doc]).
-            # BUT, if the user intended to summarize 5 docs into 1 (Multi-input task), we should call process_mds(all_docs) once.
-            
-            # How to decide?
-            # RFC didn't specify. Current behavior in main.py loop suggests 1-by-1.
-            # So we assume default is 1-by-1 unless logic dictates otherwise.
-            # Let's preserve 1-by-1 behavior but run them in parallel.
             tasks.append(
                 self.md_processor.process_mds(
                     [article],

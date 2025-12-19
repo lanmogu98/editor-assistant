@@ -156,10 +156,13 @@ class MDProcessor:
                 error(f"Content too large: {md_article.title}: {str(e)}")
                 return False, run_id
 
-        # Create run record in database
-        # Note: SQLite writes are synchronous, but fast enough for now.
-        # Future optimization: run_in_executor
-        run_id = self._create_run_record(md_articles, task_name)
+        # Create run record in database (Async via thread pool)
+        # Offload synchronous DB write to prevent blocking the event loop
+        try:
+            run_id = await asyncio.to_thread(self._create_run_record, md_articles, task_name)
+        except Exception as e:
+            self.logger.warning(f"Async DB creation failed, falling back: {e}")
+            run_id = self._create_run_record(md_articles, task_name)
 
         # Create base title
         title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
@@ -195,7 +198,7 @@ class MDProcessor:
                 response = await self._make_api_request(prompt, task_name, stream=self.stream)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
-            self._update_run_status(run_id, "failed", str(e))
+            await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
             return False, run_id
 
         # Build metadata prefix
@@ -210,7 +213,7 @@ class MDProcessor:
             outputs = task.post_process(response, md_articles)
         except Exception as e:
             error(f"Post-processing failed: {e}")
-            self._update_run_status(run_id, "failed", str(e))
+            await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
             return False, run_id
 
         # Save all outputs
@@ -229,24 +232,24 @@ class MDProcessor:
                                            formatted_content, output_dir, False)
                         progress(f"{output_name} output saved to {output_dir / f'{output_name}_{title}.md'}")
                 
-                # Save to database
-                self._save_output_to_db(run_id, output_name, content)
+                # Save to database (Async via thread pool)
+                await asyncio.to_thread(self._save_output_to_db, run_id, output_name, content)
                 
         except Exception as e:
             error(f"Error saving response: {str(e)}")
-            self._update_run_status(run_id, "failed", str(e))
+            await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
             return False, run_id
 
-        # Save token usage
+        # Save token usage (Async via thread pool)
         try:
             if save_files and output_dir:
                 self.llm_client.save_token_usage_report(title, output_dir)
-            self._save_token_usage_to_db(run_id)
+            await asyncio.to_thread(self._save_token_usage_to_db, run_id)
         except Exception as e:
             warning(f"Unable to save token usage report: {str(e)}")
         
-        # Mark run as successful
-        self._update_run_status(run_id, "success")
+        # Mark run as successful (Async via thread pool)
+        await asyncio.to_thread(self._update_run_status, run_id, "success")
         
         return True, run_id
 
@@ -292,9 +295,8 @@ class MDProcessor:
             raise RuntimeError(f"Error generating response for {request_name}: {str(e)}") from e
 
     # =========================================================================
-    # Database Helper Methods (Synchronous - for now)
+    # Database Helper Methods (Synchronous - Called in Thread Pool)
     # =========================================================================
-    # ... (Keep these synchronous for simplicity in Phase 2, unless bottlenecks appear)
     
     def _create_run_record(self, md_articles: List[MDArticle], task_name: str) -> int:
         try:
