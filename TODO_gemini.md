@@ -16,7 +16,14 @@
 - [x] **Phase 3: Integration**:
     - [x] Refactor `main.py` `process_multiple` to use `asyncio.gather`.
     - [x] Refactor `cli.py` to use `asyncio.run`.
+    - [x] Integrate `batch` processing command into CLI.
     - [x] Add end-to-end integration test (`tests/integration/test_async_flow.py`).
+- [x] **Phase 4: Verification & Docs**:
+    - [x] Perform stress testing (Rate Limits, Concurrency, Partial Failures).
+    - [x] Benchmark performance (4.46x speedup achieved).
+    - [x] Update `README.md` (Batch usage, Async features).
+    - [x] Update `DEVELOPER_GUIDE.md` (Async architecture, Performance).
+    - [x] Update `CHANGELOG.md` (v0.5.0).
 
 ### Next Steps (Post-Merge)
 - [ ] Monitor SQLite concurrent write performance (may need `run_in_executor` optimization).
