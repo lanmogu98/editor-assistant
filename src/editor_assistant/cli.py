@@ -47,6 +47,11 @@ def add_common_arguments(parser):
         action="store_true",
         help="Enable debug mode with detailed logging"
     )
+    parser.add_argument(
+        "--save-files",
+        action="store_true",
+        help="Persist generated files to disk (default: off; DB always updated)"
+    )
 
 
 
@@ -75,7 +80,7 @@ def cmd_generate_brief(args):
     # Parse key=value sources into Input objects
     inputs = [parse_source_spec(source) for source in args.sources]
 
-    assistant.process_multiple(inputs, ProcessType.BRIEF)
+    assistant.process_multiple(inputs, ProcessType.BRIEF, save_files=args.save_files)
 
 
 def cmd_generate_outline(args):
@@ -84,7 +89,7 @@ def cmd_generate_outline(args):
     assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
-    assistant.process_multiple([input_obj], ProcessType.OUTLINE)
+    assistant.process_multiple([input_obj], ProcessType.OUTLINE, save_files=args.save_files)
 
 def cmd_generate_translate(args):
     """Generate translation from a single paper."""
@@ -92,7 +97,7 @@ def cmd_generate_translate(args):
     assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
-    assistant.process_multiple([input_obj], ProcessType.TRANSLATE)
+    assistant.process_multiple([input_obj], ProcessType.TRANSLATE, save_files=args.save_files)
 
 
 def cmd_process_multi_task(args):
@@ -109,7 +114,7 @@ def cmd_process_multi_task(args):
     # Execute each task serially
     for task_name in task_names:
         progress(f"Executing task: {task_name}")
-        assistant.process_multiple(inputs, task_name)
+        assistant.process_multiple(inputs, task_name, save_files=args.save_files)
 
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
