@@ -46,7 +46,8 @@ class EditorAssistant:
     # LLM processor for multiple files (Async)
     async def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], 
                              output_to_console=True, save_files=False,
-                             progress_callbacks: Dict[str, Callable[[str], None]] = None):       
+                             progress_callbacks: Dict[str, Callable[[str], None]] = None,
+                             done_callback: Optional[Callable[[str, bool], None]] = None):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -96,13 +97,26 @@ class EditorAssistant:
                 # We expect strict string matching
                 callback = progress_callbacks.get(str(article.source_path))
 
+            async def process_wrapper(art, task, out, save, cb, done_cb):
+                try:
+                    res = await self.md_processor.process_mds([art], task, out, save_files=save, stream_callback=cb)
+                    success = res[0] if isinstance(res, tuple) else False
+                    if done_cb:
+                        done_cb(str(art.source_path), success)
+                    return res
+                except Exception as e:
+                    if done_cb:
+                        done_cb(str(art.source_path), False)
+                    raise e
+
             tasks.append(
-                self.md_processor.process_mds(
-                    [article],
+                process_wrapper(
+                    article,
                     task_name,
                     output_to_console,
-                    save_files=save_files,
-                    stream_callback=callback
+                    save_files,
+                    callback,
+                    done_callback
                 )
             )
 

@@ -448,6 +448,8 @@ SQLite is thread-safe but not fully concurrent for writes. The `storage` module 
 
 ### Batch Processing UI
 The `batch` command uses the [Rich](https://github.com/Textualize/rich) library to display concurrent progress bars.
-- **Progress Tracking**: Each file gets a dedicated progress bar.
+- **Overall Progress**: A main bar tracking total files processed.
+- **Active Tasks**: Individual progress bars for currently processing files (concurrency limit: 5). Pending tasks are hidden to prevent terminal clutter.
+- **Completion Handling**: Completed tasks are removed from the live view and replaced by a permanent log line.
 - **Streaming**: Output tokens are streamed to update the progress bar status, keeping the interface clean.
 - **Fallback**: If `rich` is not installed, it gracefully degrades to standard console output.

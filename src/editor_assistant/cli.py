@@ -13,6 +13,9 @@ from pathlib import Path
 # Optional rich import for better UI
 try:
     from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -162,19 +165,28 @@ async def cmd_batch_process(args):
             TimeRemainingColumn(),
         ) as progress_ctx:
             
-            # Create a task for each file
-            # We track tokens or just simple "Processing..." status
+            # Create a task for each file (hidden initially to prevent clutter)
             rich_tasks = {}
+            
+            # Overall progress bar
+            overall_task = progress_ctx.add_task(
+                f"[bold green]Batch Processing ({len(inputs)} files)", 
+                total=len(inputs),
+                completed=0,
+                status=""  # Initialize status field to avoid KeyError
+            )
+            
             for inp in inputs:
                 filename = Path(inp.path).name
                 task_id = progress_ctx.add_task(
                     f"[cyan]{filename}", 
-                    total=None, # Indeterminate until we know length, or just track completion
-                    status="[dim]Pending..."
+                    total=None,
+                    status="[dim]Pending...",
+                    visible=False # Hide until active
                 )
                 rich_tasks[inp.path] = task_id
             
-            # Helper to create a callback closure
+            # Helper to create a stream callback closure
             def make_callback(file_path):
                 task_id = rich_tasks[file_path]
                 
@@ -184,55 +196,50 @@ async def cmd_batch_process(args):
                 def callback(chunk: str):
                     nonlocal started
                     if not started:
-                        progress_ctx.update(task_id, status="[green]Generating...", total=100) # Switch to determinate if we could estimate? No, LLM is streaming.
-                        # Just keep indeterminate spinner but update status
+                        # Make visible on first activity
+                        progress_ctx.update(task_id, visible=True, status="[green]Generating...", total=100)
                         started = True
                     
-                    # Optional: We could count tokens here if we wanted a rough progress bar
-                    # For now, just show activity
-                    progress_ctx.update(task_id, advance=len(chunk)/50) # Fake advance to animate bar?
+                    # Show activity
+                    progress_ctx.update(task_id, advance=len(chunk)/50)
                     
                 return callback
+
+            # Helper for done callback
+            def on_done(file_path, success):
+                task_id = rich_tasks.get(file_path)
+                if task_id is not None:
+                    # Mark complete in UI
+                    progress_ctx.update(task_id, completed=100, visible=False)
+                    
+                    # Print permanent log line
+                    filename = Path(file_path).name
+                    if success:
+                        progress_ctx.console.print(f"[green]✔ {filename} processed[/green]")
+                    else:
+                        progress_ctx.console.print(f"[red]✗ {filename} failed[/red]")
+                    
+                    # Update overall progress
+                    progress_ctx.update(overall_task, advance=1)
 
             # Create callbacks for all inputs
             for inp in inputs:
                 progress_callbacks[inp.path] = make_callback(inp.path)
             
-            # Run processing with output_to_console=False (we handle UI)
-            # Pass save_files=True implicitly for batch? args says save_files default False?
-            # Batch usually implies saving. 
-            # But let's respect CLI arg. If save_files is False, where does output go? 
-            # In batch mode, if not saving to files, it goes nowhere (except DB).
-            # User probably wants files.
-            # Let's verify args.save_files default. It is store_true (False).
-            # The original implementation passed save_files=args.save_files.
-            
-            # IMPORTANT: For batch processing, we MUST save files or the user gets nothing visible (since we suppress console output).
-            # Unless they just want DB population.
-            # But typically batch = files.
-            # Let's force save_files=True if not specified? 
-            # Or just warn?
-            # Let's assume user passes --save-files or we default it to True in batch logic?
-            # Existing code: await assistant.process_multiple(inputs, args.task, save_files=args.save_files)
-            # I will stick to args.save_files but maybe default to True if user didn't specify?
-            # argparse defaults to False.
-            # I will set save_files=True by default for batch if user didn't say otherwise?
-            # Can't easily distinguish default False from explicit False.
-            # Let's just use args.save_files.
-            
             await assistant.process_multiple(
                 inputs, 
                 args.task, 
-                output_to_console=False, # Suppress raw text mixing
-                save_files=args.save_files or True, # Force save for batch? Yes, usually desired.
-                progress_callbacks=progress_callbacks
+                output_to_console=False, 
+                save_files=args.save_files or True, 
+                progress_callbacks=progress_callbacks,
+                done_callback=on_done
             )
             
-            # Update all to complete
-            for task_id in rich_tasks.values():
-                progress_ctx.update(task_id, completed=100, status="[bold green]Done")
+            # Ensure overall is done (in case of weirdness)
+            progress_ctx.update(overall_task, completed=len(inputs))
                 
     else:
+        # Fallback to standard behavior (concurrent text mixing or serial if desired)
         # Fallback to standard behavior (concurrent text mixing or serial if desired)
         # Or just run it. If streaming is on but Rich missing, it will be messy.
         # We assume Rich is installed.
@@ -244,6 +251,41 @@ async def cmd_batch_process(args):
             args.task, 
             save_files=args.save_files or True # Force save for batch
         )
+
+    # Print Batch Summary
+    usage = assistant.md_processor.llm_client.get_token_usage()
+    total_cost = usage["cost"]["total_cost"]
+    total_tokens = usage["total_input_tokens"] + usage["total_output_tokens"]
+    currency = assistant.md_processor.llm_client.pricing_currency
+    processed_count = len(usage["requests"])
+    
+    if processed_count > 0:
+        avg_cost = total_cost / processed_count
+        avg_tokens = total_tokens / processed_count
+    else:
+        avg_cost = 0
+        avg_tokens = 0
+
+    if RICH_AVAILABLE:
+        console = Console()
+        table = Table(show_header=False, box=None)
+        table.add_row("Total Files", str(len(inputs)))
+        table.add_row("Successful API Calls", str(processed_count))
+        table.add_row("Total Tokens", f"{total_tokens:,}")
+        table.add_row("Total Cost", f"{currency}{total_cost:.4f}")
+        table.add_row("Avg Tokens/Task", f"{avg_tokens:,.0f}")
+        table.add_row("Avg Cost/Task", f"{currency}{avg_cost:.4f}")
+        
+        console.print()
+        console.print(Panel(table, title="[bold green]Batch Processing Summary[/bold green]", expand=False))
+    else:
+        print("\nBatch Processing Summary")
+        print(f"Total Files: {len(inputs)}")
+        print(f"Successful Calls: {processed_count}")
+        print(f"Total Tokens: {total_tokens:,}")
+        print(f"Total Cost: {currency}{total_cost:.4f}")
+        print(f"Avg Tokens/Task: {avg_tokens:,.0f}")
+        print(f"Avg Cost/Task: {currency}{avg_cost:.4f}")
 
 
 # Synchronous commands (CPU bound or simple IO)
