@@ -157,12 +157,20 @@ async def cmd_batch_process(args):
     progress_callbacks = {}
     
     if RICH_AVAILABLE and stream:
+        # Suppress INFO logs to prevent interfering with Rich UI
+        import logging
+        logging.getLogger().setLevel(logging.WARNING)
+
+        # Force terminal mode to ensure in-place updates (prevent scrolling)
+        console = Console(force_terminal=True)
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TextColumn("{task.fields[status]}"),
             TimeRemainingColumn(),
+            console=console,
+            transient=True, # Clear progress bars on exit
         ) as progress_ctx:
             
             # Create a task for each file (hidden initially to prevent clutter)
