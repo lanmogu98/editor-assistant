@@ -1,7 +1,7 @@
 from .md_processor import MDProcessor
 from .data_models import MDArticle, InputType, Input, ProcessType
 from .md_converter import MarkdownConverter
-from .config.logging_config import setup_logging, progress, error
+from .config.logging_config import setup_logging, progress, error, warning, user_message
 import logging
 from pathlib import Path
 from typing import Union
@@ -14,7 +14,7 @@ class EditorAssistant:
         self.md_converter = MarkdownConverter()
     
     # LLM processor for multiple files
-    def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True):       
+    def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True, save_files=False):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -28,39 +28,65 @@ class EditorAssistant:
 
         # initialize the md content list
         md_articles = []
+        failed_inputs = []
 
         for input in inputs:
             # if the path is a markdown file, read the content and create an MDArticle object
             md_article = None
             if input.path.endswith(".md"):
-                with open(input.path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                md_article = MDArticle(type=input.type,  
-                                    content=content, 
-                                    title=Path(input.path).stem, 
-                                    source_path=input.path,
-                                    output_path=input.path)
-                md_articles.append(md_article)
+                try:
+                    with open(input.path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    md_article = MDArticle(
+                        type=input.type,
+                        content=content,
+                        title=Path(input.path).stem,
+                        source_path=input.path,
+                        output_path=input.path,
+                    )
+                    md_articles.append(md_article)
+                except Exception as e:
+                    failed_inputs.append((input.path, str(e)))
                 continue
             
             # if the path is not a markdown file, convert it to markdown
             try:
                 md_article = self.md_converter.convert_content(input.path, type=input.type)
-                md_articles.append(md_article)
+                if md_article:
+                    md_articles.append(md_article)
+                else:
+                    failed_inputs.append((input.path, "conversion returned None"))
             except Exception as e:
-                error (f"failed to convert {input.path}: {str(e)} to md")
-                return 
+                failed_inputs.append((input.path, str(e)))
+                continue
+
+        if failed_inputs and not md_articles:
+            error(f"All inputs failed to convert: {failed_inputs}")
+            return
+        if failed_inputs:
+            for path, msg in failed_inputs:
+                warning(f"Failed to convert {path}: {msg}")
+            user_message(
+                f"{len(failed_inputs)} input(s) failed conversion; continuing with remaining."
+            )
 
         progress("Input formatted as markdown and ready to process.")
         # process the md files
         try:
-            success = self.md_processor.process_mds(md_articles, task_name, output_to_console)
-            if not success:
+            success, _ = self.md_processor.process_mds(
+                md_articles,
+                task_name,
+                output_to_console,
+                save_files=save_files,
+            )
+            if not success and md_articles:
                 self.logger.warning(f"failed to process {md_articles[0].title}")
         except Exception as e:
-            self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
+            if md_articles:
+                self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
+            else:
+                self.logger.warning(f"failed to process: {str(e)}")
+            return
          
         return 
 
-# TODO: add process interface for a single input (for task translate & online),
-# which requires no type specification.

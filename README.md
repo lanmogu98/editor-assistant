@@ -112,6 +112,8 @@ ANTHROPIC_API_KEY=your_openrouter_api_key
 ```bash
 editor-assistant brief paper=https://example.com/research-article
 editor-assistant brief paper=paper.pdf news=https://example.com/related-news news=context.md --model deepseek-r1 --debug
+# Optional: enable file outputs (default off)
+editor-assistant brief paper=paper.pdf --save-files
 ```
 
 **Generate Research Outlines (single source):**
@@ -119,6 +121,8 @@ editor-assistant brief paper=paper.pdf news=https://example.com/related-news new
 ```bash
 editor-assistant outline https://arxiv.org/paper.pdf
 editor-assistant outline paper.pdf --model deepseek-r1
+# Optional file outputs
+editor-assistant outline paper.pdf --save-files
 ```
 
 **Generate Chinese Translations with Bilingual Output (single source):**
@@ -127,6 +131,8 @@ editor-assistant outline paper.pdf --model deepseek-r1
 editor-assistant translate https://arxiv.org/paper.pdf
 editor-assistant translate document.pdf --model gemini-2.5-pro
 editor-assistant translate research.md --model deepseek-r1 --debug
+# Optional file outputs
+editor-assistant translate research.md --save-files
 ```
 
 *Note: Translation generates both Chinese-only and bilingual side-by-side versions*
@@ -150,6 +156,8 @@ editor-assistant clean page.html --stdout
 ```bash
 editor-assistant process paper=paper.pdf --tasks "brief,outline"
 editor-assistant process paper=paper.pdf news=news.md --tasks "brief,outline,translate"
+# Optional file outputs (default off)
+editor-assistant process paper=paper.pdf --tasks "brief,outline" --save-files
 ```
 
 **View Run History and Statistics:**
@@ -169,6 +177,7 @@ editor-assistant show 1 --output            # Show full output content
 - `--model`: Choose LLM model (default: deepseek-v3.2)
 - `--thinking`: Reasoning level for Gemini 3+ models (`low`, `medium`, `high`). Default: model decides dynamically
 - `--no-stream`: Disable streaming output (default: streaming enabled)
+- `--save-files`: Persist prompts/responses/token reports to disk (default: off; DB is still updated)
 - `--debug`: Enable detailed debug logging with file output
 - `--version`: Show version information
 

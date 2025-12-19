@@ -20,6 +20,7 @@ from .config.constants import (
     RESPONSE_CACHE_ENABLED,
     RESPONSE_CACHE_MAX_SIZE,
     RESPONSE_CACHE_TTL_SECONDS,
+    API_REQUEST_TIMEOUT_SECONDS,
 )
 from .utils import estimate_tokens
 
@@ -288,7 +289,12 @@ class LLMClient:
 
     def _non_stream_response(self, data: dict, start_time: float, request_name: str) -> str:
         """Handle non-streaming API response."""
-        response = requests.post(self.api_url, headers=self.headers, json=data)
+        response = requests.post(
+            self.api_url,
+            headers=self.headers,
+            json=data,
+            timeout=API_REQUEST_TIMEOUT_SECONDS,
+        )
         response.raise_for_status()
         
         result = response.json()
@@ -310,10 +316,11 @@ class LLMClient:
         import sys
         
         response = requests.post(
-            self.api_url, 
-            headers=self.headers, 
-            json=data, 
-            stream=True
+            self.api_url,
+            headers=self.headers,
+            json=data,
+            stream=True,
+            timeout=API_REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         

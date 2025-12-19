@@ -9,12 +9,16 @@ All notable changes to this project will be documented in this file.
 - Test fixtures now require `DEEPSEEK_API_KEY_VOLC` (DeepSeek via Volcengine); legacy key removed.
 - `TODO_codex.md` to track branch-specific tasks (tests vs reliability).
 - Batch processing helper script (`scripts/batch_process.py`) for HTML/MD with task/model/preview options.
+- Content validation enforced in processing pipeline (blocked publisher hard stop, short-content warning).
+- CLI `--save-files` flag (default off) to control whether prompts/responses/token reports are written to disk; DB remains updated.
 
 ### Docs
 - Developer testing guide notes `deepseek-v3.2` as the cheap default model for integration tests and the env var `DEEPSEEK_API_KEY_VOLC`.
 
 ### Fixed
 - Language-aware token estimation to improve Chinese/English mixed token counting.
+- Per-input conversion failures no longer abort entire run; errors are logged and processing continues when possible.
+- LLM requests now use a configurable timeout; context checks reserve output tokens before sending.
 
 ## [0.4.0] - 2025-12-18
 

@@ -83,38 +83,43 @@ class TestMDProcessorProcessMds:
     @pytest.mark.unit
     def test_process_mds_with_valid_article(self, processor, valid_article):
         """Test processing with valid article."""
-        result = processor.process_mds(
+        success, run_id = processor.process_mds(
             [valid_article], 
             ProcessType.BRIEF
         )
         
-        assert result is True
+        assert success is True
+        # run_id may be -1 in unit tests when repository creation is mocked
+        assert run_id >= -1
     
     @pytest.mark.unit
     def test_process_mds_with_string_task_type(self, processor, valid_article):
         """Test processing with string task type."""
-        result = processor.process_mds(
+        success, run_id = processor.process_mds(
             [valid_article], 
             "brief"  # String instead of enum
         )
         
-        assert result is True
+        assert success is True
+        assert run_id >= -1
     
     @pytest.mark.unit
     def test_process_mds_with_unknown_task(self, processor, valid_article):
         """Test that unknown task returns False."""
-        result = processor.process_mds(
+        success, run_id = processor.process_mds(
             [valid_article], 
             "unknown_task"
         )
         
-        assert result is False
+        assert success is False
+        assert run_id == -1
     
     @pytest.mark.unit
     def test_process_mds_empty_articles_returns_false(self, processor):
         """Test that empty article list returns False."""
-        result = processor.process_mds([], ProcessType.BRIEF)
-        assert result is False
+        success, run_id = processor.process_mds([], ProcessType.BRIEF)
+        assert success is False
+        assert run_id == -1
 
 
 class TestMDProcessorWithRealClient:

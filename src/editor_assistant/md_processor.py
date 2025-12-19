@@ -19,9 +19,9 @@ from typing import Dict, Any, List, Optional, Union
 import os
 from .config.logging_config import error, progress, warning, user_message
 from .config.constants import (
-    CHAR_TOKEN_RATIO,
     PROMPT_OVERHEAD_TOKENS,
     DEBUG_LOGGING_LEVEL,
+    OUTPUT_TOKEN_RESERVE,
 )
 
 # for LLM processing
@@ -35,6 +35,10 @@ from .tasks import TaskRegistry, Task
 
 # for storage
 from .storage import RunRepository
+# for content validation
+from .content_validation import validate_content, BlockedPublisherError
+# for token estimation
+from .utils import estimate_tokens
 
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
@@ -44,27 +48,30 @@ class ContentTooSmallError(Exception):
     """Raised when content is suspiciously small for llm processing."""
     pass
 
-def check_content_size(content: str, llm_client: LLMClient) -> None:
+def check_context_budget(content: str, llm_client: LLMClient) -> None:
     """
-    Check if content size exceeds model context window capacity.
-    
-    Args:
-        content: The content to check
-        llm_client: LLM client with model configuration
-        
-    Raises:
-        ContentTooLargeError: If content is too large for the model
+    Context-budget guardrail (distinct from validate_content which handles source/blocklist/short-content).
+    Ensures prompt + input + reserved output fit within the model window.
     """
-    # Estimate token count
-    estimated_tokens = len(content) / CHAR_TOKEN_RATIO
+    estimated_tokens = estimate_tokens(content)
 
-    # Calculate available tokens (context - output - prompt overhead)
-    available_tokens = (llm_client.context_window - PROMPT_OVERHEAD_TOKENS)
-    
+    # Reserve space for prompt overhead and model output
+    output_reserve = llm_client.max_tokens or OUTPUT_TOKEN_RESERVE
+    # Avoid over-reserving relative to context
+    output_reserve = min(output_reserve, llm_client.context_window // 2)
+
+    available_tokens = llm_client.context_window - PROMPT_OVERHEAD_TOKENS - output_reserve
+
+    if available_tokens <= 0:
+        raise ContentTooLargeError(
+            f"Model capacity too small after reserves for {llm_client.model_name}."
+        )
+
     if estimated_tokens > available_tokens:
         raise ContentTooLargeError(
             f"Content size ({estimated_tokens:.0f} tokens) exceeds "
-            f"model capacity ({available_tokens:.0f} tokens) for {llm_client.model_name}. "
+            f"model capacity ({available_tokens:.0f} tokens) for {llm_client.model_name} "
+            f"(reserved {output_reserve} for output, {PROMPT_OVERHEAD_TOKENS} for prompt). "
             f"Please use a smaller document or split manually."
         )
 
@@ -95,9 +102,10 @@ class MDProcessor:
         # Initialize storage repository
         self.repository = RunRepository()
     
-    def process_mds(self, md_articles: List[MDArticle], 
-                     task_type: Union[ProcessType, str], 
-                     output_to_console: bool = True) -> bool:
+    def process_mds(self, md_articles: List[MDArticle],
+                     task_type: Union[ProcessType, str],
+                     output_to_console: bool = True,
+                     save_files: bool = False) -> tuple[bool, int]:
         """
         Process documents using the pluggable task system.
         
@@ -107,8 +115,10 @@ class MDProcessor:
             output_to_console: Whether to print output to console (ignored if streaming)
             
         Returns:
-            bool: True if successful, False otherwise
+            Tuple[bool, int]: (success flag, run_id or -1)
         """
+        run_id = -1
+
         # Resolve task type to string
         task_name = task_type.value if isinstance(task_type, ProcessType) else task_type
         
@@ -116,24 +126,41 @@ class MDProcessor:
         task_cls = TaskRegistry.get(task_name)
         if task_cls is None:
             error(f"Unknown task type: {task_name}. Available: {TaskRegistry.list_tasks()}")
-            return False
+            return False, run_id
         
         # Instantiate task
         task: Task = task_cls()
         
-        # Validate inputs
+        # Validate inputs (task-level)
         is_valid, err_msg = task.validate(md_articles)
         if not is_valid:
             error(f"Validation failed for {task_name}: {err_msg}")
-            return False
+            return False, run_id
 
-        # Check content size before processing
+        # Content validation per article
         for md_article in md_articles:
             try:
-                check_content_size(md_article.content, self.llm_client)
+                source_url = md_article.source_path if md_article.source_path and str(md_article.source_path).startswith("http") else None
+                is_content_valid, warn_msg = validate_content(
+                    md_article.content or "",
+                    source_url=source_url
+                )
+                if warn_msg:
+                    warning(warn_msg)
+                if not is_content_valid:
+                    error(f"Content invalid for {md_article.title or 'Untitled'}: {warn_msg}")
+                    return False, run_id
+            except BlockedPublisherError as e:
+                error(f"Blocked publisher: {e}")
+                return False, run_id
+
+        # Context budget check (separate from validate_content's source/length checks)
+        for md_article in md_articles:
+            try:
+                check_context_budget(md_article.content or "", self.llm_client)
             except ContentTooLargeError as e:
                 error(f"Content too large: {md_article.title}: {str(e)}")
-                return False
+                return False, run_id
 
         # Create run record in database
         run_id = self._create_run_record(md_articles, task_name)
@@ -145,23 +172,24 @@ class MDProcessor:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         title = f"{title_base}{task.get_output_suffix()}_{self.model_name}_{timestamp}"
 
-        # Create output directory
-        output_dir = (Path(md_articles[0].output_path).parent / "llm_generations")
-        output_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = None
+        if save_files:
+            output_dir = (Path(md_articles[0].output_path).parent / "llm_generations")
+            output_dir.mkdir(parents=True, exist_ok=True)
 
         # Build prompt using task
         try:
             prompt = task.build_prompt(md_articles)
         except Exception as e:
             error(f"Failed to build prompt: {e}")
-            return False
+            return False, run_id
           
         # Check prompt size
         try:
-            check_content_size(prompt, self.llm_client)
+            check_context_budget(prompt, self.llm_client)
         except ContentTooLargeError as e:
             error(f"Prompt too large: {str(e)}")
-            return False
+            return False, run_id
 
         # Make LLM request
         try:
@@ -170,7 +198,7 @@ class MDProcessor:
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             self._update_run_status(run_id, "failed", str(e))
-            return False
+            return False, run_id
 
         # Build metadata prefix
         metadata_lines = []
@@ -185,23 +213,24 @@ class MDProcessor:
         except Exception as e:
             error(f"Post-processing failed: {e}")
             self._update_run_status(run_id, "failed", str(e))
-            return False
+            return False, run_id
 
-        # Save all outputs
+        # Save all outputs (files optional)
         # Note: if streaming, content was already printed in real-time
         should_print = output_to_console and not self.stream
         try:
             for output_name, content in outputs.items():
                 formatted_content = metadata_prefix + content
                 
-                # Save to file
-                if output_name == "main":
-                    self._save_content(SaveType.RESPONSE, title, 
-                                       formatted_content, output_dir, should_print)
-                else:
-                    self._save_content(SaveType.RESPONSE, f"{output_name}_{title}",
-                                       formatted_content, output_dir, False)
-                    progress(f"{output_name} output saved to {output_dir / f'{output_name}_{title}.md'}")
+                # Save to file (optional)
+                if save_files and output_dir:
+                    if output_name == "main":
+                        self._save_content(SaveType.RESPONSE, title, 
+                                           formatted_content, output_dir, should_print)
+                    else:
+                        self._save_content(SaveType.RESPONSE, f"{output_name}_{title}",
+                                           formatted_content, output_dir, False)
+                        progress(f"{output_name} output saved to {output_dir / f'{output_name}_{title}.md'}")
                 
                 # Save to database
                 self._save_output_to_db(run_id, output_name, content)
@@ -209,11 +238,12 @@ class MDProcessor:
         except Exception as e:
             error(f"Error saving response: {str(e)}")
             self._update_run_status(run_id, "failed", str(e))
-            return False
+            return False, run_id
 
-        # Save token usage to file and database
+        # Save token usage to file (optional) and database
         try:
-            self.llm_client.save_token_usage_report(title, output_dir)
+            if save_files and output_dir:
+                self.llm_client.save_token_usage_report(title, output_dir)
             self._save_token_usage_to_db(run_id)
         except Exception as e:
             warning(f"Unable to save token usage report: {str(e)}")
@@ -221,7 +251,7 @@ class MDProcessor:
         # Mark run as successful
         self._update_run_status(run_id, "success")
         
-        return True
+        return True, run_id
 
 
     # save content to a file
