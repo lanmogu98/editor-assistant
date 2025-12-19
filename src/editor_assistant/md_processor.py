@@ -174,7 +174,8 @@ class MDProcessor:
 
         output_dir = None
         if save_files:
-            output_dir = (Path(md_articles[0].output_path).parent / "llm_generations")
+            base_output = Path(md_articles[0].output_path) if md_articles[0].output_path else Path.cwd()
+            output_dir = base_output / "llm_summaries" / self.model_name
             output_dir.mkdir(parents=True, exist_ok=True)
 
         # Build prompt using task

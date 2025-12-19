@@ -14,8 +14,8 @@ from editor_assistant.data_models import MDArticle, InputType, ProcessType
 
 # Skip all tests if no API key
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY"),
-    reason="DEEPSEEK_API_KEY not set"
+    not os.getenv("DEEPSEEK_API_KEY_VOLC"),
+    reason="DEEPSEEK_API_KEY_VOLC not set"
 )
 
 
@@ -44,20 +44,21 @@ class TestBriefTaskIntegration:
     @pytest.mark.slow
     def test_brief_generates_output(self, processor, paper_article, temp_dir):
         """Test that brief task generates output."""
-        result = processor.process_mds(
+        success, _ = processor.process_mds(
             [paper_article],
             ProcessType.BRIEF,
-            output_to_console=False
+            output_to_console=False,
+            save_files=True
         )
         
-        assert result is True
+        assert success is True
         
         # Check output file was created
         output_dir = temp_dir / "llm_summaries" / processor.model_name
         assert output_dir.exists()
         
         # Check response file exists
-        response_files = list((output_dir / "responses").glob("*.md"))
+        response_files = list(output_dir.glob("response_*.md"))
         assert len(response_files) > 0
     
     @pytest.mark.integration
@@ -74,7 +75,7 @@ class TestBriefTaskIntegration:
         
         # Read the output
         output_dir = temp_dir / "llm_summaries" / processor.model_name
-        response_files = list((output_dir / "responses").glob("*.md"))
+        response_files = list(output_dir.glob("response_*.md"))
         
         if response_files:
             content = response_files[0].read_text(encoding='utf-8')
@@ -149,13 +150,14 @@ class TestMultiSourceIntegration:
     @pytest.mark.slow
     def test_brief_with_multiple_sources(self, processor, multiple_articles, temp_dir):
         """Test brief task with multiple sources."""
-        result = processor.process_mds(
+        success, _ = processor.process_mds(
             multiple_articles,
             ProcessType.BRIEF,
-            output_to_console=False
+            output_to_console=False,
+            save_files=True
         )
         
-        assert result is True
+        assert success is True
 
 
 class TestStreamingIntegration:
@@ -187,13 +189,14 @@ class TestStreamingIntegration:
     @pytest.mark.slow
     def test_streaming_produces_output(self, streaming_processor, test_article, temp_dir, capsys):
         """Test that streaming produces output."""
-        result = streaming_processor.process_mds(
+        success, _ = streaming_processor.process_mds(
             [test_article],
             ProcessType.BRIEF,
-            output_to_console=True
+            output_to_console=True,
+            save_files=True
         )
         
-        assert result is True
+        assert success is True
         
         # Check that something was printed (streaming output)
         captured = capsys.readouterr()
@@ -203,11 +206,12 @@ class TestStreamingIntegration:
     @pytest.mark.slow
     def test_non_streaming_produces_output(self, non_streaming_processor, test_article, temp_dir):
         """Test that non-streaming produces output."""
-        result = non_streaming_processor.process_mds(
+        success, _ = non_streaming_processor.process_mds(
             [test_article],
             ProcessType.BRIEF,
-            output_to_console=False
+            output_to_console=False,
+            save_files=True
         )
         
-        assert result is True
+        assert success is True
 
