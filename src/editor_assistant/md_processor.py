@@ -16,7 +16,7 @@ import logging
 import datetime
 import asyncio
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union, Callable
+from typing import Dict, Any, List, Optional, Union, Callable, Tuple
 import os
 from .config.logging_config import error, progress, warning, user_message
 from .config.constants import (
@@ -209,11 +209,15 @@ class MDProcessor:
                 if final_callback is None and not output_to_console:
                     final_callback = lambda x: None
                 
-                response = await self._make_api_request(prompt, task_name, stream=self.stream, stream_callback=final_callback)
+                response, usage_stats = await self._make_api_request(prompt, task_name, stream=self.stream, stream_callback=final_callback)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
             return False, run_id
+        except asyncio.CancelledError:
+            warning(f"Run {run_id} cancelled during API request")
+            await asyncio.to_thread(self._update_run_status, run_id, "aborted", "Cancelled by user")
+            raise
 
         # Build metadata prefix
         metadata_lines = []
@@ -253,12 +257,16 @@ class MDProcessor:
             error(f"Error saving response: {str(e)}")
             await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
             return False, run_id
+        except asyncio.CancelledError:
+            warning(f"Run {run_id} cancelled during saving")
+            await asyncio.to_thread(self._update_run_status, run_id, "aborted", "Cancelled by user")
+            raise
 
         # Save token usage (Async via thread pool)
         try:
             if save_files and output_dir:
                 self.llm_client.save_token_usage_report(title, output_dir)
-            await asyncio.to_thread(self._save_token_usage_to_db, run_id)
+            await asyncio.to_thread(self._save_token_usage_to_db, run_id, usage_stats)
         except Exception as e:
             warning(f"Unable to save token usage report: {str(e)}")
         
@@ -288,7 +296,7 @@ class MDProcessor:
             error(f"Error saving content: {str(e)}")
             raise
 
-    async def _make_api_request(self, prompt: str, request_name: str, stream: bool = False, stream_callback: Optional[Callable[[str], None]] = None) -> str:
+    async def _make_api_request(self, prompt: str, request_name: str, stream: bool = False, stream_callback: Optional[Callable[[str], None]] = None) -> Tuple[str, Dict[str, Any]]:
         """
         Make an API request to the LLM client (Async).
         """
@@ -352,10 +360,12 @@ class MDProcessor:
         except Exception as e:
             self.logger.warning(f"Failed to save output to database: {e}")
     
-    def _save_token_usage_to_db(self, run_id: int) -> None:
+    def _save_token_usage_to_db(self, run_id: int, usage: Dict[str, Any] = None) -> None:
         if run_id < 0: return
         try:
-            usage = self.llm_client.get_token_usage()
+            if usage is None:
+                usage = self.llm_client.get_token_usage()
+            
             self.repository.add_token_usage(
                 run_id=run_id,
                 input_tokens=usage.get("total_input_tokens", 0),

@@ -255,7 +255,7 @@ class LLMClient:
     async def generate_response(self, prompt: str,
                           request_name: str = "unnamed_request",
                           stream: bool = False,
-                          stream_callback: Optional[Callable[[str], None]] = None) -> str:
+                          stream_callback: Optional[Callable[[str], None]] = None) -> Tuple[str, Dict[str, Any]]:
         """
         Generate a response using the LLM API (Async).
 
@@ -266,14 +266,23 @@ class LLMClient:
             stream_callback: Optional callback for streaming chunks. If None and stream=True, prints to stdout.
 
         Returns:
-            The response text
+            Tuple containing:
+            - The response text
+            - Dictionary with usage statistics for this specific request
         """
         # Check cache first (if enabled)
         if self._cache_enabled:
             cached_response = self._cache.get(prompt, self.model)
             if cached_response is not None:
                 progress(f"Cache hit for {request_name}")
-                return cached_response
+                # Return empty usage for cache hit (or estimate?)
+                # For now, return 0 cost/usage to avoid double counting or confusing logic
+                empty_usage = {
+                    "total_input_tokens": 0, "total_output_tokens": 0,
+                    "cost": {"input_cost": 0, "output_cost": 0, "total_cost": 0},
+                    "process_times": {"total_time": 0}
+                }
+                return cached_response, empty_usage
 
         # Apply rate limiting before making request
         await self._wait_for_rate_limit()
@@ -291,6 +300,10 @@ class LLMClient:
             "stream": stream,
             **self.request_overrides
         }
+
+        # Request token usage data for streaming responses (OpenAI/DeepSeek standard)
+        if stream:
+            data["stream_options"] = {"include_usage": True}
         
         # Implement retry logic with exponential backoff
         retry_delay = INITIAL_RETRY_DELAY_SECONDS
@@ -301,15 +314,15 @@ class LLMClient:
         for attempt in range(MAX_API_RETRIES):
             try:
                 if stream:
-                    response_text = await self._stream_response(client, data, start_time, request_name, stream_callback)
+                    response_text, usage = await self._stream_response(client, data, start_time, request_name, stream_callback)
                 else:
-                    response_text = await self._non_stream_response(client, data, start_time, request_name)
+                    response_text, usage = await self._non_stream_response(client, data, start_time, request_name)
 
                 # Store in cache (if enabled)
                 if self._cache_enabled:
                     self._cache.set(prompt, self.model, response_text)
 
-                return response_text
+                return response_text, usage
             
             except httpx.RequestError as e:
                 if attempt == MAX_API_RETRIES - 1:
@@ -333,7 +346,7 @@ class LLMClient:
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 2
 
-    async def _non_stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str) -> str:
+    async def _non_stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str) -> Tuple[str, Dict[str, Any]]:
         """Handle non-streaming API response."""
         response = await client.post(
             self.api_url,
@@ -351,11 +364,11 @@ class LLMClient:
         input_tokens = result.get("usage", {}).get("prompt_tokens", 0)
         output_tokens = result.get("usage", {}).get("completion_tokens", 0)
         
-        self._track_usage(input_tokens, output_tokens, start_time, request_name)
+        usage = self._track_usage(input_tokens, output_tokens, start_time, request_name)
         
-        return response_text
+        return response_text, usage
 
-    async def _stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str, stream_callback: Optional[Callable[[str], None]] = None) -> str:
+    async def _stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str, stream_callback: Optional[Callable[[str], None]] = None) -> Tuple[str, Dict[str, Any]]:
         """Handle streaming API response with real-time output or callback."""
         
         full_content = []
@@ -423,13 +436,13 @@ class LLMClient:
         if output_tokens == 0:
             output_tokens = estimate_tokens(response_text)
         
-        self._track_usage(input_tokens, output_tokens, start_time, request_name)
+        usage = self._track_usage(input_tokens, output_tokens, start_time, request_name)
         
-        return response_text
+        return response_text, usage
 
     def _track_usage(self, input_tokens: int, output_tokens: int, 
-                     start_time: float, request_name: str) -> None:
-        """Track token usage and costs."""
+                     start_time: float, request_name: str) -> Dict[str, Any]:
+        """Track token usage and costs. Returns usage for this request."""
         # Calculate costs
         input_cost = (input_tokens / 1_000_000) * self.pricing.input
         output_cost = (output_tokens / 1_000_000) * self.pricing.output
@@ -463,6 +476,19 @@ class LLMClient:
             "name": request_name,
             "process_time": process_time
         })
+
+        return {
+            "total_input_tokens": input_tokens,
+            "total_output_tokens": output_tokens,
+            "cost": {
+                "input_cost": input_cost,
+                "output_cost": output_cost,
+                "total_cost": total_cost
+            },
+            "process_times": {
+                "total_time": process_time
+            }
+        }
     
     def get_token_usage(self) -> Dict[str, Any]:
         """

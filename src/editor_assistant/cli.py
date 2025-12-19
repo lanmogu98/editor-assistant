@@ -238,7 +238,7 @@ async def cmd_batch_process(args):
                 inputs, 
                 args.task, 
                 output_to_console=False, 
-                save_files=args.save_files or True, 
+                save_files=args.save_files, 
                 progress_callbacks=progress_callbacks,
                 done_callback=on_done
             )
@@ -257,7 +257,7 @@ async def cmd_batch_process(args):
         await assistant.process_multiple(
             inputs, 
             args.task, 
-            save_files=args.save_files or True # Force save for batch
+            save_files=args.save_files # Force save for batch
         )
 
     # Print Batch Summary
@@ -275,7 +275,7 @@ async def cmd_batch_process(args):
         avg_tokens = 0
 
     if RICH_AVAILABLE:
-        console = Console()
+        console = Console(force_terminal=True)
         table = Table(show_header=False, box=None)
         table.add_row("Total Files", str(len(inputs)))
         table.add_row("Successful API Calls", str(processed_count))
