@@ -7,6 +7,27 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Pydantic v2 compatibility: replaced class-based Config with ConfigDict to remove deprecation warning.
 
+## [0.5.0] - 2025-12-19
+
+Major architecture refactor to Asynchronous I/O for high-performance batch processing.
+
+### Added
+- **Async/Await Architecture**: Full migration to `asyncio` for core processing pipeline.
+- **Httpx Client**: Replaced `requests` with `httpx` for non-blocking HTTP calls.
+- **Concurrency Control**: Implemented `asyncio.Semaphore` to limit concurrent LLM requests (default: 5).
+- **Async Integration Tests**: New test suite `tests/integration/test_async_flow.py` for end-to-end async verification.
+- **Async Unit Tests**: New tests for `LLMClient` and `MDProcessor` using `pytest-asyncio` and `AsyncMock`.
+
+### Changed
+- **LLMClient**: `generate_response` is now `async`. Streaming uses `aiter_lines()`.
+- **MDProcessor**: `process_mds` is now `async` and awaits `LLMClient`.
+- **EditorAssistant**: `process_multiple` uses `asyncio.gather` for parallel document processing.
+- **CLI**: Entry points now wrap async functions with `asyncio.run()`.
+- **Dependencies**: Added `httpx` and `pytest-asyncio`. Deprecated `requests`.
+
+### Fixed
+- **Performance**: Eliminated serial blocking in batch processing; 3 concurrent tasks now complete in roughly the time of the longest single task.
+
 ## [0.4.1] - 2025-12-19
 
 ### Docs

@@ -6,10 +6,11 @@
 
 A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
 
-**Version: 0.4.1** | [See Breaking Changes](#-breaking-changes-in-v02)
+**Version: 0.5.0** | [See Breaking Changes](#-breaking-changes-in-v02)
 
 ### 🚀 Features
 
+- **High-Performance Async Processing**: Built on `asyncio` and `httpx` for fast concurrent processing of multiple documents.
 - **Simple CLI Interface**: Command-line tool with 5 main commands
 - **Multi-format Input**: Processes PDFs, DOCs, web pages, URLs, and markdown files
 - **Three Content Types**:
@@ -47,8 +48,8 @@ pip install -e .
 
 The package automatically installs these dependencies:
 
+- `httpx` - Async HTTP client for high-performance API calls
 - `markitdown` - Microsoft's document conversion library
-- `requests` - HTTP library for API calls
 - `pydantic` - Data validation and settings management
 - `trafilatura` - Web content extraction
 - `readabilipy` - Clean HTML content extraction
@@ -151,7 +152,7 @@ editor-assistant clean "https://example.com/page.html" -o clean.md
 editor-assistant clean page.html --stdout
 ```
 
-**Multi-task Processing (serial execution):**
+**Multi-task Processing (Concurrent Execution):**
 
 ```bash
 editor-assistant process paper=paper.pdf --tasks "brief,outline"
@@ -185,30 +186,35 @@ editor-assistant show 1 --output            # Show full output content
 - General engineering norms: `docs/ENGINEERING_GUIDE.md`
 - Project-specific architecture/tests/configs: `DEVELOPER_GUIDE.md`
 
-### Python API
+### Python API (Async)
 
 ```python
+import asyncio
 from editor_assistant.main import EditorAssistant
 from editor_assistant.data_models import ProcessType, InputType, Input
 
-# Initialize with your preferred model
-assistant = EditorAssistant("deepseek-r1", debug_mode=True)
+async def main():
+    # Initialize with your preferred model
+    assistant = EditorAssistant("deepseek-r1", debug_mode=True)
 
-# Generate research outline (single paper)
-assistant.process_multiple(
-    [Input(type=InputType.PAPER, path="path/to/paper.pdf")],
-    ProcessType.OUTLINE
-)
+    # Generate research outline (single paper)
+    await assistant.process_multiple(
+        [Input(type=InputType.PAPER, path="path/to/paper.pdf")],
+        ProcessType.OUTLINE
+    )
 
-# Generate multi-source brief (paper + news)
-assistant.process_multiple(
-    [
-        Input(type=InputType.PAPER, path="paper.pdf"),
-        Input(type=InputType.NEWS, path="https://example.com/news"),
-        Input(type=InputType.NEWS, path="context.md"),
-    ],
-    ProcessType.BRIEF
-)
+    # Generate multi-source brief (paper + news)
+    await assistant.process_multiple(
+        [
+            Input(type=InputType.PAPER, path="paper.pdf"),
+            Input(type=InputType.NEWS, path="https://example.com/news"),
+            Input(type=InputType.NEWS, path="context.md"),
+        ],
+        ProcessType.BRIEF
+    )
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ### 🤖 Supported Models
@@ -370,8 +376,11 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 一个简单的AI驱动的Python命令行工具，用于处理研究论文并使用大型语言模型（LLM）生成内容。专为个人研究工作流程自动化设计。
 
+**版本: 0.5.0**
+
 ### 🚀 功能特色
 
+- **高性能异步处理**: 基于 `asyncio` 和 `httpx` 构建，支持多文档的快速并发处理。
 - **简单CLI界面**：包含5个主要命令的命令行工具
 - **多格式输入**：处理PDF、DOC、网页、URL和markdown文件
 - **三种内容类型**：
@@ -517,7 +526,6 @@ editor-assistant clean page.html --stdout
 
 ##### Anthropic模型
 - `claude-sonnet-4-or` - Claude Sonnet 4模型，支持200k上下文
-
 
 
 
