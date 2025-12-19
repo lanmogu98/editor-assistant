@@ -7,6 +7,7 @@ Provides a clean, consistent CLI with subcommands for different operations.
 
 import argparse
 import sys
+import asyncio
 from pathlib import Path
 
 from .main import EditorAssistant
@@ -72,7 +73,7 @@ def parse_source_spec(spec: str) -> Input:
     src_type = InputType.PAPER if type_str == "paper" else InputType.NEWS
     return Input(type=src_type, path=path.strip())
 
-def cmd_generate_brief(args):
+async def cmd_generate_brief(args):
     """Generate brief news from one or more sources (multi-source supported)."""
     stream = not getattr(args, 'no_stream', False)
     assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
@@ -80,27 +81,27 @@ def cmd_generate_brief(args):
     # Parse key=value sources into Input objects
     inputs = [parse_source_spec(source) for source in args.sources]
 
-    assistant.process_multiple(inputs, ProcessType.BRIEF, save_files=args.save_files)
+    await assistant.process_multiple(inputs, ProcessType.BRIEF, save_files=args.save_files)
 
 
-def cmd_generate_outline(args):
+async def cmd_generate_outline(args):
     """Generate research outlines from a single paper."""
     stream = not getattr(args, 'no_stream', False)
     assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
-    assistant.process_multiple([input_obj], ProcessType.OUTLINE, save_files=args.save_files)
+    await assistant.process_multiple([input_obj], ProcessType.OUTLINE, save_files=args.save_files)
 
-def cmd_generate_translate(args):
+async def cmd_generate_translate(args):
     """Generate translation from a single paper."""
     stream = not getattr(args, 'no_stream', False)
     assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
-    assistant.process_multiple([input_obj], ProcessType.TRANSLATE, save_files=args.save_files)
+    await assistant.process_multiple([input_obj], ProcessType.TRANSLATE, save_files=args.save_files)
 
 
-def cmd_process_multi_task(args):
+async def cmd_process_multi_task(args):
     """Process input with multiple tasks (serial execution)."""
     stream = not getattr(args, 'no_stream', False)
     assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
@@ -111,11 +112,42 @@ def cmd_process_multi_task(args):
     # Parse tasks (comma-separated)
     task_names = [t.strip() for t in args.tasks.split(",")]
     
-    # Execute each task serially
+    # Execute each task serially (one task type after another)
+    # But for each task type, process_multiple handles concurrent inputs!
     for task_name in task_names:
         progress(f"Executing task: {task_name}")
-        assistant.process_multiple(inputs, task_name, save_files=args.save_files)
+        await assistant.process_multiple(inputs, task_name, save_files=args.save_files)
 
+async def cmd_batch_process(args):
+    """Batch process files in a directory."""
+    folder = Path(args.folder)
+    if not folder.exists():
+        print(f"Error: Folder '{folder}' does not exist")
+        return
+
+    # Support filtering by extension
+    ext = args.ext if args.ext.startswith(".") else f".{args.ext}"
+    pattern = f"*{ext}"
+    files = sorted(folder.glob(pattern))
+    
+    if not files:
+        print(f"No {ext} files found in '{folder}'")
+        return
+
+    print(f"Found {len(files)} {ext} files in '{folder}'")
+    
+    stream = not getattr(args, 'no_stream', False)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
+    
+    # Create Input objects for all files
+    # Default to PAPER type for batch processing unless specified (future enhancement)
+    inputs = [Input(type=InputType.PAPER, path=str(f)) for f in files]
+    
+    # Process all concurrently
+    await assistant.process_multiple(inputs, args.task, save_files=args.save_files)
+
+
+# Synchronous commands (CPU bound or simple IO)
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
     from urllib.parse import urlparse
@@ -195,7 +227,7 @@ def cmd_clean_html(args):
 
 
 # =========================================================================
-# History and Stats Commands
+# History and Stats Commands (Synchronous)
 # =========================================================================
 
 def cmd_history(args):
@@ -344,6 +376,10 @@ Examples:
   %(prog)s translate paper.pdf --model gemini-2.5-flash --thinking high
   %(prog)s process paper.pdf --tasks brief,outline --no-stream
   
+  # Batch processing
+  %(prog)s batch ./samples/ --ext .pdf --task brief
+  %(prog)s batch ./papers/ --ext .html --task translate --model deepseek-v3.2
+  
   # Convert and clean
   %(prog)s convert *.pdf -o ./markdown/
   %(prog)s clean https://example.com/page.html -o clean.md
@@ -428,6 +464,30 @@ Examples:
     )
     add_common_arguments(process_parser)
     process_parser.set_defaults(func=cmd_process_multi_task)
+    
+    # Batch process command
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="Batch process files in a directory",
+        description="Process multiple files concurrently using a single task"
+    )
+    batch_parser.add_argument(
+        "folder",
+        help="Path to folder containing files"
+    )
+    batch_parser.add_argument(
+        "--task",
+        required=True,
+        choices=["brief", "outline", "translate"],
+        help="Task to run on each file"
+    )
+    batch_parser.add_argument(
+        "--ext",
+        default=".pdf",
+        help="File extension to filter by (default: .pdf)"
+    )
+    add_common_arguments(batch_parser)
+    batch_parser.set_defaults(func=cmd_batch_process)
     
     # Format conversion command
     convert_parser = subparsers.add_parser(
@@ -541,12 +601,16 @@ def main():
     
     # Execute the appropriate command
     try:
-        args.func(args)
+        if asyncio.iscoroutinefunction(args.func):
+            asyncio.run(args.func(args))
+        else:
+            args.func(args)
     except KeyboardInterrupt:
         print("\n✗ Operation cancelled by user")
         sys.exit(1)
     except Exception as e:
         print(f"✗ Error: {str(e)}")
+        # Raise debugging info if needed, or exit cleanly
         sys.exit(1)
 
 

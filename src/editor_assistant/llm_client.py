@@ -1,14 +1,16 @@
 """
-LLM Client for interacting with the API.
+LLM Client for interacting with the API (Async Version).
 """
 
 import os
 import time
 import hashlib
-import requests
+import json
+import asyncio
+import httpx
 from collections import deque, OrderedDict
 from datetime import datetime
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, AsyncIterator
 from pathlib import Path
 from .config.logging_config import warning, progress, user_message
 from .config.constants import (
@@ -95,7 +97,7 @@ class ResponseCache:
 
 
 class LLMClient:
-    """Client for interacting with the LLM API."""
+    """Client for interacting with the LLM API (Async)."""
     
     @staticmethod
     def get_supported_models():
@@ -183,14 +185,41 @@ class LLMClient:
             max_size=RESPONSE_CACHE_MAX_SIZE,
             ttl_seconds=RESPONSE_CACHE_TTL_SECONDS
         )
+        
+        # Async HTTP client instance
+        self._async_client: Optional[httpx.AsyncClient] = None
 
-    def _wait_for_rate_limit(self) -> None:
+    async def __aenter__(self):
+        """Context manager entry."""
+        if self._async_client is None:
+            self._async_client = httpx.AsyncClient(timeout=API_REQUEST_TIMEOUT_SECONDS)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        if self._async_client:
+            await self._async_client.aclose()
+            self._async_client = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create async client."""
+        if self._async_client is None:
+            # Note: In a real app without context manager, we might leak connections if not careful.
+            # Ideally, users should use 'async with LLMClient()'.
+            # For backward compatibility or non-context usage, we create a new one, 
+            # but this is less efficient.
+            self._async_client = httpx.AsyncClient(timeout=API_REQUEST_TIMEOUT_SECONDS)
+        return self._async_client
+
+    async def close(self):
+        """Manually close the client."""
+        if self._async_client:
+            await self._async_client.aclose()
+            self._async_client = None
+
+    async def _wait_for_rate_limit(self) -> None:
         """
-        Wait if necessary to respect rate limits.
-
-        Enforces:
-        1. Minimum interval between requests (per-provider configurable)
-        2. Maximum requests per minute (per-provider configurable)
+        Wait if necessary to respect rate limits (Async).
         """
         current_time = time.time()
 
@@ -200,7 +229,7 @@ class LLMClient:
             wait_time = self._min_interval - time_since_last
             if RATE_LIMIT_WARNINGS_ENABLED:
                 warning(f"Rate limiting: waiting {wait_time:.2f}s (min interval)")
-            time.sleep(wait_time)
+            await asyncio.sleep(wait_time)
             current_time = time.time()
 
         # Check per-minute rate limit
@@ -216,18 +245,18 @@ class LLMClient:
                 if wait_time > 0:
                     if RATE_LIMIT_WARNINGS_ENABLED:
                         warning(f"Rate limiting: waiting {wait_time:.2f}s (per-minute limit)")
-                    time.sleep(wait_time)
+                    await asyncio.sleep(wait_time)
                     current_time = time.time()
 
         # Record this request
         self._last_request_time = current_time
         self._request_timestamps.append(current_time)
 
-    def generate_response(self, prompt: str,
+    async def generate_response(self, prompt: str,
                           request_name: str = "unnamed_request",
                           stream: bool = False) -> str:
         """
-        Generate a response using the LLM API.
+        Generate a response using the LLM API (Async).
 
         Args:
             prompt: The prompt to send to the API
@@ -245,7 +274,7 @@ class LLMClient:
                 return cached_response
 
         # Apply rate limiting before making request
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
 
         start_time = time.time()
 
@@ -264,12 +293,15 @@ class LLMClient:
         # Implement retry logic with exponential backoff
         retry_delay = INITIAL_RETRY_DELAY_SECONDS
 
+        # Ensure we have a client
+        client = await self._get_client()
+
         for attempt in range(MAX_API_RETRIES):
             try:
                 if stream:
-                    response_text = self._stream_response(data, start_time, request_name)
+                    response_text = await self._stream_response(client, data, start_time, request_name)
                 else:
-                    response_text = self._non_stream_response(data, start_time, request_name)
+                    response_text = await self._non_stream_response(client, data, start_time, request_name)
 
                 # Store in cache (if enabled)
                 if self._cache_enabled:
@@ -277,23 +309,34 @@ class LLMClient:
 
                 return response_text
             
-            except requests.exceptions.RequestException as e:
+            except httpx.RequestError as e:
                 if attempt == MAX_API_RETRIES - 1:
                     raise Exception(
                         f"Failed to generate response after "
                         f"{MAX_API_RETRIES} attempts: {str(e)}"
                     )
                 warning(f"API request failed ({str(e)}), retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                await asyncio.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
+            except httpx.HTTPStatusError as e:
+                # Handle HTTP errors (e.g. 429, 500)
+                if e.response.status_code == 429:
+                     warning(f"Rate limit exceeded (429), retrying in {retry_delay} seconds...")
+                else:
+                     warning(f"HTTP error {e.response.status_code}, retrying...")
+                
+                if attempt == MAX_API_RETRIES - 1:
+                    raise Exception(f"HTTP Error: {e}")
+                
+                await asyncio.sleep(retry_delay)
+                retry_delay *= 2
 
-    def _non_stream_response(self, data: dict, start_time: float, request_name: str) -> str:
+    async def _non_stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str) -> str:
         """Handle non-streaming API response."""
-        response = requests.post(
+        response = await client.post(
             self.api_url,
             headers=self.headers,
             json=data,
-            timeout=API_REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         
@@ -310,58 +353,53 @@ class LLMClient:
         
         return response_text
 
-    def _stream_response(self, data: dict, start_time: float, request_name: str) -> str:
+    async def _stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str) -> str:
         """Handle streaming API response with real-time output."""
-        import json
-        import sys
-        
-        response = requests.post(
-            self.api_url,
-            headers=self.headers,
-            json=data,
-            stream=True,
-            timeout=API_REQUEST_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
         
         full_content = []
         input_tokens = 0
         output_tokens = 0
         
-        for line in response.iter_lines():
-            if not line:
-                continue
+        async with client.stream(
+            "POST",
+            self.api_url,
+            headers=self.headers,
+            json=data
+        ) as response:
+            response.raise_for_status()
             
-            line_text = line.decode('utf-8')
-            
-            # Skip SSE prefix
-            if line_text.startswith('data: '):
-                line_text = line_text[6:]
-            
-            # Skip [DONE] marker
-            if line_text.strip() == '[DONE]':
-                break
-            
-            try:
-                chunk = json.loads(line_text)
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
                 
-                # Extract content delta
-                if 'choices' in chunk and len(chunk['choices']) > 0:
-                    delta = chunk['choices'][0].get('delta', {})
-                    content = delta.get('content', '')
-                    
-                    if content:
-                        full_content.append(content)
-                        # Print in real-time
-                        print(content, end='', flush=True)
+                # Skip SSE prefix
+                if line.startswith('data: '):
+                    line = line[6:]
                 
-                # Some APIs return usage in the final chunk
-                if 'usage' in chunk and chunk['usage'] is not None:
-                    input_tokens = chunk['usage'].get('prompt_tokens', 0)
-                    output_tokens = chunk['usage'].get('completion_tokens', 0)
+                # Skip [DONE] marker
+                if line.strip() == '[DONE]':
+                    break
+                
+                try:
+                    chunk = json.loads(line)
                     
-            except json.JSONDecodeError:
-                continue
+                    # Extract content delta
+                    if 'choices' in chunk and len(chunk['choices']) > 0:
+                        delta = chunk['choices'][0].get('delta', {})
+                        content = delta.get('content', '')
+                        
+                        if content:
+                            full_content.append(content)
+                            # Print in real-time
+                            print(content, end='', flush=True)
+                    
+                    # Some APIs return usage in the final chunk
+                    if 'usage' in chunk and chunk['usage'] is not None:
+                        input_tokens = chunk['usage'].get('prompt_tokens', 0)
+                        output_tokens = chunk['usage'].get('completion_tokens', 0)
+                        
+                except json.JSONDecodeError:
+                    continue
         
         # Print newline after streaming completes and flush buffer
         print(flush=True)
@@ -508,4 +546,3 @@ class LLMClient:
         import logging
         logger = logging.getLogger(__name__)
         logger.debug(f"Detailed token usage report saved to: {output_dir / 'token_usage.txt'}")
- 

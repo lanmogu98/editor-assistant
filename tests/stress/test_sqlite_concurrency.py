@@ -1,0 +1,68 @@
+"""
+Stress test for SQLite concurrent writes.
+Verifies if the database locks up under high concurrency from the async processor.
+"""
+
+import pytest
+import asyncio
+from editor_assistant.storage import RunRepository
+from editor_assistant.md_processor import MDProcessor
+from editor_assistant.data_models import MDArticle, InputType
+from unittest.mock import MagicMock, AsyncMock, patch
+
+@pytest.mark.asyncio
+async def test_sqlite_concurrent_writes_stress():
+    """
+    Simulate 50 concurrent task completions trying to write to DB simultaneously.
+    """
+    repo = RunRepository()
+    
+    # Patch generate_response on the LLMClient class to avoid real API calls
+    # We use a real model name to pass validation, but intercept the call
+    with patch("editor_assistant.llm_client.LLMClient.generate_response", new_callable=AsyncMock) as mock_generate, \
+         patch("editor_assistant.llm_client.LLMClient.get_token_usage") as mock_usage:
+        
+        mock_generate.return_value = "Stress test response"
+        mock_usage.return_value = {
+            "total_input_tokens": 100,
+            "total_output_tokens": 50,
+            "cost": {"input_cost": 0.001, "output_cost": 0.001},
+            "process_times": {"total_time": 0.1}
+        }
+
+        # Initialize processor with high concurrency
+        # Use a valid model name
+        processor = MDProcessor("deepseek-v3.2", max_concurrent=50)
+        
+        # Create 50 inputs
+        inputs = [
+            MDArticle(
+                type=InputType.PAPER, 
+                content=f"Content {i}", 
+                title=f"Stress Test {i}", 
+                source_path=f"stress_{i}.txt"
+            ) 
+            for i in range(50)
+        ]
+        
+        # Run all 50 tasks
+        # They will all hit the DB write phase roughly at the same time
+        print("\nLaunching 50 concurrent tasks...")
+        results = await asyncio.gather(
+            *[processor.process_mds([inp], "brief", output_to_console=False) for inp in inputs]
+        )
+        
+        # Verify results
+        success_count = sum(1 for r in results if isinstance(r, tuple) and r[0])
+        fail_count = 50 - success_count
+        
+        print(f"Success: {success_count}, Failed: {fail_count}")
+        
+        # Check DB consistency
+        runs = repo.get_recent_runs(limit=100)
+        stress_runs = [r for r in runs if r['model'] == 'deepseek-v3.2' and 'Stress Test' in str(r['input_titles'])]
+        
+        # Assertions
+        # If we didn't optimize DB writes, this might fail with fewer records or errors
+        assert success_count == 50, f"Expected 50 successes, got {success_count}"
+        assert len(stress_runs) == 50, f"Expected 50 DB records, got {len(stress_runs)}"
