@@ -138,6 +138,21 @@ editor-assistant translate research.md --save-files
 
 *Note: Translation generates both Chinese-only and bilingual side-by-side versions*
 
+**Batch Processing (High-Performance):**
+
+Efficiently process a folder of files concurrently using async I/O.
+
+```bash
+# Translate all .md files in a directory
+editor-assistant batch ./docs/ --ext .md --task translate
+
+# Generate briefs for all PDFs using a specific model
+editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
+
+# Save outputs to files (default is DB only)
+editor-assistant batch ./papers/ --ext .html --task outline --save-files
+```
+
 **Convert Files to Markdown:**
 
 ```bash
@@ -463,6 +478,21 @@ editor-assistant translate research.md --model deepseek-r1 --debug
 ```
 
 *注意：翻译功能同时生成纯中文版本和双语对照版本*
+
+**批量处理（高性能）：**
+
+利用异步IO高效并发处理文件夹中的文件。
+
+```bash
+# 批量翻译目录下的所有 .md 文件
+editor-assistant batch ./docs/ --ext .md --task translate
+
+# 使用指定模型为所有 PDF 生成简讯
+editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
+
+# 保存输出到文件（默认只存数据库）
+editor-assistant batch ./papers/ --ext .html --task outline --save-files
+```
 
 **转换文件为Markdown：**
 

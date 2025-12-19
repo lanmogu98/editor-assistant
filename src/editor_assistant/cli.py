@@ -118,6 +118,35 @@ async def cmd_process_multi_task(args):
         progress(f"Executing task: {task_name}")
         await assistant.process_multiple(inputs, task_name, save_files=args.save_files)
 
+async def cmd_batch_process(args):
+    """Batch process files in a directory."""
+    folder = Path(args.folder)
+    if not folder.exists():
+        print(f"Error: Folder '{folder}' does not exist")
+        return
+
+    # Support filtering by extension
+    ext = args.ext if args.ext.startswith(".") else f".{args.ext}"
+    pattern = f"*{ext}"
+    files = sorted(folder.glob(pattern))
+    
+    if not files:
+        print(f"No {ext} files found in '{folder}'")
+        return
+
+    print(f"Found {len(files)} {ext} files in '{folder}'")
+    
+    stream = not getattr(args, 'no_stream', False)
+    assistant = EditorAssistant(args.model, debug_mode=args.debug, thinking_level=args.thinking, stream=stream)
+    
+    # Create Input objects for all files
+    # Default to PAPER type for batch processing unless specified (future enhancement)
+    inputs = [Input(type=InputType.PAPER, path=str(f)) for f in files]
+    
+    # Process all concurrently
+    await assistant.process_multiple(inputs, args.task, save_files=args.save_files)
+
+
 # Synchronous commands (CPU bound or simple IO)
 def cmd_convert_to_md(args):
     """Convert various formats to markdown."""
@@ -347,6 +376,10 @@ Examples:
   %(prog)s translate paper.pdf --model gemini-2.5-flash --thinking high
   %(prog)s process paper.pdf --tasks brief,outline --no-stream
   
+  # Batch processing
+  %(prog)s batch ./samples/ --ext .pdf --task brief
+  %(prog)s batch ./papers/ --ext .html --task translate --model deepseek-v3.2
+  
   # Convert and clean
   %(prog)s convert *.pdf -o ./markdown/
   %(prog)s clean https://example.com/page.html -o clean.md
@@ -431,6 +464,30 @@ Examples:
     )
     add_common_arguments(process_parser)
     process_parser.set_defaults(func=cmd_process_multi_task)
+    
+    # Batch process command
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="Batch process files in a directory",
+        description="Process multiple files concurrently using a single task"
+    )
+    batch_parser.add_argument(
+        "folder",
+        help="Path to folder containing files"
+    )
+    batch_parser.add_argument(
+        "--task",
+        required=True,
+        choices=["brief", "outline", "translate"],
+        help="Task to run on each file"
+    )
+    batch_parser.add_argument(
+        "--ext",
+        default=".pdf",
+        help="File extension to filter by (default: .pdf)"
+    )
+    add_common_arguments(batch_parser)
+    batch_parser.set_defaults(func=cmd_batch_process)
     
     # Format conversion command
     convert_parser = subparsers.add_parser(
