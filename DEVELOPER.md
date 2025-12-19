@@ -637,6 +637,25 @@ python scripts/run_tests.py quick       # Essential tests only
 
 > Note: When new requirements or action items are discovered, record them in `TODO_codex.md` under the appropriate branch/backlog section to keep work visible.
 
+---
+
+## Task Distribution & Multi-agent Workflow
+
+1) Task source  
+   - Maintain the task pool (requirements, priorities) in `FUTURE_ROADMAP.md`.  
+   - Any new task raised in user conversations must also be added to `FUTURE_ROADMAP.md`.
+
+2) Pick-up & dispatch  
+   - Each agent keeps its own todo file (e.g., `todo_<agent>.md`). When an agent picks a task from `FUTURE_ROADMAP.md` or user chat, log it in that file.  
+   - Cross-branch/shared items can additionally be tracked in `TODO_codex.md` for global visibility.
+
+3) Execute & feedback  
+   - Work in branch/module, check off in the agent todo, and reference the task source in PR/changes.  
+   - New subtasks/risks discovered during work should be fed back to `FUTURE_ROADMAP.md` and relevant todos.
+
+4) Scope  
+   - This workflow applies to multi-agent parallel development across projects, not limited to this repo.
+
 ### Test Markers
 
 | Marker | Description |

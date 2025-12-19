@@ -1,7 +1,7 @@
 from .md_processor import MDProcessor
 from .data_models import MDArticle, InputType, Input, ProcessType
 from .md_converter import MarkdownConverter
-from .config.logging_config import setup_logging, progress, error
+from .config.logging_config import setup_logging, progress, error, warning, user_message
 import logging
 from pathlib import Path
 from typing import Union
@@ -14,7 +14,7 @@ class EditorAssistant:
         self.md_converter = MarkdownConverter()
     
     # LLM processor for multiple files
-    def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True):       
+    def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True, save_files=False):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -65,12 +65,20 @@ class EditorAssistant:
             return
         if failed_inputs:
             for path, msg in failed_inputs:
-                self.logger.warning(f"failed to convert {path}: {msg}")
+                warning(f"Failed to convert {path}: {msg}")
+            user_message(
+                f"{len(failed_inputs)} input(s) failed conversion; continuing with remaining."
+            )
 
         progress("Input formatted as markdown and ready to process.")
         # process the md files
         try:
-            success = self.md_processor.process_mds(md_articles, task_name, output_to_console)
+            success, _ = self.md_processor.process_mds(
+                md_articles,
+                task_name,
+                output_to_console,
+                save_files=save_files,
+            )
             if not success and md_articles:
                 self.logger.warning(f"failed to process {md_articles[0].title}")
         except Exception as e:
@@ -78,8 +86,7 @@ class EditorAssistant:
                 self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
             else:
                 self.logger.warning(f"failed to process: {str(e)}")
+            return
          
         return 
 
-# TODO: add process interface for a single input (for task translate & online),
-# which requires no type specification.

@@ -13,6 +13,7 @@
 - [x] Handle per-input failures without aborting all inputs.
 - [x] Align README/DEVELOPER env var guidance with `llm_config.yml`.
 - [ ] Add targeted tests and run unit + minimal integration.
+- [ ] Make file output optional via CLI flag (default off); no DB writes for failed inputs.
 
 ## Backlog
 - [ ] Pydantic v2 migration: replace class-based Config with ConfigDict to clear warnings.
