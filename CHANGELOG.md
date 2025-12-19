@@ -6,11 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Unit coverage for content validation (blocked publishers, short content warnings).
-- Test fixtures accept both `DEEPSEEK_API_KEY_VOLC` and legacy `DEEPSEEK_API_KEY` for integration runs.
+- Test fixtures now require `DEEPSEEK_API_KEY_VOLC` (DeepSeek via Volcengine); legacy key removed.
 - `TODO_codex.md` to track branch-specific tasks (tests vs reliability).
+- Batch processing helper script (`scripts/batch_process.py`) for HTML/MD with task/model/preview options.
 
 ### Docs
-- Developer testing guide notes `deepseek-v3.2` as the cheap default model for integration tests and the preferred env var `DEEPSEEK_API_KEY_VOLC`.
+- Developer testing guide notes `deepseek-v3.2` as the cheap default model for integration tests and the env var `DEEPSEEK_API_KEY_VOLC`.
+
+### Fixed
+- Language-aware token estimation to improve Chinese/English mixed token counting.
 
 ## [0.4.0] - 2025-12-18
 

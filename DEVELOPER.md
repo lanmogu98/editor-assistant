@@ -570,6 +570,8 @@ print(client.get_cache_stats())
 3. Update CHANGELOG.md
 4. Submit PR to main
 
+> Note: When new requirements or action items are discovered, record them in `TODO_agentname.md` under the appropriate branch/backlog section to keep work visible.
+
 ### Code Style
 
 - Follow PEP 8
@@ -633,7 +635,7 @@ python scripts/run_tests.py coverage    # With coverage report
 python scripts/run_tests.py quick       # Essential tests only
 ```
 
-**Integration model & cost note:** Integration tests default to `deepseek-v3.2` (cheapest). Set `DEEPSEEK_API_KEY_VOLC` (preferred) or legacy `DEEPSEEK_API_KEY`; the model is low-cost, so small-sample runs are safe.
+**Integration model & cost note:** Integration tests default to `deepseek-v3.2` (cheap). Set `DEEPSEEK_API_KEY_VOLC`; legacy `DEEPSEEK_API_KEY` is no longer supported.
 
 ### Test Markers
 
