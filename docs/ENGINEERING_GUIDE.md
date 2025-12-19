@@ -65,3 +65,27 @@ When you change **X**, you MUST update **Y**:
 - Type hints and small, testable functions.
 - Keep failure modes explicit; avoid silent catches.
 - Prefer Squash/Merge for clean history; tag releases after version bump + changelog update.
+
+## Refactoring & Reliability Best Practices
+
+When refactoring core logic (especially async/concurrency changes), verify against these high-level reliability patterns:
+
+1.  **Incremental & Test-Driven (TDD)**:
+    *   **Principle**: Work incrementally. Spend significantly more time designing sufficient tests (boundary conditions, stress, concurrency) than writing code.
+    *   **Check**: Do NOT commit implementation code until the corresponding tests pass.
+
+2.  **State Management & Isolation**:
+    *   **Principle**: Long-lived objects (clients, processors) must not accumulate request-specific state (counters, buffers).
+    *   **Check**: Verify that return values (e.g., usage stats, costs) reflect *only* the specific operation, not the object's lifetime history.
+
+2.  **Configuration ExplicitNess**:
+    *   **Principle**: Do not override user configuration with hidden defaults in code.
+    *   **Check**: Explicitly test "negative" cases (e.g., flags set to `False` or omitted) to ensure they aren't forced to `True` by logic like `val = args.flag or True`.
+
+3.  **Graceful Termination**:
+    *   **Principle**: Systems must handle interruption signals (SIGINT/Ctrl+C) without leaving data in inconsistent states.
+    *   **Check**: Ensure async tasks handle `CancelledError` to clean up resources or update persistence status (e.g., `pending` -> `aborted`) before exiting.
+
+4.  **UX/IO Separation**:
+    *   **Principle**: Separately manage structured UI output (TUI/Progress Bars) and unstructured logging.
+    *   **Check**: When using rich terminal UIs, suppress or redirect standard INFO logs to prevent visual interference ("scrolling bugs").
