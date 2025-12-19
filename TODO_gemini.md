@@ -26,5 +26,16 @@
     - [x] Update `CHANGELOG.md` (v0.5.0).
 
 ### Next Steps (Post-Merge)
-- [ ] Monitor SQLite concurrent write performance (may need `run_in_executor` optimization).
-- [ ] Optimize `MDConverter` to run in thread pool for parallel conversion.
+- [x] Monitor SQLite concurrent write performance (Optimized with `asyncio.to_thread`).
+- [x] Optimize `MDConverter` to run in thread pool for parallel conversion (Implemented in `main.py`).
+
+### v0.5.1 Tasks (Completed)
+- [x] **Batch UI**: Implement `rich` progress bars and live status.
+- [x] **Fixes**:
+    - [x] Correct per-request vs cumulative cost reporting.
+    - [x] Handle `Ctrl+C` cancellation gracefully (update DB status).
+    - [x] Fix `--save-files` flag handling.
+- [x] **Docs**:
+    - [x] Add Refactor Verification Protocol to `DEVELOPER_GUIDE.md`.
+    - [x] Add TDD practices to `docs/ENGINEERING_GUIDE.md`.
+    - [x] Sync all docs for v0.5.1.

@@ -6,7 +6,7 @@
 
 A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
 
-**Version: 0.5.0** | [See Breaking Changes](#-breaking-changes-in-v02)
+**Version: 0.5.1** | [See Breaking Changes](#-breaking-changes-in-v02)
 
 ### 🚀 Features
 
@@ -391,7 +391,7 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 一个简单的AI驱动的Python命令行工具，用于处理研究论文并使用大型语言模型（LLM）生成内容。专为个人研究工作流程自动化设计。
 
-**版本: 0.5.0**
+**版本: 0.5.1**
 
 ### 🚀 功能特色
 
