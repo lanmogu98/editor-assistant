@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Document Processor
+Document Processor (Async Refactor).
 
 Processes markdown content using large language models with 128k+ context windows.
 Uses a pluggable task system for extensibility.
@@ -8,12 +8,13 @@ Uses a pluggable task system for extensibility.
 Workflow:
 1. Validate content size against model context window
 2. Load and validate the appropriate task
-3. Build prompt and make LLM request
+3. Build prompt and make LLM request (Async)
 4. Post-process and save outputs
 """
 
 import logging
 import datetime
+import asyncio
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 import os
@@ -50,8 +51,7 @@ class ContentTooSmallError(Exception):
 
 def check_context_budget(content: str, llm_client: LLMClient) -> None:
     """
-    Context-budget guardrail (distinct from validate_content which handles source/blocklist/short-content).
-    Ensures prompt + input + reserved output fit within the model window.
+    Context-budget guardrail.
     """
     estimated_tokens = estimate_tokens(content)
 
@@ -76,21 +76,20 @@ def check_context_budget(content: str, llm_client: LLMClient) -> None:
         )
 
 
-# Summarizer class for processing markdown content
 class MDProcessor:
     """
-    Processes documents using large language models to generate comprehensive summaries.
-    Designed for 128k+ context window models that can handle entire documents in single requests.
+    Processes documents using large language models (Async).
     """
     
-    def __init__(self, model_name: str, thinking_level: str = None, stream: bool = True):
+    def __init__(self, model_name: str, thinking_level: str = None, stream: bool = True, max_concurrent: int = 5):
         """
         Initialize the processor.
         
         Args:
             model_name: Name of the LLM model to use
-            thinking_level: Optional thinking/reasoning level override (low, medium, high, minimal)
-            stream: Whether to use streaming output (default: True)
+            thinking_level: Optional thinking/reasoning level override
+            stream: Whether to use streaming output
+            max_concurrent: Maximum number of concurrent requests (semaphore size)
         """
         self.llm_client = LLMClient(model_name, thinking_level=thinking_level)
         self.model_name = model_name
@@ -101,21 +100,16 @@ class MDProcessor:
         
         # Initialize storage repository
         self.repository = RunRepository()
+        
+        # Concurrency control
+        self._semaphore = asyncio.Semaphore(max_concurrent)
     
-    def process_mds(self, md_articles: List[MDArticle],
+    async def process_mds(self, md_articles: List[MDArticle],
                      task_type: Union[ProcessType, str],
                      output_to_console: bool = True,
                      save_files: bool = False) -> tuple[bool, int]:
         """
-        Process documents using the pluggable task system.
-        
-        Args:
-            md_articles: The list of MDArticle objects to process
-            task_type: Task type (ProcessType enum or string name)
-            output_to_console: Whether to print output to console (ignored if streaming)
-            
-        Returns:
-            Tuple[bool, int]: (success flag, run_id or -1)
+        Process documents using the pluggable task system (Async).
         """
         run_id = -1
 
@@ -154,7 +148,7 @@ class MDProcessor:
                 error(f"Blocked publisher: {e}")
                 return False, run_id
 
-        # Context budget check (separate from validate_content's source/length checks)
+        # Context budget check
         for md_article in md_articles:
             try:
                 check_context_budget(md_article.content or "", self.llm_client)
@@ -163,9 +157,11 @@ class MDProcessor:
                 return False, run_id
 
         # Create run record in database
+        # Note: SQLite writes are synchronous, but fast enough for now.
+        # Future optimization: run_in_executor
         run_id = self._create_run_record(md_articles, task_name)
 
-        # Create base title for the output files
+        # Create base title
         title_base = md_articles[0].title if md_articles and md_articles[0].title else "untitled"
         if task.supports_multi_input and len(md_articles) > 1:
             title_base = f"{title_base}-multi"
@@ -192,10 +188,11 @@ class MDProcessor:
             error(f"Prompt too large: {str(e)}")
             return False, run_id
 
-        # Make LLM request
+        # Make LLM request (Async with Semaphore)
         try:
             progress(f"Processing document with {len(prompt)} characters...")
-            response = self._make_api_request(prompt, task_name, stream=self.stream)
+            async with self._semaphore:
+                response = await self._make_api_request(prompt, task_name, stream=self.stream)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             self._update_run_status(run_id, "failed", str(e))
@@ -216,8 +213,7 @@ class MDProcessor:
             self._update_run_status(run_id, "failed", str(e))
             return False, run_id
 
-        # Save all outputs (files optional)
-        # Note: if streaming, content was already printed in real-time
+        # Save all outputs
         should_print = output_to_console and not self.stream
         try:
             for output_name, content in outputs.items():
@@ -241,7 +237,7 @@ class MDProcessor:
             self._update_run_status(run_id, "failed", str(e))
             return False, run_id
 
-        # Save token usage to file (optional) and database
+        # Save token usage
         try:
             if save_files and output_dir:
                 self.llm_client.save_token_usage_report(title, output_dir)
@@ -258,14 +254,7 @@ class MDProcessor:
     # save content to a file
     def _save_content(self, type:SaveType, content_name: str, content: str, 
                       paper_output_dir: Path, console_print: bool = False) -> None:
-        """
-        Save a prompt to a file for inspection.
-        
-        Args:
-            prompt_name: Name of the prompt
-            prompt: The prompt content
-            paper_name: Name of the paper
-        """
+        """Save content to a file."""
         save_dir = paper_output_dir
         try:
             os.makedirs(save_dir, exist_ok=True)
@@ -282,20 +271,16 @@ class MDProcessor:
             error(f"Error saving content: {str(e)}")
             raise
 
-    def _make_api_request(self, prompt: str, request_name: str, stream: bool = False) -> str:
+    async def _make_api_request(self, prompt: str, request_name: str, stream: bool = False) -> str:
         """
-        Make an API request to the LLM client.
-        
-        Args:
-            prompt: The prompt to send
-            request_name: Name of the request for tracking
-            stream: Whether to use streaming output
-            
-        Returns:
-            The response text
+        Make an API request to the LLM client (Async).
         """
         try:
-            return self.llm_client.generate_response(prompt, request_name, stream=stream)
+            # Important: Use context manager to ensure connection is closed if we're not reusing it?
+            # RFC Plan: Use __aenter__ in LLMClient.
+            # But here we have self.llm_client which is persistent for MDProcessor lifetime.
+            # We can just call generate_response, as we implemented auto-client creation inside it.
+            return await self.llm_client.generate_response(prompt, request_name, stream=stream)
         except ConnectionError as e:
             error(f"Connection failed during {request_name}: {str(e)}")
             raise ConnectionError(f"Failed to connect to LLM service: {str(e)}") from e
@@ -307,22 +292,12 @@ class MDProcessor:
             raise RuntimeError(f"Error generating response for {request_name}: {str(e)}") from e
 
     # =========================================================================
-    # Database Helper Methods
+    # Database Helper Methods (Synchronous - for now)
     # =========================================================================
+    # ... (Keep these synchronous for simplicity in Phase 2, unless bottlenecks appear)
     
     def _create_run_record(self, md_articles: List[MDArticle], task_name: str) -> int:
-        """
-        Create a run record in the database.
-        
-        Args:
-            md_articles: List of input articles
-            task_name: Task name
-        
-        Returns:
-            Run ID
-        """
         try:
-            # Get or create input records
             input_ids = []
             for article in md_articles:
                 input_id = self.repository.get_or_create_input(
@@ -333,7 +308,6 @@ class MDProcessor:
                 )
                 input_ids.append(input_id)
             
-            # Create run record
             run_id = self.repository.create_run(
                 task=task_name,
                 model=self.model_name,
@@ -342,36 +316,28 @@ class MDProcessor:
                 stream=self.stream,
                 currency=self.llm_client.pricing_currency
             )
-            
             return run_id
         except Exception as e:
             self.logger.warning(f"Failed to create run record: {e}")
-            return -1  # Return invalid ID, processing will continue
+            return -1
     
     def _update_run_status(self, run_id: int, status: str, error_message: str = None) -> None:
-        """Update run status in database."""
-        if run_id < 0:
-            return  # Skip if run record creation failed
+        if run_id < 0: return
         try:
             self.repository.update_run_status(run_id, status, error_message)
         except Exception as e:
             self.logger.warning(f"Failed to update run status: {e}")
     
     def _save_output_to_db(self, run_id: int, output_type: str, content: str) -> None:
-        """Save output to database."""
-        if run_id < 0:
-            return
+        if run_id < 0: return
         try:
-            # Determine content type (json if starts with { or [)
             content_type = "json" if content.strip().startswith(("{", "[")) else "text"
             self.repository.add_output(run_id, output_type, content, content_type)
         except Exception as e:
             self.logger.warning(f"Failed to save output to database: {e}")
     
     def _save_token_usage_to_db(self, run_id: int) -> None:
-        """Save token usage to database."""
-        if run_id < 0:
-            return
+        if run_id < 0: return
         try:
             usage = self.llm_client.get_token_usage()
             self.repository.add_token_usage(
@@ -384,5 +350,3 @@ class MDProcessor:
             )
         except Exception as e:
             self.logger.warning(f"Failed to save token usage to database: {e}")
-
-# CLI functionality moved to cli.py - this module now contains only core processing logic

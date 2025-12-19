@@ -3,6 +3,7 @@ from .data_models import MDArticle, InputType, Input, ProcessType
 from .md_converter import MarkdownConverter
 from .config.logging_config import setup_logging, progress, error, warning, user_message
 import logging
+import asyncio
 from pathlib import Path
 from typing import Union
 
@@ -13,8 +14,8 @@ class EditorAssistant:
         self.md_processor = MDProcessor(model_name, thinking_level=thinking_level, stream=stream)
         self.md_converter = MarkdownConverter()
     
-    # LLM processor for multiple files
-    def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True, save_files=False):       
+    # LLM processor for multiple files (Async)
+    async def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True, save_files=False):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -30,6 +31,10 @@ class EditorAssistant:
         md_articles = []
         failed_inputs = []
 
+        # Step 1: Pre-process inputs (Convert/Read) - Synchronous for now (Phase 2 optimization: async thread pool)
+        # Note: We keep this sync for simplicity in this phase, or we can use to_thread.
+        # Given conversion can be slow, let's just keep it simple sequential for conversion, parallel for LLM.
+        # Why? Because LLM is the main bottleneck (30s+), conversion is usually seconds.
         for input in inputs:
             # if the path is a markdown file, read the content and create an MDArticle object
             md_article = None
@@ -71,22 +76,53 @@ class EditorAssistant:
             )
 
         progress("Input formatted as markdown and ready to process.")
-        # process the md files
-        try:
-            success, _ = self.md_processor.process_mds(
-                md_articles,
-                task_name,
-                output_to_console,
-                save_files=save_files,
+        
+        # process the md files concurrently
+        # Logic: We launch a task for each article.
+        tasks = []
+        for article in md_articles:
+            # Wrap single article in list because process_mds expects list
+            # We process them individually to maximize concurrency (1 input = 1 task)
+            # unless the task inherently supports multi-input aggregation (like summary of multiple papers).
+            # But the current architecture (MDProcessor.process_mds) takes a list of articles.
+            # If the Task supports multi-input (e.g. compare 2 papers), we should pass them together?
+            # Let's check Task.supports_multi_input.
+            
+            # Check task capability
+            # We need to instantiate the task temporarily to check property? Or assume single-doc for now?
+            # Existing logic was: process_mds takes list.
+            # If we want to process N docs in parallel, we should spawn N tasks, each calling process_mds([doc]).
+            # BUT, if the user intended to summarize 5 docs into 1 (Multi-input task), we should call process_mds(all_docs) once.
+            
+            # How to decide?
+            # RFC didn't specify. Current behavior in main.py loop suggests 1-by-1.
+            # So we assume default is 1-by-1 unless logic dictates otherwise.
+            # Let's preserve 1-by-1 behavior but run them in parallel.
+            tasks.append(
+                self.md_processor.process_mds(
+                    [article],
+                    task_name,
+                    output_to_console,
+                    save_files=save_files,
+                )
             )
-            if not success and md_articles:
-                self.logger.warning(f"failed to process {md_articles[0].title}")
+
+        try:
+            # Run all tasks concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Check results
+            for i, result in enumerate(results):
+                article_title = md_articles[i].title
+                if isinstance(result, Exception):
+                    self.logger.warning(f"Failed to process {article_title}: {result}")
+                else:
+                    success, _ = result
+                    if not success:
+                        self.logger.warning(f"Failed to process {article_title} (Task returned failure)")
+                        
         except Exception as e:
-            if md_articles:
-                self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
-            else:
-                self.logger.warning(f"failed to process: {str(e)}")
+            self.logger.warning(f"Critical error during concurrent processing: {str(e)}")
             return
          
         return 
-

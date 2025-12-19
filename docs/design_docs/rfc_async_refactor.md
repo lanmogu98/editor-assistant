@@ -1,9 +1,11 @@
 # RFC: Async/Concurrent Processing Refactor
 
 ## 1. Summary
+
 Refactor the current synchronous `requests`-based LLM interaction to an asynchronous architecture using `httpx` and `asyncio`. This will enable parallel processing of multiple documents, significantly reducing total processing time for batch tasks.
 
 ## 2. Motivation
+
 - **Current State**: Documents are processed sequentially (`process_multiple` loop).
 - **Problem**: LLM API calls have high latency (avg 10-30s). Processing 10 docs takes ~5 mins.
 - **Goal**: Process documents concurrently. Theoretical speedup approaches N-fold (bounded by rate limits).
@@ -11,12 +13,14 @@ Refactor the current synchronous `requests`-based LLM interaction to an asynchro
 ## 3. Proposed Architecture
 
 ### 3.1. Dependency Changes
+
 - Replace `requests` with `httpx` (standard async HTTP client).
 - Keep `requests`? No, fully replace to avoid dual-stack complexity.
 
 ### 3.2. Core Components Changes
 
 #### `LLMClient` (src/editor_assistant/llm_client.py)
+
 - Change `__init__`: Initialize `httpx.AsyncClient`.
 - Change `generate_response()` -> `async def generate_response()`.
 - Refactor `_make_api_request` to use `await client.post()`.
@@ -24,19 +28,24 @@ Refactor the current synchronous `requests`-based LLM interaction to an asynchro
 - **Resource Management**: Implement `__aenter__` and `__aexit__` for context manager usage (auto-close client).
 
 #### `MDProcessor` (src/editor_assistant/md_processor.py)
+
 - Change `process_mds` -> `async def process_mds`.
 - Use `asyncio.Semaphore` to limit concurrency (respect provider Rate Limits).
   - e.g., `max_concurrent = 5` (configurable).
 
 #### `EditorAssistant` (src/editor_assistant/main.py)
+
 - Change `process_multiple` -> `async def process_multiple`.
 - Logic shift:
   - From:
+
     ```python
     for input in inputs:
         processor.process_mds([input])
     ```
+
   - To:
+  
     ```python
     tasks = [processor.process_mds([input]) for input in inputs]
     await asyncio.gather(*tasks)

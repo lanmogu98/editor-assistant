@@ -1,24 +1,23 @@
 # TODO_gemini
 
-## Current Branch: docs/roadmap-cleanup
+## Current Branch: feature/async-refactor
 
-### Documentation Updates
-- [x] Update `FUTURE_ROADMAP.md`: Mark "Persistence Layer" as completed (Phase 1).
-- [x] Update `FUTURE_ROADMAP.md`: Clarify "Async Processing" (Streaming solved).
-- [x] Update `FUTURE_ROADMAP.md`: Mark "Plugin System" as partial (Registry implemented).
-- [x] Update `FUTURE_ROADMAP.md`: Move "Tiered Pricing" to Phase 2.
-- [x] Verify "Persistence Layer" feature parity:
-    - [x] Check DB schema (sessions/runs, inputs, outputs, token_usage).
-    - [x] Check CLI commands (`history`, `stats`, `show`).
-    - [x] Note missing features (`resume` command, Export) - Added to Roadmap backlog.
+### Async/Concurrent Refactor (Phase 2)
+- [x] **Design Async Architecture**: RFC created in `docs/design_docs/rfc_async_refactor.md`.
+- [x] **Phase 1: Async LLMClient**:
+    - [x] Add `httpx` dependency.
+    - [x] Update `LLMClient` to use `httpx.AsyncClient`.
+    - [x] Implement async streaming support.
+    - [x] Unit tests (`tests/unit/test_llm_client_async.py`).
+- [x] **Phase 2: Async MDProcessor**:
+    - [x] Refactor `process_mds` to be async.
+    - [x] Implement concurrency control (`asyncio.Semaphore`).
+    - [x] Unit tests (`tests/unit/test_md_processor_async.py`).
+- [x] **Phase 3: Integration**:
+    - [x] Refactor `main.py` `process_multiple` to use `asyncio.gather`.
+    - [x] Refactor `cli.py` to use `asyncio.run`.
+    - [x] Add end-to-end integration test (`tests/integration/test_async_flow.py`).
 
-### Async/Concurrent Refactor (Planned Phase 2)
-- [ ] **Design Async Architecture**:
-    - [ ] Identify synchronous blocking points (`requests.post`, file I/O).
-    - [ ] Choose async library: `httpx` (standard replacement for requests).
-    - [ ] Plan concurrency limit (semaphore) to respect provider rate limits.
-- [ ] **Implementation Steps**:
-    1.  Create `AsyncLLMClient` (or refactor `LLMClient` to support both/async).
-    2.  Update `MDProcessor` to use `async`/`await`.
-    3.  Refactor `main.py` -> `process_multiple` to use `asyncio.gather`.
-    4.  Update `cli.py` to run async entry point.
+### Next Steps (Post-Merge)
+- [ ] Monitor SQLite concurrent write performance (may need `run_in_executor` optimization).
+- [ ] Optimize `MDConverter` to run in thread pool for parallel conversion.

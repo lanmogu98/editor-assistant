@@ -7,7 +7,8 @@ name = "editor_assistant"
 version = "0.4.1"
 dependencies = [
     "markitdown[all]",
-    "requests",
+    "requests",  # Deprecated: will be removed after async migration complete
+    "httpx>=0.25.0",
     "pydantic",
     "trafilatura",
     "readabilipy",
