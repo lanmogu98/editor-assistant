@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Pydantic v2 compatibility: replaced class-based Config with ConfigDict to remove deprecation warning.
+
 ## [0.4.1] - 2025-12-19
 
 ### Docs

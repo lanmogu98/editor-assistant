@@ -1,6 +1,6 @@
 # This file contains the data models for the project.
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from enum import Enum
 from pathlib import Path
@@ -44,8 +44,7 @@ class MDArticle(BaseModel):
     source_path: Optional[str] = None
     output_path: Optional[Path] = None
 
-    class Config:
-        arbitrary_types_allowed = True  # Allow Path type
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # Allow Path type
 
 
 class SaveType(str, Enum):

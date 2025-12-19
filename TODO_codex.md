@@ -16,5 +16,5 @@
 - [ ] Make file output optional via CLI flag (default off); no DB writes for failed inputs.
 
 ## Backlog
-- [ ] Pydantic v2 migration: replace class-based Config with ConfigDict to clear warnings.
+- [x] Pydantic v2 migration: replace class-based Config with ConfigDict to clear warnings.
 
