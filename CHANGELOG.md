@@ -4,10 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-12-19
+
 ### Docs
 - Split documentation: general norms in `docs/ENGINEERING_GUIDE.md`; project-specific details remain in `DEVELOPER_GUIDE.md`. Added README pointers.
 
-## [0.4.1] - 2025-12-19
+### Changed
+- Version metadata aligned to `0.4.1` across README, `pyproject.toml`, and `__version__`.
 
 ### Added
 - Unit coverage for content validation (blocked publishers, short content warnings).
