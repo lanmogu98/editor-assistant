@@ -23,7 +23,7 @@ A simple AI-powered Python CLI tool for processing research papers and generatin
 
 - Python 3.8+
 - API keys for supported LLM providers:
-  - **Deepseek**: `DEEPSEEK_API_KEY` environment variable (via Volcengine)
+- **Deepseek**: `DEEPSEEK_API_KEY_VOLC` environment variable (via Volcengine)
   - **Gemini**: `GEMINI_API_KEY` environment variable
   - **Kimi**: `KIMI_API_KEY` environment variable (via Volcengine)
   - **Doubao**: `DOUBAO_API_KEY` environment variable (via Volcengine)
@@ -62,7 +62,7 @@ Set up your API keys:
 
 ```bash
 # For Deepseek models (via Volcengine)
-export DEEPSEEK_API_KEY=your_volcengine_api_key
+export DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 
 # For Gemini models
 export GEMINI_API_KEY=your_gemini_api_key
@@ -398,7 +398,7 @@ pip install -e .
 
 ```bash
 # 对于Deepseek模型（通过火山引擎）
-export DEEPSEEK_API_KEY=your_volcengine_api_key
+export DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 
 # 对于Gemini模型
 export GEMINI_API_KEY=your_gemini_api_key
