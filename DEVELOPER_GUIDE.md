@@ -453,3 +453,23 @@ The `batch` command uses the [Rich](https://github.com/Textualize/rich) library 
 - **Completion Handling**: Completed tasks are removed from the live view and replaced by a permanent log line.
 - **Streaming**: Output tokens are streamed to update the progress bar status, keeping the interface clean.
 - **Fallback**: If `rich` is not installed, it gracefully degrades to standard console output.
+
+## Refactor Verification Protocol (Project Specific)
+
+Lessons learned from v0.5.x async refactor. Verify these before merging complex changes:
+
+### 1. State Isolation (The "Accumulator" Bug)
+* **Context**: `LLMClient` is long-lived.
+* **Check**: Ensure `token_usage` returned by `generate_response` is for *that specific request*, not the client's lifetime total. Run 3 items and check individual costs.
+
+### 2. Negative Configuration (The "Flag Ignored" Bug)
+* **Context**: `argparse` defaults vs code defaults.
+* **Check**: Run `batch` *without* `--save-files` and ensure no files are created. Code like `val = args.flag or True` is forbidden.
+
+### 3. Lifecycle & Interruption (The "Zombie" Bug)
+* **Context**: Async tasks can be cancelled.
+* **Check**: `Ctrl+C` must update DB status to `aborted`. Ensure `process_mds` has `try/except asyncio.CancelledError` blocks around API calls.
+
+### 4. UI/Log Interference (The "Scrolling" Bug)
+* **Context**: `Rich` TUI vs `logging` module.
+* **Check**: When `Progress` is active, root logger level must be `WARNING` to suppress `INFO` logs that break the layout. Use `Console(force_terminal=True)` for robustness.
