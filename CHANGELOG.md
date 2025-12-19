@@ -4,8 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-12-19
+
+### Added
+- **Batch UI Improvements**: 
+  - Implemented `rich`-based progress bars for batch processing with overall progress and active task tracking.
+  - Added smart auto-hiding for pending/completed tasks to prevent terminal clutter.
+  - Added summary report table at the end of batch execution (Total files, tokens, cost, average per task).
+  - Added real-time "Liveness" feedback via streaming callbacks to UI.
+
 ### Fixed
-- Pydantic v2 compatibility: replaced class-based Config with ConfigDict to remove deprecation warning.
+- **CLI**: Fixed `batch` command UI rendering issues with large numbers of files.
+- **MDProcessor**: Fixed path handling when input is a file (correctly uses parent directory for output).
 
 ## [0.5.0] - 2025-12-19
 
