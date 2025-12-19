@@ -63,7 +63,7 @@ dev_notes/
 # Documentation (agent-specific - not CLAUDE.md which is project instructions)
 GEMINI.md
 CLAUDE.md
-docs/dev_notes/
+# docs/dev_notes/  <-- Keep dev notes tracked for RFCs
 
 # Test output (keep test code tracked)
 test_output/
