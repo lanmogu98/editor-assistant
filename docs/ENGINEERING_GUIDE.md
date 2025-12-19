@@ -22,6 +22,31 @@ test coverage before implementing.
 - Release notes → `CHANGELOG.md` (`Unreleased` during development; move to a version on release).
 - Keep CLI flags, defaults, env vars, and costs in sync across docs.
 
+## Documentation Synchronization Protocol
+
+**Context**: LLM Agents often implement code but forget to update the broader documentation context, leading to drift.
+**Rule**: Documentation updates are NOT optional "chores". They are part of the "Definition of Done".
+
+### The Sync Web
+When you change **X**, you MUST update **Y**:
+
+| If you change... | You MUST update... |
+| :--- | :--- |
+| **New Feature / Refactor** | 1. `FUTURE_ROADMAP.md` (Status: Pending -> In Progress -> Done) <br> 2. `TODO_<agent>.md` (Mark Complete) <br> 3. `CHANGELOG.md` (Add entry under Unreleased) |
+| **CLI / Configuration** | 1. `README.md` (Usage examples) <br> 2. `DEVELOPER_GUIDE.md` (Module ref / Config) |
+| **Project Structure** | 1. `DEVELOPER_GUIDE.md` (Architecture Overview) |
+| **Dependencies** | 1. `pyproject.toml` <br> 2. `README.md` (Installation if changed) |
+
+### Agent Protocol
+1. **Pre-Implementation**: Check `FUTURE_ROADMAP.md` and `TODO_<agent>.md` to confirm scope.
+2. **Implementation**: Write code + tests.
+3. **Post-Implementation (Before Commit)**: 
+   - Update `CHANGELOG.md`.
+   - Update `README.md` if user-facing.
+   - Update `DEVELOPER_GUIDE.md` if architecture changed.
+   - Update `FUTURE_ROADMAP.md` status.
+   - **Do not wait for a human to remind you.**
+
 ## Secrets & Safety
 
 - No secrets in code or logs. Use env vars; prefer `.env` locally (not committed).

@@ -6,6 +6,8 @@ This document outlines remaining architectural improvements that require signifi
 
 ## 1. Async/Concurrent Processing
 
+**Status:** ✅ Completed (v0.5.0)
+
 **Why it matters:**
 - Currently processes documents sequentially (N documents = N × time)
 - Network I/O wait time is wasted (LLM API calls take 2-30 seconds each)
@@ -163,6 +165,7 @@ class MyConverter(ConverterProtocol):
 
 ## Completed Items (This Session)
 
+✅ Async/Concurrent Processing: `httpx` + `asyncio` refactor, 5x performance boost (v0.5.0)
 ✅ Persistence Layer: SQLite storage, Schema, `history`/`stats` commands (Phase 1)
 ✅ Performance: O(n²) string fix, lazy loading, single-pass extraction
 ✅ Maintenance: Typos, dead code, error handling, type hints

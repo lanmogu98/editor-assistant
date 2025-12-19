@@ -17,6 +17,14 @@ This document provides technical documentation for developers contributing to Ed
 7. [Common Patterns](#common-patterns)
 8. [Performance & Concurrency](#performance--concurrency)
 
+## Documentation Synchronization
+(See `docs/ENGINEERING_GUIDE.md` for general norms)
+
+**Agent Protocol**:
+1. **Roadmap**: `FUTURE_ROADMAP.md` is the source of truth for planning. Agent TODOs (`TODO_claude.md`, `TODO_gemini.md`) are transient execution logs. Always sync status back to Roadmap.
+2. **Developer Guide**: This file (`DEVELOPER_GUIDE.md`) must reflect the *current* architecture. If you add a module (e.g. `async_processor`), update the "Architecture Overview" and "Module Reference" immediately.
+3. **Changelog**: All user-facing changes go to `CHANGELOG.md`.
+
 ---
 
 ## Architecture Overview
@@ -322,6 +330,10 @@ tests/
 ### Writing Tests (Async)
 
 Tests for async components must use `pytest-asyncio`.
+
+#### Test Data Thresholds
+- **Content Length**: Benchmark and Stress tests require input content length > **1000 characters**.
+  - *Reasoning*: The `MDProcessor` has logic to warn or reject suspiciously short content. Test generators (like `benchmark_async.py`) must ensure dummy data exceeds this threshold to avoid warnings or invalid test results.
 
 #### Unit Test Example (Async)
 

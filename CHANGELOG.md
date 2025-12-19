@@ -17,6 +17,7 @@ Major architecture refactor to Asynchronous I/O for high-performance batch proce
 - **Concurrency Control**: Implemented `asyncio.Semaphore` to limit concurrent LLM requests (default: 5).
 - **Async Integration Tests**: New test suite `tests/integration/test_async_flow.py` for end-to-end async verification.
 - **Async Unit Tests**: New tests for `LLMClient` and `MDProcessor` using `pytest-asyncio` and `AsyncMock`.
+- **Docs Protocol**: Added "Documentation Synchronization Protocol" to `ENGINEERING_GUIDE.md` and `DEVELOPER_GUIDE.md` to prevent doc drift.
 
 ### Changed
 - **LLMClient**: `generate_response` is now `async`. Streaming uses `aiter_lines()`.
