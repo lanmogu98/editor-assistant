@@ -14,7 +14,7 @@
 - [x] 验证 `claude-sonnet-4-or` 正常工作
 
 ### 分支: docs/developer-guide (已合并)
-- [x] 创建 `DEVELOPER.md` 开发者文档
+- [x] 创建 `DEVELOPER_GUIDE.md` 开发者文档
   - [x] 架构概览和数据流图
   - [x] 模块参考表
   - [x] 添加新模型指南
@@ -39,7 +39,7 @@
 - [x] 修改 `ProviderSettings` Pydantic 模型支持 rate_limit 字段
 - [x] 修改 `LLMClient` 从 provider 配置读取 rate limit
 - [x] 测试不同 provider 的 rate limit 独立生效
-- [x] 更新 DEVELOPER.md 相关文档
+- [x] 更新 DEVELOPER_GUIDE.md 相关文档
 - [x] 更新 CHANGELOG
 
 ### ~~2. 分支: feature/gemini-thinking~~ ✅ 已完成
@@ -63,7 +63,7 @@
   - 支持多任务输出 (`post_process` 返回 `Dict[str, str]`)
 - [x] 实现 TaskRegistry 系统 (`tasks/base.py`)
 - [x] 重构现有任务（`brief.py`, `outline.py`, `translate.py`）
-- [x] 添加示例：更新 DEVELOPER.md "Adding a New Task Type" 章节
+- [x] 添加示例：更新 DEVELOPER_GUIDE.md "Adding a New Task Type" 章节
 - [x] 更新 CHANGELOG
 
 ### ~~4. 分支: feature/multi-task~~ ✅ 已完成
@@ -71,7 +71,7 @@
 
 - [x] CLI 添加 `process` 命令，支持 `--tasks` 参数
 - [x] 实现串行多任务执行（同一输入执行多个任务）
-- [x] 更新 README, DEVELOPER.md, CHANGELOG
+- [x] 更新 README, DEVELOPER_GUIDE.md, CHANGELOG
 - [ ] 设计 ClassifyTask 结构化输出（Phase 2）
 
 ### ~~5. 分支: feature/streaming~~ ✅ 已完成
@@ -167,7 +167,7 @@ CREATE TABLE token_usage (
   - `editor-assistant history` - 列出历史运行
   - `editor-assistant stats` - 统计信息（按模型/任务/时间）
   - `editor-assistant show <run_id>` - 查看特定运行详情
-- [x] 更新文档（DEVELOPER.md, README.md）
+- [x] 更新文档（DEVELOPER_GUIDE.md, README.md）
 
 **预期查询能力：**
 ```sql
@@ -203,7 +203,7 @@ WHERE i.title = 'XXX' AND o.output_type = 'main';
 5. **测试模块重构** - ✅ 已完成（单元测试 + 集成测试）
 5. **模型参数完善** - input_max, output_max, context_window 的整合
 6. **Rate limit per provider** - 每个模型单独控制
-7. **Cache 模块说明** - ✅ 已在 DEVELOPER.md 文档中说明
+7. **Cache 模块说明** - ✅ 已在 DEVELOPER_GUIDE.md 文档中说明
 8. **开发者文档** - ✅ 已完成
 
 ---
@@ -225,7 +225,7 @@ WHERE i.title = 'XXX' AND o.output_type = 'main';
 
 ## 🔗 相关文档
 
-- [DEVELOPER.md](./DEVELOPER.md) - 开发者指南
+- [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) - 开发者指南
 - [CHANGELOG.md](./CHANGELOG.md) - 变更日志
 - [FUTURE_ROADMAP.md](./FUTURE_ROADMAP.md) - 长期路线图
 - [ISSUES_REPORT.md](./ISSUES_REPORT.md) - 问题报告

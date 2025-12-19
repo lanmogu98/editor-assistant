@@ -6,7 +6,7 @@
 
 A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
 
-**Version: 0.2** | [See Breaking Changes](#-breaking-changes-in-v02)
+**Version: 0.4.1** | [See Breaking Changes](#-breaking-changes-in-v02)
 
 ### 🚀 Features
 
@@ -180,6 +180,10 @@ editor-assistant show 1 --output            # Show full output content
 - `--save-files`: Persist prompts/responses/token reports to disk (default: off; DB is still updated)
 - `--debug`: Enable detailed debug logging with file output
 - `--version`: Show version information
+
+### Developer Docs
+- General engineering norms: `docs/ENGINEERING_GUIDE.md`
+- Project-specific architecture/tests/configs: `DEVELOPER_GUIDE.md`
 
 ### Python API
 

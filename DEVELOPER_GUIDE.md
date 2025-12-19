@@ -1,6 +1,10 @@
-# Developer Guide
+# Developer Guide (Project-Specific)
 
 This document provides technical documentation for developers contributing to Editor Assistant.
+
+## Documentation Map
+- General engineering norms (reusable across projects): see `docs/ENGINEERING_GUIDE.md`.
+- This file focuses on project-specific architecture, configs, models, tasks, storage, and test matrix.
 
 ## Table of Contents
 

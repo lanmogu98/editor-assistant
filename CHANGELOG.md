@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Docs
+- Split documentation: general norms in `docs/ENGINEERING_GUIDE.md`; project-specific details remain in `DEVELOPER_GUIDE.md`. Added README pointers.
+
+## [0.4.1] - 2025-12-19
+
 ### Added
 - Unit coverage for content validation (blocked publishers, short content warnings).
 - Test fixtures now require `DEEPSEEK_API_KEY_VOLC` (DeepSeek via Volcengine); legacy key removed.
@@ -52,7 +57,7 @@ Major release with SQLite storage, streaming output, and improved testing.
   - `Task` base class with `validate()`, `build_prompt()`, `post_process()` methods
   - Existing tasks (`brief`, `outline`, `translate`) refactored as Task subclasses
   - Tasks can now produce multiple outputs (e.g., translate → main + bilingual)
-  - Updated `DEVELOPER.md` with simplified "Adding a New Task Type" guide
+  - Updated `DEVELOPER_GUIDE.md` with simplified "Adding a New Task Type" guide
 
 - **Gemini 3 thinking mode support** - Control reasoning depth for Gemini 3 models:
   - Added `--thinking` CLI parameter (`low`, `medium`, `high`)
@@ -65,7 +70,7 @@ Major release with SQLite storage, streaming output, and improved testing.
   - Added optional `rate_limit` field in `ProviderSettings`
   - `LLMClient` reads rate limits from provider config, falls back to global defaults
   - Example configuration added to `anthropic-openrouter` in `llm_config.yml`
-- `DEVELOPER.md` - Comprehensive developer guide with:
+- `DEVELOPER_GUIDE.md` - Comprehensive developer guide with:
   - Architecture overview and data flow diagram
   - Module reference table
   - Step-by-step guide for adding new LLM models
