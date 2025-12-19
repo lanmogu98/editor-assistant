@@ -19,9 +19,9 @@ from typing import Dict, Any, List, Optional, Union
 import os
 from .config.logging_config import error, progress, warning, user_message
 from .config.constants import (
-    CHAR_TOKEN_RATIO,
     PROMPT_OVERHEAD_TOKENS,
     DEBUG_LOGGING_LEVEL,
+    OUTPUT_TOKEN_RESERVE,
 )
 
 # for LLM processing
@@ -35,6 +35,8 @@ from .tasks import TaskRegistry, Task
 
 # for storage
 from .storage import RunRepository
+from .content_validation import validate_content, BlockedPublisherError
+from .utils import estimate_tokens
 
 class ContentTooLargeError(Exception):
     """Raised when content exceeds model context window capacity."""
@@ -55,16 +57,25 @@ def check_content_size(content: str, llm_client: LLMClient) -> None:
     Raises:
         ContentTooLargeError: If content is too large for the model
     """
-    # Estimate token count
-    estimated_tokens = len(content) / CHAR_TOKEN_RATIO
+    estimated_tokens = estimate_tokens(content)
 
-    # Calculate available tokens (context - output - prompt overhead)
-    available_tokens = (llm_client.context_window - PROMPT_OVERHEAD_TOKENS)
-    
+    # Reserve space for prompt overhead and model output
+    output_reserve = llm_client.max_tokens or OUTPUT_TOKEN_RESERVE
+    # Avoid over-reserving relative to context
+    output_reserve = min(output_reserve, llm_client.context_window // 2)
+
+    available_tokens = llm_client.context_window - PROMPT_OVERHEAD_TOKENS - output_reserve
+
+    if available_tokens <= 0:
+        raise ContentTooLargeError(
+            f"Model capacity too small after reserves for {llm_client.model_name}."
+        )
+
     if estimated_tokens > available_tokens:
         raise ContentTooLargeError(
             f"Content size ({estimated_tokens:.0f} tokens) exceeds "
-            f"model capacity ({available_tokens:.0f} tokens) for {llm_client.model_name}. "
+            f"model capacity ({available_tokens:.0f} tokens) for {llm_client.model_name} "
+            f"(reserved {output_reserve} for output, {PROMPT_OVERHEAD_TOKENS} for prompt). "
             f"Please use a smaller document or split manually."
         )
 
@@ -121,16 +132,33 @@ class MDProcessor:
         # Instantiate task
         task: Task = task_cls()
         
-        # Validate inputs
+        # Validate inputs (task-level)
         is_valid, err_msg = task.validate(md_articles)
         if not is_valid:
             error(f"Validation failed for {task_name}: {err_msg}")
             return False
 
+        # Content validation per article
+        for md_article in md_articles:
+            try:
+                source_url = md_article.source_path if md_article.source_path and str(md_article.source_path).startswith("http") else None
+                is_content_valid, warn_msg = validate_content(
+                    md_article.content or "",
+                    source_url=source_url
+                )
+                if warn_msg:
+                    warning(warn_msg)
+                if not is_content_valid:
+                    error(f"Content invalid for {md_article.title or 'Untitled'}: {warn_msg}")
+                    return False
+            except BlockedPublisherError as e:
+                error(f"Blocked publisher: {e}")
+                return False
+
         # Check content size before processing
         for md_article in md_articles:
             try:
-                check_content_size(md_article.content, self.llm_client)
+                check_content_size(md_article.content or "", self.llm_client)
             except ContentTooLargeError as e:
                 error(f"Content too large: {md_article.title}: {str(e)}")
                 return False

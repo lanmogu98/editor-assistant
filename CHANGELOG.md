@@ -6,11 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Unit coverage for content validation (blocked publishers, short content warnings).
-- Test fixtures accept both `DEEPSEEK_API_KEY_VOLC` and legacy `DEEPSEEK_API_KEY` for integration runs.
+- Test fixtures now require `DEEPSEEK_API_KEY_VOLC` (DeepSeek via Volcengine); legacy key removed.
 - `TODO_codex.md` to track branch-specific tasks (tests vs reliability).
+- Content validation enforced in processing pipeline (blocked publisher hard stop, short-content warning).
 
 ### Docs
-- Developer testing guide notes `deepseek-v3.2` as the cheap default model for integration tests and the preferred env var `DEEPSEEK_API_KEY_VOLC`.
+- Developer testing guide notes `deepseek-v3.2` as the cheap default model for integration tests and the env var `DEEPSEEK_API_KEY_VOLC`.
+
+### Fixed
+- Language-aware token estimation to improve Chinese/English mixed token counting.
+- Per-input conversion failures no longer abort entire run; errors are logged and processing continues when possible.
+- LLM requests now use a configurable timeout; context checks reserve output tokens before sending.
 
 ## [0.4.0] - 2025-12-18
 

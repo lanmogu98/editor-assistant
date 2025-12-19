@@ -31,6 +31,9 @@ MINIMAL_TOKEN_ACCEPTED = 100
 # This accounts for system prompts, formatting, and response structure.
 PROMPT_OVERHEAD_TOKENS = 10000
 
+# Default token reserve for model output when context budgeting.
+OUTPUT_TOKEN_RESERVE = 2000
+
 
 # =============================================================================
 # API RETRY CONFIGURATION
@@ -42,6 +45,9 @@ MAX_API_RETRIES = 3
 # Initial delay (in seconds) before first retry.
 # Subsequent retries use exponential backoff (delay * 2^attempt).
 INITIAL_RETRY_DELAY_SECONDS = 1
+
+# Timeout for LLM HTTP requests (seconds).
+API_REQUEST_TIMEOUT_SECONDS = 30
 
 
 # =============================================================================

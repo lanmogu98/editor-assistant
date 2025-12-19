@@ -28,37 +28,56 @@ class EditorAssistant:
 
         # initialize the md content list
         md_articles = []
+        failed_inputs = []
 
         for input in inputs:
             # if the path is a markdown file, read the content and create an MDArticle object
             md_article = None
             if input.path.endswith(".md"):
-                with open(input.path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                md_article = MDArticle(type=input.type,  
-                                    content=content, 
-                                    title=Path(input.path).stem, 
-                                    source_path=input.path,
-                                    output_path=input.path)
-                md_articles.append(md_article)
+                try:
+                    with open(input.path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    md_article = MDArticle(
+                        type=input.type,
+                        content=content,
+                        title=Path(input.path).stem,
+                        source_path=input.path,
+                        output_path=input.path,
+                    )
+                    md_articles.append(md_article)
+                except Exception as e:
+                    failed_inputs.append((input.path, str(e)))
                 continue
             
             # if the path is not a markdown file, convert it to markdown
             try:
                 md_article = self.md_converter.convert_content(input.path, type=input.type)
-                md_articles.append(md_article)
+                if md_article:
+                    md_articles.append(md_article)
+                else:
+                    failed_inputs.append((input.path, "conversion returned None"))
             except Exception as e:
-                error (f"failed to convert {input.path}: {str(e)} to md")
-                return 
+                failed_inputs.append((input.path, str(e)))
+                continue
+
+        if failed_inputs and not md_articles:
+            error(f"All inputs failed to convert: {failed_inputs}")
+            return
+        if failed_inputs:
+            for path, msg in failed_inputs:
+                self.logger.warning(f"failed to convert {path}: {msg}")
 
         progress("Input formatted as markdown and ready to process.")
         # process the md files
         try:
             success = self.md_processor.process_mds(md_articles, task_name, output_to_console)
-            if not success:
+            if not success and md_articles:
                 self.logger.warning(f"failed to process {md_articles[0].title}")
         except Exception as e:
-            self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
+            if md_articles:
+                self.logger.warning(f"failed to process {md_articles[0].title}: {str(e)}")
+            else:
+                self.logger.warning(f"failed to process: {str(e)}")
          
         return 
 
