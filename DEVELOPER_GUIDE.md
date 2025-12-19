@@ -444,4 +444,10 @@ class MDProcessor:
 
 ### SQLite Persistence
 
-SQLite is thread-safe but not fully concurrent for writes. The `storage` module handles locking, but extremely high write concurrency might hit `database is locked` errors. The current implementation uses synchronous SQLite calls; future optimization may move DB writes to a thread pool or use `aiosqlite`.
+SQLite is thread-safe but not fully concurrent for writes. The `storage` module handles locking, but extremely high write concurrency might hit `database is locked` errors. The current implementation uses synchronous SQLite calls offloaded to a thread pool (`asyncio.to_thread`) to prevent blocking the event loop.
+
+### Batch Processing UI
+The `batch` command uses the [Rich](https://github.com/Textualize/rich) library to display concurrent progress bars.
+- **Progress Tracking**: Each file gets a dedicated progress bar.
+- **Streaming**: Output tokens are streamed to update the progress bar status, keeping the interface clean.
+- **Fallback**: If `rich` is not installed, it gracefully degrades to standard console output.

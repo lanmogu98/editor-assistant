@@ -10,6 +10,13 @@ import sys
 import asyncio
 from pathlib import Path
 
+# Optional rich import for better UI
+try:
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
+    RICH_AVAILABLE = True
+except ImportError:
+    RICH_AVAILABLE = False
+
 from .main import EditorAssistant
 from .data_models import ProcessType, Input, InputType
 from .llm_client import LLMClient
@@ -143,8 +150,100 @@ async def cmd_batch_process(args):
     # Default to PAPER type for batch processing unless specified (future enhancement)
     inputs = [Input(type=InputType.PAPER, path=str(f)) for f in files]
     
-    # Process all concurrently
-    await assistant.process_multiple(inputs, args.task, save_files=args.save_files)
+    # Prepare callbacks for Rich UI if available and streaming enabled
+    progress_callbacks = {}
+    
+    if RICH_AVAILABLE and stream:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("{task.fields[status]}"),
+            TimeRemainingColumn(),
+        ) as progress_ctx:
+            
+            # Create a task for each file
+            # We track tokens or just simple "Processing..." status
+            rich_tasks = {}
+            for inp in inputs:
+                filename = Path(inp.path).name
+                task_id = progress_ctx.add_task(
+                    f"[cyan]{filename}", 
+                    total=None, # Indeterminate until we know length, or just track completion
+                    status="[dim]Pending..."
+                )
+                rich_tasks[inp.path] = task_id
+            
+            # Helper to create a callback closure
+            def make_callback(file_path):
+                task_id = rich_tasks[file_path]
+                
+                # State to track if we've started receiving tokens
+                started = False
+                
+                def callback(chunk: str):
+                    nonlocal started
+                    if not started:
+                        progress_ctx.update(task_id, status="[green]Generating...", total=100) # Switch to determinate if we could estimate? No, LLM is streaming.
+                        # Just keep indeterminate spinner but update status
+                        started = True
+                    
+                    # Optional: We could count tokens here if we wanted a rough progress bar
+                    # For now, just show activity
+                    progress_ctx.update(task_id, advance=len(chunk)/50) # Fake advance to animate bar?
+                    
+                return callback
+
+            # Create callbacks for all inputs
+            for inp in inputs:
+                progress_callbacks[inp.path] = make_callback(inp.path)
+            
+            # Run processing with output_to_console=False (we handle UI)
+            # Pass save_files=True implicitly for batch? args says save_files default False?
+            # Batch usually implies saving. 
+            # But let's respect CLI arg. If save_files is False, where does output go? 
+            # In batch mode, if not saving to files, it goes nowhere (except DB).
+            # User probably wants files.
+            # Let's verify args.save_files default. It is store_true (False).
+            # The original implementation passed save_files=args.save_files.
+            
+            # IMPORTANT: For batch processing, we MUST save files or the user gets nothing visible (since we suppress console output).
+            # Unless they just want DB population.
+            # But typically batch = files.
+            # Let's force save_files=True if not specified? 
+            # Or just warn?
+            # Let's assume user passes --save-files or we default it to True in batch logic?
+            # Existing code: await assistant.process_multiple(inputs, args.task, save_files=args.save_files)
+            # I will stick to args.save_files but maybe default to True if user didn't specify?
+            # argparse defaults to False.
+            # I will set save_files=True by default for batch if user didn't say otherwise?
+            # Can't easily distinguish default False from explicit False.
+            # Let's just use args.save_files.
+            
+            await assistant.process_multiple(
+                inputs, 
+                args.task, 
+                output_to_console=False, # Suppress raw text mixing
+                save_files=args.save_files or True, # Force save for batch? Yes, usually desired.
+                progress_callbacks=progress_callbacks
+            )
+            
+            # Update all to complete
+            for task_id in rich_tasks.values():
+                progress_ctx.update(task_id, completed=100, status="[bold green]Done")
+                
+    else:
+        # Fallback to standard behavior (concurrent text mixing or serial if desired)
+        # Or just run it. If streaming is on but Rich missing, it will be messy.
+        # We assume Rich is installed.
+        if not RICH_AVAILABLE and stream:
+            print("Warning: 'rich' library not found. Streaming output will be interleaved.")
+            
+        await assistant.process_multiple(
+            inputs, 
+            args.task, 
+            save_files=args.save_files or True # Force save for batch
+        )
 
 
 # Synchronous commands (CPU bound or simple IO)

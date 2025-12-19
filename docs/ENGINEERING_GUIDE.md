@@ -28,6 +28,7 @@ test coverage before implementing.
 **Rule**: Documentation updates are NOT optional "chores". They are part of the "Definition of Done".
 
 ### The Sync Web
+
 When you change **X**, you MUST update **Y**:
 
 | If you change... | You MUST update... |
@@ -38,6 +39,7 @@ When you change **X**, you MUST update **Y**:
 | **Dependencies** | 1. `pyproject.toml` <br> 2. `README.md` (Installation if changed) |
 
 ### Agent Protocol
+
 1. **Pre-Implementation**: Check `FUTURE_ROADMAP.md` and `TODO_<agent>.md` to confirm scope.
 2. **Implementation**: Write code + tests.
 3. **Post-Implementation (Before Commit)**: 

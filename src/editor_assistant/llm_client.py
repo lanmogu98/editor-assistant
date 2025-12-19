@@ -10,7 +10,7 @@ import asyncio
 import httpx
 from collections import deque, OrderedDict
 from datetime import datetime
-from typing import Dict, Any, Optional, Tuple, AsyncIterator
+from typing import Dict, Any, Optional, Tuple, AsyncIterator, Callable
 from pathlib import Path
 from .config.logging_config import warning, progress, user_message
 from .config.constants import (
@@ -254,14 +254,16 @@ class LLMClient:
 
     async def generate_response(self, prompt: str,
                           request_name: str = "unnamed_request",
-                          stream: bool = False) -> str:
+                          stream: bool = False,
+                          stream_callback: Optional[Callable[[str], None]] = None) -> str:
         """
         Generate a response using the LLM API (Async).
 
         Args:
             prompt: The prompt to send to the API
             request_name: Name of the request for token tracking
-            stream: If True, stream the response and print in real-time
+            stream: If True, stream the response
+            stream_callback: Optional callback for streaming chunks. If None and stream=True, prints to stdout.
 
         Returns:
             The response text
@@ -299,7 +301,7 @@ class LLMClient:
         for attempt in range(MAX_API_RETRIES):
             try:
                 if stream:
-                    response_text = await self._stream_response(client, data, start_time, request_name)
+                    response_text = await self._stream_response(client, data, start_time, request_name, stream_callback)
                 else:
                     response_text = await self._non_stream_response(client, data, start_time, request_name)
 
@@ -353,8 +355,8 @@ class LLMClient:
         
         return response_text
 
-    async def _stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str) -> str:
-        """Handle streaming API response with real-time output."""
+    async def _stream_response(self, client: httpx.AsyncClient, data: dict, start_time: float, request_name: str, stream_callback: Optional[Callable[[str], None]] = None) -> str:
+        """Handle streaming API response with real-time output or callback."""
         
         full_content = []
         input_tokens = 0
@@ -390,8 +392,11 @@ class LLMClient:
                         
                         if content:
                             full_content.append(content)
-                            # Print in real-time
-                            print(content, end='', flush=True)
+                            # Print in real-time OR use callback
+                            if stream_callback:
+                                stream_callback(content)
+                            else:
+                                print(content, end='', flush=True)
                     
                     # Some APIs return usage in the final chunk
                     if 'usage' in chunk and chunk['usage'] is not None:
@@ -401,8 +406,9 @@ class LLMClient:
                 except json.JSONDecodeError:
                     continue
         
-        # Print newline after streaming completes and flush buffer
-        print(flush=True)
+        # Print newline after streaming completes if using default print
+        if not stream_callback:
+            print(flush=True)
         
         response_text = ''.join(full_content)
         

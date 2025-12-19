@@ -15,6 +15,7 @@ dependencies = [
     "html2text",
     "pyyaml",
     "jinja2",
+    "rich>=13.0.0",
 ]
 
 [project.scripts]

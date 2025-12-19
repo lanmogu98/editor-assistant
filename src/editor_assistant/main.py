@@ -5,7 +5,7 @@ from .config.logging_config import setup_logging, progress, error, warning, user
 import logging
 import asyncio
 from pathlib import Path
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, Dict, Callable
 
 class EditorAssistant:
     def __init__(self, model_name, debug_mode=False, thinking_level=None, stream=True):
@@ -44,7 +44,9 @@ class EditorAssistant:
             return None, str(e)
 
     # LLM processor for multiple files (Async)
-    async def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], output_to_console=True, save_files=False):       
+    async def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], 
+                             output_to_console=True, save_files=False,
+                             progress_callbacks: Dict[str, Callable[[str], None]] = None):       
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -87,12 +89,20 @@ class EditorAssistant:
         # Logic: We launch a task for each article.
         tasks = []
         for article in md_articles:
+            # Find callback for this file if available
+            callback = None
+            if progress_callbacks:
+                # Key is the source path (absolute or relative as passed in input)
+                # We expect strict string matching
+                callback = progress_callbacks.get(str(article.source_path))
+
             tasks.append(
                 self.md_processor.process_mds(
                     [article],
                     task_name,
                     output_to_console,
                     save_files=save_files,
+                    stream_callback=callback
                 )
             )
 

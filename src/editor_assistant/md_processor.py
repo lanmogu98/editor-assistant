@@ -16,7 +16,7 @@ import logging
 import datetime
 import asyncio
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Callable
 import os
 from .config.logging_config import error, progress, warning, user_message
 from .config.constants import (
@@ -107,9 +107,14 @@ class MDProcessor:
     async def process_mds(self, md_articles: List[MDArticle],
                      task_type: Union[ProcessType, str],
                      output_to_console: bool = True,
-                     save_files: bool = False) -> tuple[bool, int]:
+                     save_files: bool = False,
+                     stream_callback: Optional[Callable[[str], None]] = None) -> tuple[bool, int]:
         """
         Process documents using the pluggable task system (Async).
+        
+        Args:
+            stream_callback: Optional callback function to receive streaming chunks.
+                           If None and output_to_console is True, chunks are printed to stdout.
         """
         run_id = -1
 
@@ -174,6 +179,10 @@ class MDProcessor:
         output_dir = None
         if save_files:
             base_output = Path(md_articles[0].output_path) if md_articles[0].output_path else Path.cwd()
+            # If base_output is a file (e.g. input file path), use its parent directory
+            if base_output.is_file():
+                base_output = base_output.parent
+                
             output_dir = base_output / "llm_summaries" / self.model_name
             output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -195,7 +204,12 @@ class MDProcessor:
         try:
             progress(f"Processing document with {len(prompt)} characters...")
             async with self._semaphore:
-                response = await self._make_api_request(prompt, task_name, stream=self.stream)
+                # If output_to_console is False and no callback provided, suppress output
+                final_callback = stream_callback
+                if final_callback is None and not output_to_console:
+                    final_callback = lambda x: None
+                
+                response = await self._make_api_request(prompt, task_name, stream=self.stream, stream_callback=final_callback)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
@@ -274,7 +288,7 @@ class MDProcessor:
             error(f"Error saving content: {str(e)}")
             raise
 
-    async def _make_api_request(self, prompt: str, request_name: str, stream: bool = False) -> str:
+    async def _make_api_request(self, prompt: str, request_name: str, stream: bool = False, stream_callback: Optional[Callable[[str], None]] = None) -> str:
         """
         Make an API request to the LLM client (Async).
         """
@@ -283,7 +297,7 @@ class MDProcessor:
             # RFC Plan: Use __aenter__ in LLMClient.
             # But here we have self.llm_client which is persistent for MDProcessor lifetime.
             # We can just call generate_response, as we implemented auto-client creation inside it.
-            return await self.llm_client.generate_response(prompt, request_name, stream=stream)
+            return await self.llm_client.generate_response(prompt, request_name, stream=stream, stream_callback=stream_callback)
         except ConnectionError as e:
             error(f"Connection failed during {request_name}: {str(e)}")
             raise ConnectionError(f"Failed to connect to LLM service: {str(e)}") from e
