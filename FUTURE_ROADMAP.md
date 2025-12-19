@@ -9,7 +9,7 @@ This document outlines remaining architectural improvements that require signifi
 **Why it matters:**
 - Currently processes documents sequentially (N documents = N × time)
 - Network I/O wait time is wasted (LLM API calls take 2-30 seconds each)
-- Cannot support streaming responses for real-time output
+- (Solved: Streaming responses are now supported, but processing is still serial)
 
 **Value:** 3-5x speedup for multi-document workflows
 
@@ -93,7 +93,9 @@ class MDProcessor:
 
 ---
 
-## 4. Plugin/Extension System
+## 4. Plugin/Extension System (Partial)
+
+**Status:** ⚠️ Core Registry Pattern implemented (Task Architecture), External loading pending.
 
 **Why it matters:**
 - Adding new converters requires modifying core code
@@ -104,10 +106,10 @@ class MDProcessor:
 
 **Implementation Plan:**
 ```
-1. Define plugin interfaces (Converter, Processor, Prompt)
-2. Add registry pattern for dynamic registration
-3. Scan plugin directories on startup
-4. Document plugin development
+1. Define plugin interfaces (Converter, Processor, Prompt) ✅ (TaskRegistry implemented)
+2. Add registry pattern for dynamic registration ✅
+3. Scan plugin directories on startup (Pending)
+4. Document plugin development (Pending)
 ```
 
 **Example:**
@@ -123,9 +125,12 @@ class MyConverter(ConverterProtocol):
 
 ---
 
-## 5. Persistence Layer
+## 5. Persistence Layer (Partial)
+
+**Status:** ✅ Core Implemented (Schema + History/Stats CLI), `resume` command pending.
 
 **Why it matters:**
+
 - Token usage only saved to text files
 - No historical tracking or analytics
 - Cannot resume interrupted processing
@@ -134,10 +139,10 @@ class MyConverter(ConverterProtocol):
 
 **Implementation Plan:**
 ```
-1. Add SQLite database (lightweight, no server needed)
-2. Schema: sessions, requests, token_usage, cache
-3. Add CLI commands: `history`, `stats`, `resume`
-4. Optional: Export to CSV/JSON
+1. Add SQLite database (lightweight, no server needed) ✅
+2. Schema: sessions, requests, token_usage, cache ✅
+3. Add CLI commands: `history`, `stats` ✅, `resume` (Pending)
+4. Optional: Export to CSV/JSON (Pending)
 ```
 
 **Estimated effort:** 2-3 days
@@ -152,19 +157,20 @@ class MyConverter(ConverterProtocol):
 | 2 | Async processing | 2-3 days | High (Performance) |
 | 3 | Dependency injection | 1-2 days | Medium (Testability) |
 | 4 | Plugin system | 2-3 days | Medium (Extensibility) |
-| 5 | Persistence layer | 2-3 days | Medium (Analytics) |
+| 5 | Resume capability & Export | 1 day | Medium (UX) |
 
 ---
 
 ## Completed Items (This Session)
 
+✅ Persistence Layer: SQLite storage, Schema, `history`/`stats` commands (Phase 1)
 ✅ Performance: O(n²) string fix, lazy loading, single-pass extraction
 ✅ Maintenance: Typos, dead code, error handling, type hints
 ✅ Scaling: Rate limiting, response caching
 ✅ Validation: Content validation module
 ✅ Code quality: Centralized constants, circular import fix
 
-**Total: 15 issues resolved, 48 tests added**
+**Total: 16 issues resolved, 48 tests added**
 
 ---
 
@@ -372,7 +378,8 @@ frontend/
 | **1 (Current)** | TODO.md 任务 | 1-2 weeks | Foundation |
 | **1** | Configuration file support | 1 day | High (UX) |
 | **1** | Async processing | 2-3 days | High (Performance) |
-| **1** | Tiered pricing | 1 day | Medium (Accuracy) |
+| **2** | Tiered pricing | 1 day | Medium (Accuracy) |
+| **2** | Resume capability | 1 day | Medium (Reliability) |
 | **2** | Benchmark module | 2-3 weeks | High (Product) |
 | **2** | Interactive assistant (backend) | 3-4 weeks | High (Product) |
 | **3** | Web UI | 4-6 weeks | High (Adoption) |
