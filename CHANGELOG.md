@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Unit coverage for content validation (blocked publishers, short content warnings).
+- Test fixtures accept both `DEEPSEEK_API_KEY_VOLC` and legacy `DEEPSEEK_API_KEY` for integration runs.
+- `TODO_codex.md` to track branch-specific tasks (tests vs reliability).
+
+### Docs
+- Developer testing guide notes `deepseek-v3.2` as the cheap default model for integration tests and the preferred env var `DEEPSEEK_API_KEY_VOLC`.
+
 ## [0.4.0] - 2025-12-18
 
 Major release with SQLite storage, streaming output, and improved testing.

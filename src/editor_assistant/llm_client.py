@@ -21,6 +21,7 @@ from .config.constants import (
     RESPONSE_CACHE_MAX_SIZE,
     RESPONSE_CACHE_TTL_SECONDS,
 )
+from .utils import estimate_tokens
 
 # set up the LLM model details
 from .config.set_llm import LLMModel, ALL_MODEL_DETAILS
@@ -355,21 +356,21 @@ class LLMClient:
             except json.JSONDecodeError:
                 continue
         
-        # Print newline after streaming completes
-        print()
+        # Print newline after streaming completes and flush buffer
+        print(flush=True)
         
         response_text = ''.join(full_content)
         
         # Estimate tokens if not provided (for APIs that don't return usage in stream)
         if input_tokens == 0:
-            # Estimate input tokens from prompt
+            # Estimate input tokens from prompt (handles Chinese/English mix)
             prompt_content = ""
             for msg in data.get("messages", []):
                 prompt_content += msg.get("content", "")
-            input_tokens = len(prompt_content) // 4  # Rough estimate: ~4 chars per token
+            input_tokens = estimate_tokens(prompt_content)
         
         if output_tokens == 0:
-            output_tokens = len(response_text) // 4  # Rough estimate
+            output_tokens = estimate_tokens(response_text)
         
         self._track_usage(input_tokens, output_tokens, start_time, request_name)
         

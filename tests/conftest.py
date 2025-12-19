@@ -232,10 +232,10 @@ def real_llm_client(budget_model_name):
 @pytest.fixture
 def skip_without_api_key():
     """Skip test if required API keys are not set."""
-    required_keys = ["DEEPSEEK_API_KEY"]
-    missing = [k for k in required_keys if not os.getenv(k)]
-    if missing:
-        pytest.skip(f"Missing API keys: {missing}")
+    # Accept either legacy or current Deepseek env vars; require at least one.
+    candidates = ["DEEPSEEK_API_KEY_VOLC", "DEEPSEEK_API_KEY"]
+    if all(not os.getenv(k) for k in candidates):
+        pytest.skip(f"Missing API keys: {candidates}")
 
 
 # ============================================================================

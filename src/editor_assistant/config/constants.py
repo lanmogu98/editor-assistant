@@ -11,10 +11,17 @@ import logging
 # TOKEN ESTIMATION
 # =============================================================================
 
-# Conservative character-to-token ratio for estimating token counts.
-# Different LLMs have different tokenizers, so this is an approximation.
-# Lower values are more conservative (assume more tokens per character).
-CHAR_TOKEN_RATIO = 3.5
+# Character-to-token ratios for estimating token counts.
+# Different LLMs have different tokenizers, so these are approximations.
+
+# English/ASCII text: ~3.5-4 characters per token
+CHAR_TOKEN_RATIO_EN = 3.5
+
+# Chinese/CJK text: ~1.5-2 characters per token (each Chinese char ≈ 2-3 tokens)
+CHAR_TOKEN_RATIO_ZH = 1.5
+
+# Default ratio (backward compatibility)
+CHAR_TOKEN_RATIO = CHAR_TOKEN_RATIO_EN
 
 # Minimum token count for valid input content.
 # Content below this threshold is likely malformed or empty.

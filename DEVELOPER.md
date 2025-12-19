@@ -633,6 +633,8 @@ python scripts/run_tests.py coverage    # With coverage report
 python scripts/run_tests.py quick       # Essential tests only
 ```
 
+**Integration model & cost note:** Integration tests default to `deepseek-v3.2` (cheapest). Set `DEEPSEEK_API_KEY_VOLC` (preferred) or legacy `DEEPSEEK_API_KEY`; the model is low-cost, so small-sample runs are safe.
+
 ### Test Markers
 
 | Marker | Description |
