@@ -3,6 +3,12 @@ Integration tests for LLM API calls.
 
 These tests make real API calls and cost money.
 Run sparingly and only when needed.
+
+Beginner notes:
+---------------
+- These tests are *async* because `LLMClient.generate_response(...)` is async and must be awaited.
+- We mark async tests using `@pytest.mark.asyncio` (provided by `pytest-asyncio`).
+- We skip the entire module if the required API key env var is not set.
 """
 
 import pytest
@@ -23,7 +29,13 @@ class TestLLMClientRealAPI:
     
     @pytest.fixture
     def client(self, budget_model_name):
-        """Create a real LLM client."""
+        """
+        Create a real LLM client.
+
+        Beginner note:
+        `budget_model_name` is a shared fixture from `tests/conftest.py`.
+        It's intended to pick the cheapest model for smoke/integration testing.
+        """
         return LLMClient(budget_model_name)
     
     @pytest.mark.integration
@@ -54,7 +66,13 @@ class TestLLMClientRealAPI:
     @pytest.mark.integration
     @pytest.mark.slow
     async def test_generate_response_streaming(self, client):
-        """Test streaming response."""
+        """
+        Test streaming response.
+
+        Beginner note:
+        In streaming mode, the client prints partial output chunks while receiving them,
+        and still returns the final `(response_text, usage_dict)` tuple at the end.
+        """
         prompt = "Count from 1 to 5."
         
         response, usage = await client.generate_response(
@@ -84,7 +102,13 @@ class TestLLMClientRealAPI:
 
 @pytest.mark.asyncio
 class TestMultipleModels:
-    """Test different model providers."""
+    """
+    Test different model providers.
+
+    Beginner notes:
+    - These are still integration tests and may cost money.
+    - We skip each test unless its specific provider API key is available.
+    """
     
     @pytest.mark.integration
     @pytest.mark.slow

@@ -24,6 +24,9 @@ pytest -m unit
 # Run everything except slow tests
 pytest -m "not slow"
 
+# Run everything except integration + expensive tests (safe default: no paid API calls)
+pytest -m "not integration and not expensive"
+
 # Run integration tests (may require real API keys; may cost money)
 pytest -m integration
 ```
@@ -35,6 +38,7 @@ Markers are defined in `pytest.ini`.
 ## How pytest finds tests
 
 This repo configures pytest to auto-discover:
+
 - Files: `test_*.py`
 - Classes: `Test*`
 - Functions: `test_*`
@@ -68,7 +72,44 @@ We use markers to control *what kind of test* something is:
   - The test is async and must be awaited (uses `pytest-asyncio`)
 
 Practical tip:
+
 - When you add a new test, decide whether it’s **unit** or **integration** first, then add `slow/expensive` if applicable.
+
+---
+
+## Async tests (how and why)
+
+This project uses an async architecture:
+
+- `LLMClient.generate_response(...)` is **async** and returns `(response_text: str, usage: dict)`
+- `MDProcessor.process_mds(...)` is **async** and returns `(success: bool, run_id: int)`
+- `EditorAssistant.process_multiple(...)` is **async**
+
+### How to write async tests
+
+Use `pytest-asyncio`:
+
+- Add `@pytest.mark.asyncio`
+- Write `async def ...`
+- Call async production code with `await ...`
+
+Common pitfall:
+
+- If production code does `await something(...)`, your mock must be awaitable.
+  Use `AsyncMock(...)` for async functions/methods.
+
+Example:
+
+```python
+import pytest
+from unittest.mock import AsyncMock
+
+@pytest.mark.asyncio
+async def test_async_mock():
+    m = AsyncMock(return_value=(True, 123))
+    ok, run_id = await m()
+    assert ok is True
+```
 
 ---
 
@@ -96,6 +137,7 @@ It defines shared fixtures used across many tests.
 
 This repo has a session-scoped autouse fixture that ensures tests never touch the production DB.
 It sets:
+
 - `EDITOR_ASSISTANT_TEST_DB_DIR` to a temporary directory for the test session.
 
 This is designed to prevent accidental writes to `~/.editor_assistant/`.
@@ -107,6 +149,7 @@ This is designed to prevent accidental writes to `~/.editor_assistant/`.
 Important: `LLMClient.__init__()` requires the relevant API key environment variable to exist **at construction time** (even if you never call the network).
 
 Therefore:
+
 - **Unit tests** that construct `LLMClient` or `MDProcessor` must either:
   - Patch those constructors, or
   - Set a **dummy** env var inside the test/module (using `monkeypatch`)
@@ -125,12 +168,14 @@ We intentionally avoid setting dummy API keys globally in `conftest.py`, because
 When you patch something, patch the name in the module under test.
 
 Example:
+
 - `MDProcessor` imports `LLMClient` as `from .llm_client import LLMClient`
 - Therefore tests patch `editor_assistant.md_processor.LLMClient` (not `editor_assistant.llm_client.LLMClient`)
 
 ### 2) Async mocks
 
 If production code does `await client.generate_response(...)`, your mock must be awaitable:
+
 - Use `AsyncMock(...)`
 
 ### 3) CLI tests: prefer `python -m ...`
@@ -152,8 +197,7 @@ This works even if `editor-assistant` is not installed as a command.
 - Add **stress / concurrency tests** to `tests/stress/` and mark them `slow`
 
 When adding a new module test, try to:
+
 - Cover the “happy path”
 - Add at least 1 boundary/edge case (empty input, invalid input, exception path)
 - Make the test deterministic (avoid sleeping/timeouts unless the test is about timing)
-
-

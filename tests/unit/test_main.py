@@ -16,7 +16,16 @@ from editor_assistant.data_models import MDArticle
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_process_multiple_all_inputs_fail():
-    """All inputs fail conversion -> no processing call."""
+    """
+    All inputs fail conversion -> no processing call.
+
+    Beginner notes:
+    - `EditorAssistant.process_multiple(...)` is an *async* method, so this test must be `async def`
+      and we must `await` the call.
+    - We patch `MarkdownConverter` and `MDProcessor` at the import location used by
+      `editor_assistant.main` so no real conversion or LLM work is done.
+    - `MDProcessor.process_mds(...)` is also async, so the mock must be awaitable (`AsyncMock`).
+    """
     with patch("editor_assistant.main.MarkdownConverter") as MockConverter, \
          patch("editor_assistant.main.MDProcessor") as MockProcessor:
         mock_converter = MockConverter.return_value
@@ -36,7 +45,17 @@ async def test_process_multiple_all_inputs_fail():
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_process_multiple_partial_fail_warns_but_processes(tmp_path, capsys):
-    """When some inputs fail conversion, processing continues without persisting failed inputs."""
+    """
+    When some inputs fail conversion, processing continues with the successful inputs.
+
+    Beginner notes:
+    - This is an async test; use `await`.
+    - `convert_content()` returns either:
+      - an `MDArticle` (success), or
+      - `None` (conversion failed), or
+      - raises (hard failure)
+    - We assert that the processor is still invoked with the successful converted article(s).
+    """
     good_path = tmp_path / "good.pdf"
     good_path.write_text("dummy", encoding="utf-8")
 
@@ -60,6 +79,7 @@ async def test_process_multiple_partial_fail_warns_but_processes(tmp_path, capsy
         ]
 
         mock_processor = MockProcessor.return_value
+        # `process_mds` is async, so we use AsyncMock to avoid "coroutine was never awaited" errors.
         mock_processor.process_mds = AsyncMock(return_value=(True, 123))
         assistant = EditorAssistant("test-model", stream=False)
 

@@ -323,6 +323,10 @@ class LLMClient:
             
             except httpx.RequestError as e:
                 # Use repr(e) instead of str(e) because some httpx exceptions have empty __str__
+                # Beginner note:
+                # - We want error messages to be actionable for users.
+                # - Some httpx exceptions format to "" via str(e), especially for low-level transport issues.
+                # - repr(e) usually includes the exception class and parameters, which is better than empty text.
                 error_msg = str(e) or repr(e)
                 if attempt == MAX_API_RETRIES - 1:
                     raise Exception(

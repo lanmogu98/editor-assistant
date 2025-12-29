@@ -2,6 +2,12 @@
 Integration tests for Task execution with real APIs.
 
 These tests run actual tasks with LLM calls.
+
+Beginner notes:
+---------------
+- `MDProcessor.process_mds(...)` is async (returns `(success: bool, run_id: int)`), so these tests
+  are `async def` and use `await`.
+- These tests can cost money. They are skipped if `DEEPSEEK_API_KEY_VOLC` is not set.
 """
 
 import pytest
@@ -25,7 +31,12 @@ class TestBriefTaskIntegration:
     
     @pytest.fixture
     def processor(self, budget_model_name):
-        """Create processor with budget model."""
+        """
+        Create processor with budget model.
+
+        Beginner note:
+        `budget_model_name` comes from `tests/conftest.py` and should represent the cheapest model.
+        """
         return MDProcessor(budget_model_name, stream=False)
     
     @pytest.fixture
@@ -65,7 +76,13 @@ class TestBriefTaskIntegration:
     @pytest.mark.integration
     @pytest.mark.slow
     async def test_brief_output_is_chinese(self, processor, paper_article, temp_dir):
-        """Test that brief output is in Chinese."""
+        """
+        Test that brief output is in Chinese.
+
+        Beginner note:
+        This test uses a very loose heuristic (presence of Chinese characters).
+        It's not a linguistic guarantee, but it catches obvious regressions.
+        """
         paper_article.output_path = temp_dir
         
         await processor.process_mds(
@@ -193,7 +210,13 @@ class TestStreamingIntegration:
     @pytest.mark.integration
     @pytest.mark.slow
     async def test_streaming_produces_output(self, streaming_processor, test_article, temp_dir, capsys):
-        """Test that streaming produces output."""
+        """
+        Test that streaming produces output.
+
+        Beginner note:
+        In streaming mode, output is printed incrementally. This test mainly ensures the code path
+        runs without crashing and returns success.
+        """
         success, _ = await streaming_processor.process_mds(
             [test_article],
             ProcessType.BRIEF,
@@ -210,7 +233,12 @@ class TestStreamingIntegration:
     @pytest.mark.integration
     @pytest.mark.slow
     async def test_non_streaming_produces_output(self, non_streaming_processor, test_article, temp_dir):
-        """Test that non-streaming produces output."""
+        """
+        Test that non-streaming produces output.
+
+        Beginner note:
+        In non-streaming mode, output is typically written at the end rather than chunk-by-chunk.
+        """
         success, _ = await non_streaming_processor.process_mds(
             [test_article],
             ProcessType.BRIEF,

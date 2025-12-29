@@ -48,6 +48,9 @@ INITIAL_RETRY_DELAY_SECONDS = 1
 
 # Timeout for LLM HTTP requests (seconds).
 # Large documents (40K+ tokens) with complex tasks (outline) may need 60-120+ seconds.
+# Beginner note:
+# - This timeout is passed to httpx.AsyncClient(timeout=...).
+# - It is intentionally conservative for large-paper workflows; smaller prompts will usually return faster.
 API_REQUEST_TIMEOUT_SECONDS = 180
 
 
