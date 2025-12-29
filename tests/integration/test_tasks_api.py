@@ -19,6 +19,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.mark.asyncio
 class TestBriefTaskIntegration:
     """Integration tests for brief task."""
     
@@ -42,9 +43,9 @@ class TestBriefTaskIntegration:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_brief_generates_output(self, processor, paper_article, temp_dir):
+    async def test_brief_generates_output(self, processor, paper_article, temp_dir):
         """Test that brief task generates output."""
-        success, _ = processor.process_mds(
+        success, _ = await processor.process_mds(
             [paper_article],
             ProcessType.BRIEF,
             output_to_console=False,
@@ -63,14 +64,15 @@ class TestBriefTaskIntegration:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_brief_output_is_chinese(self, processor, paper_article, temp_dir):
+    async def test_brief_output_is_chinese(self, processor, paper_article, temp_dir):
         """Test that brief output is in Chinese."""
         paper_article.output_path = temp_dir
         
-        processor.process_mds(
+        await processor.process_mds(
             [paper_article],
             ProcessType.BRIEF,
-            output_to_console=False
+            output_to_console=False,
+            save_files=True
         )
         
         # Read the output
@@ -84,6 +86,7 @@ class TestBriefTaskIntegration:
             assert has_chinese, "Output should contain Chinese characters"
 
 
+@pytest.mark.asyncio
 class TestOutlineTaskIntegration:
     """Integration tests for outline task."""
     
@@ -94,7 +97,7 @@ class TestOutlineTaskIntegration:
     
     @pytest.fixture
     def paper_article(self, sample_paper_content, temp_dir):
-        """Create paper article from sample data."""
+        """Create paper article from sample data (Shannon paper ~167KB)."""
         return MDArticle(
             type=InputType.PAPER,
             content=sample_paper_content,
@@ -106,17 +109,18 @@ class TestOutlineTaskIntegration:
     @pytest.mark.integration
     @pytest.mark.slow
     @pytest.mark.expensive
-    def test_outline_generates_structured_output(self, processor, paper_article, temp_dir):
-        """Test that outline generates structured output."""
-        result = processor.process_mds(
+    async def test_outline_generates_structured_output(self, processor, paper_article, temp_dir):
+        """Test that outline generates structured output with full paper (~41K tokens)."""
+        success, run_id = await processor.process_mds(
             [paper_article],
             ProcessType.OUTLINE,
             output_to_console=False
         )
         
-        assert result is True
+        assert success is True
 
 
+@pytest.mark.asyncio
 class TestMultiSourceIntegration:
     """Integration tests for multi-source processing."""
     
@@ -148,9 +152,9 @@ class TestMultiSourceIntegration:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_brief_with_multiple_sources(self, processor, multiple_articles, temp_dir):
+    async def test_brief_with_multiple_sources(self, processor, multiple_articles, temp_dir):
         """Test brief task with multiple sources."""
-        success, _ = processor.process_mds(
+        success, _ = await processor.process_mds(
             multiple_articles,
             ProcessType.BRIEF,
             output_to_console=False,
@@ -160,6 +164,7 @@ class TestMultiSourceIntegration:
         assert success is True
 
 
+@pytest.mark.asyncio
 class TestStreamingIntegration:
     """Integration tests for streaming output."""
     
@@ -187,9 +192,9 @@ class TestStreamingIntegration:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_streaming_produces_output(self, streaming_processor, test_article, temp_dir, capsys):
+    async def test_streaming_produces_output(self, streaming_processor, test_article, temp_dir, capsys):
         """Test that streaming produces output."""
-        success, _ = streaming_processor.process_mds(
+        success, _ = await streaming_processor.process_mds(
             [test_article],
             ProcessType.BRIEF,
             output_to_console=True,
@@ -204,9 +209,9 @@ class TestStreamingIntegration:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_non_streaming_produces_output(self, non_streaming_processor, test_article, temp_dir):
+    async def test_non_streaming_produces_output(self, non_streaming_processor, test_article, temp_dir):
         """Test that non-streaming produces output."""
-        success, _ = non_streaming_processor.process_mds(
+        success, _ = await non_streaming_processor.process_mds(
             [test_article],
             ProcessType.BRIEF,
             output_to_console=False,
@@ -214,4 +219,3 @@ class TestStreamingIntegration:
         )
         
         assert success is True
-

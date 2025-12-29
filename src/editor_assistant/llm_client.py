@@ -322,12 +322,14 @@ class LLMClient:
                 return response_text, usage
             
             except httpx.RequestError as e:
+                # Use repr(e) instead of str(e) because some httpx exceptions have empty __str__
+                error_msg = str(e) or repr(e)
                 if attempt == MAX_API_RETRIES - 1:
                     raise Exception(
                         f"Failed to generate response after "
-                        f"{MAX_API_RETRIES} attempts: {str(e)}"
+                        f"{MAX_API_RETRIES} attempts: {error_msg}"
                     )
-                warning(f"API request failed ({str(e)}), retrying in {retry_delay} seconds...")
+                warning(f"API request failed ({error_msg}), retrying in {retry_delay} seconds...")
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
             except httpx.HTTPStatusError as e:

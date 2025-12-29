@@ -17,6 +17,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.mark.asyncio
 class TestLLMClientRealAPI:
     """Test LLMClient with real API calls."""
     
@@ -27,11 +28,11 @@ class TestLLMClientRealAPI:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_generate_simple_response(self, client):
+    async def test_generate_simple_response(self, client):
         """Test generating a simple response."""
         prompt = "What is 2+2? Answer with just the number."
         
-        response = client.generate_response(prompt, request_name="test_simple")
+        response, usage = await client.generate_response(prompt, request_name="test_simple")
         
         assert isinstance(response, str)
         assert len(response.strip()) > 0
@@ -39,24 +40,24 @@ class TestLLMClientRealAPI:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_generate_response_tracks_tokens(self, client):
+    async def test_generate_response_tracks_tokens(self, client):
         """Test that token usage is tracked."""
         prompt = "Say 'hello' in three languages."
         
-        client.generate_response(prompt, request_name="test_tokens")
-        usage = client.get_token_usage()
+        response, usage = await client.generate_response(prompt, request_name="test_tokens")
+        token_usage = client.get_token_usage()
         
-        assert usage["total_input_tokens"] > 0
-        assert usage["total_output_tokens"] > 0
-        assert usage["cost"]["total_cost"] > 0
+        assert token_usage["total_input_tokens"] > 0
+        assert token_usage["total_output_tokens"] > 0
+        assert token_usage["cost"]["total_cost"] > 0
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_generate_response_streaming(self, client):
+    async def test_generate_response_streaming(self, client):
         """Test streaming response."""
         prompt = "Count from 1 to 5."
         
-        response = client.generate_response(
+        response, usage = await client.generate_response(
             prompt, 
             request_name="test_stream",
             stream=True
@@ -67,11 +68,11 @@ class TestLLMClientRealAPI:
     
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_generate_response_non_streaming(self, client):
+    async def test_generate_response_non_streaming(self, client):
         """Test non-streaming response."""
         prompt = "What is the capital of France?"
         
-        response = client.generate_response(
+        response, usage = await client.generate_response(
             prompt,
             request_name="test_no_stream",
             stream=False
@@ -81,6 +82,7 @@ class TestLLMClientRealAPI:
         assert "Paris" in response
 
 
+@pytest.mark.asyncio
 class TestMultipleModels:
     """Test different model providers."""
     
@@ -90,12 +92,12 @@ class TestMultipleModels:
         not os.getenv("GEMINI_API_KEY"),
         reason="GEMINI_API_KEY not set"
     )
-    def test_gemini_model(self):
+    async def test_gemini_model(self):
         """Test Gemini model works."""
         client = LLMClient("gemini-3-flash")
         
         try:
-            response = client.generate_response(
+            response, usage = await client.generate_response(
                 "What is 1+1?",
                 request_name="test_gemini"
             )
@@ -110,15 +112,14 @@ class TestMultipleModels:
         not os.getenv("OPENAI_API_KEY_OPENROUTER"),
         reason="OPENAI_API_KEY_OPENROUTER not set"
     )
-    def test_openrouter_model(self):
+    async def test_openrouter_model(self):
         """Test OpenRouter model works."""
         client = LLMClient("gpt-4.1-or")
         
-        response = client.generate_response(
+        response, usage = await client.generate_response(
             "Say hello",
             request_name="test_openrouter"
         )
         
         assert isinstance(response, str)
         assert len(response) > 0
-

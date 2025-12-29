@@ -11,6 +11,15 @@ All notable changes to this project will be documented in this file.
   - Adding new models only requires editing YAML, no Python code changes needed
 - **Documentation**: Updated references to `docs/ENGINEERING_GUIDE.md` (now configured as Cursor user rules)
 
+### Fixed
+- **Tests**: Fixed all test files to work with async v0.5.0 architecture
+  - Updated tests to use `await` for async methods (`process_mds`, `generate_response`)
+  - Fixed `generate_response` return type handling (now returns `Tuple[str, dict]`)
+  - Updated mocks to use `AsyncMock` where appropriate
+  - Fixed streaming test mock setup for async context manager
+- **API Timeout**: Increased `API_REQUEST_TIMEOUT_SECONDS` from 30s to 180s to handle large documents
+- **Error Logging**: Fixed empty error messages in `httpx.RequestError` handling (use `repr(e)` as fallback)
+
 ## [0.5.1] - 2025-12-19
 
 ### Added

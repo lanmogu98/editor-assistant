@@ -47,7 +47,8 @@ MAX_API_RETRIES = 3
 INITIAL_RETRY_DELAY_SECONDS = 1
 
 # Timeout for LLM HTTP requests (seconds).
-API_REQUEST_TIMEOUT_SECONDS = 30
+# Large documents (40K+ tokens) with complex tasks (outline) may need 60-120+ seconds.
+API_REQUEST_TIMEOUT_SECONDS = 180
 
 
 # =============================================================================
