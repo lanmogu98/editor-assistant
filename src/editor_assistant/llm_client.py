@@ -26,8 +26,8 @@ from .config.constants import (
 )
 from .utils import estimate_tokens
 
-# set up the LLM model details
-from .config.set_llm import LLMModel, ALL_MODEL_DETAILS
+# LLM model configuration (YAML is single source of truth)
+from .config.llm_models import get_supported_models, get_model_details
 
 
 class ResponseCache:
@@ -101,7 +101,8 @@ class LLMClient:
     
     @staticmethod
     def get_supported_models():
-        return [model.value for model in LLMModel]
+        """Return list of supported model names from llm_config.yml."""
+        return get_supported_models()
 
     def __init__(self, model_name: str, thinking_level: str = None):
         """
@@ -109,18 +110,14 @@ class LLMClient:
         The client automatically determines the service provider and settings.
         
         Args:
-            model_name: The name of the model to use, as defined in the LLMModel enum.
+            model_name: The name of the model to use, as defined in llm_config.yml.
             thinking_level: Optional thinking/reasoning level override (low, medium, high, minimal).
                           For Gemini 3+, maps to reasoning_effort in OpenAI-compatible format.
         """
         self._thinking_level = thinking_level
-        try:
-            self.model_enum = LLMModel(model_name)
-        except ValueError:
-            raise ValueError(f"Model '{model_name}' is not defined in LLMModel enum.")
 
-        # 1. Get all settings and details for the requested model from the pre-built map
-        provider_settings, model_details = ALL_MODEL_DETAILS[self.model_enum]
+        # Get all settings and details from YAML (single source of truth)
+        provider_settings, model_details = get_model_details(model_name)
         
         # 2. Get the API key
         self.api_key = os.environ.get(provider_settings.api_key_env_var)

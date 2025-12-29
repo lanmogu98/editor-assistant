@@ -37,5 +37,5 @@
     - [x] Fix `--save-files` flag handling.
 - [x] **Docs**:
     - [x] Add Refactor Verification Protocol to `DEVELOPER_GUIDE.md`.
-    - [x] Add TDD practices to `docs/ENGINEERING_GUIDE.md`.
+    - [x] Add TDD practices to Cursor user rules (formerly `docs/ENGINEERING_GUIDE.md`).
     - [x] Sync all docs for v0.5.1.

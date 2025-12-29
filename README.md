@@ -198,7 +198,7 @@ editor-assistant show 1 --output            # Show full output content
 - `--version`: Show version information
 
 ### Developer Docs
-- General engineering norms: `docs/ENGINEERING_GUIDE.md`
+- General engineering norms: Configured as Cursor user rules
 - Project-specific architecture/tests/configs: `DEVELOPER_GUIDE.md`
 
 ### Python API (Async)

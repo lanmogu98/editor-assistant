@@ -3,7 +3,7 @@
 This document provides technical documentation for developers contributing to Editor Assistant.
 
 ## Documentation Map
-- General engineering norms (reusable across projects): see `docs/ENGINEERING_GUIDE.md`.
+- General engineering norms (reusable across projects): configured as Cursor user rules.
 - This file focuses on project-specific architecture, configs, models, tasks, storage, and test matrix.
 
 ## Table of Contents
@@ -18,7 +18,7 @@ This document provides technical documentation for developers contributing to Ed
 8. [Performance & Concurrency](#performance--concurrency)
 
 ## Documentation Synchronization
-(See `docs/ENGINEERING_GUIDE.md` for general norms)
+(General engineering norms are configured as Cursor user rules)
 
 **Agent Protocol**:
 1. **Roadmap**: `FUTURE_ROADMAP.md` is the source of truth for planning. Agent TODOs (`TODO_claude.md`, `TODO_gemini.md`) are transient execution logs. Always sync status back to Roadmap.
@@ -119,35 +119,22 @@ Input (URL/PDF/MD)
 
 ## Adding a New LLM Model
 
-### Step 1: Add to `LLMModel` Enum
+**Single Source of Truth:** `config/llm_config.yml` is the only file you need to edit.
 
-Edit `config/set_llm.py`:
-
-```python
-class LLMModel(str, Enum):
-    # existing models...
-    
-    # Add your new model
-    your_new_model = "your-model-name"  # The CLI-facing name
-```
-
-### Step 2: Add Provider (if new)
-
-If using a new provider, add to `ServiceProvider` enum:
-
-```python
-class ServiceProvider(str, Enum):
-    # existing providers...
-    
-    your_provider = "your-provider"
-```
-
-### Step 3: Configure in YAML
+### Step 1: Add to YAML Config
 
 Edit `config/llm_config.yml`:
 
 ```yaml
-your-provider:
+# Add new model to existing provider
+existing-provider:
+  models:
+    your-new-model:
+      id: "actual-api-model-id"
+      pricing: {input: 1.00, output: 2.00}  # per 1M tokens
+
+# Or add a new provider with models
+your-new-provider:
   api_key_env_var: "YOUR_API_KEY"
   api_base_url: "https://api.yourprovider.com/v1/chat/completions"
   temperature: 0.6
@@ -157,20 +144,22 @@ your-provider:
   models:
     your-model-name:
       id: "actual-api-model-id"
-      pricing: {input: 1.00, output: 2.00}  # per 1M tokens
+      pricing: {input: 1.00, output: 2.00}
 ```
 
-### Step 4: Set Environment Variable
+### Step 2: Set Environment Variable
 
 ```bash
 export YOUR_API_KEY="your-api-key-here"
 ```
 
-### Step 5: Test
+### Step 3: Test
 
 ```bash
 editor-assistant brief paper=test.pdf --model your-model-name
 ```
+
+That's it! No Python code changes needed. The model list is dynamically loaded from YAML.
 
 ---
 

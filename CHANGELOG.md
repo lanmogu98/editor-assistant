@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **Model Config Refactor**: YAML is now the single source of truth for model/provider configuration.
+  - Removed hardcoded `LLMModel` and `ServiceProvider` enums from `set_llm.py`
+  - Model list is now dynamically loaded from `llm_config.yml`
+  - Adding new models only requires editing YAML, no Python code changes needed
+- **Documentation**: Updated references to `docs/ENGINEERING_GUIDE.md` (now configured as Cursor user rules)
+
 ## [0.5.1] - 2025-12-19
 
 ### Added
@@ -42,7 +49,7 @@ Major architecture refactor to Asynchronous I/O for high-performance batch proce
 ## [0.4.1] - 2025-12-19
 
 ### Docs
-- Split documentation: general norms in `docs/ENGINEERING_GUIDE.md`; project-specific details remain in `DEVELOPER_GUIDE.md`. Added README pointers.
+- Split documentation: general norms moved to Cursor user rules; project-specific details remain in `DEVELOPER_GUIDE.md`.
 
 ### Changed
 - Version metadata aligned to `0.4.1` across README, `pyproject.toml`, and `__version__`.
