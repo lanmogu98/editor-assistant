@@ -6,6 +6,8 @@ import pytest
 import os
 from unittest.mock import MagicMock, AsyncMock, patch
 
+pytestmark = pytest.mark.unit
+
 @pytest.fixture
 def mock_httpx_client():
     """Fixture to mock httpx.AsyncClient."""
@@ -27,7 +29,7 @@ def mock_env_vars(monkeypatch):
 class TestAsyncLLMClient:
     
     async def test_generate_response_is_async(self, mock_env_vars, mock_httpx_client):
-        """Test that generate_response is an async method."""
+        """Test that generate_response is an async method returning tuple."""
         from editor_assistant.llm_client import LLMClient
         
         # Setup mock response
@@ -45,14 +47,18 @@ class TestAsyncLLMClient:
         client = LLMClient("deepseek-v3.2")
         
         # Execute (should be awaitable)
-        response = await client.generate_response("Hello")
+        response, usage = await client.generate_response("Hello")
         
+        # Response is now a tuple (text, usage_dict)
         assert response == "Test response"
+        assert isinstance(usage, dict)
+        assert "total_input_tokens" in usage
         mock_httpx_client.post.assert_called_once()
     
     async def test_streaming_response(self, mock_env_vars, mock_httpx_client):
         """Test streaming response handling."""
         from editor_assistant.llm_client import LLMClient
+        from contextlib import asynccontextmanager
         
         # Setup mock streaming response object
         mock_response = MagicMock()
@@ -72,14 +78,12 @@ class TestAsyncLLMClient:
         mock_response.aiter_lines = mock_lines
         
         # Configure client.stream to be an async context manager
-        # CRITICAL FIX: AsyncMock by default returns a Coroutine when called.
-        # But `client.stream(...)` returns a Context Manager, NOT a coroutine.
-        # We need to make sure mock_httpx_client.stream(...) returns the context manager directly.
-        stream_context = MagicMock()  # Not AsyncMock, because calling stream() is synchronous-ish returning a context manager
-        stream_context.__aenter__ = AsyncMock(return_value=mock_response)
-        stream_context.__aexit__ = AsyncMock(return_value=None)
+        # Use asynccontextmanager to create a proper async context manager
+        @asynccontextmanager
+        async def mock_stream(*args, **kwargs):
+            yield mock_response
         
-        mock_httpx_client.stream.return_value = stream_context
+        mock_httpx_client.stream = mock_stream
         
         client = LLMClient("deepseek-v3.2")
         
@@ -91,11 +95,13 @@ class TestAsyncLLMClient:
         sys.stdout = captured
         
         try:
-            response = await client.generate_response("Hello", stream=True)
+            response, usage = await client.generate_response("Hello", stream=True)
         finally:
             sys.stdout = original_stdout  # Restore stdout
-            
+        
+        # Response is now a tuple (text, usage_dict)
         assert response == "Async World"
+        assert isinstance(usage, dict)
         assert "Async World" in captured.getvalue()
 
     async def test_context_manager_support(self, mock_env_vars):

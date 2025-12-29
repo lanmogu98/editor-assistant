@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 from editor_assistant.cli import cmd_batch_process
 from editor_assistant.data_models import Input, InputType
 
+pytestmark = pytest.mark.unit
+
 @pytest.mark.asyncio
 async def test_batch_process_ui_flow(tmp_path, capsys):
     """

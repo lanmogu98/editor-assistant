@@ -4,14 +4,13 @@ Integration test for Async Flow (End-to-End).
 
 import pytest
 import os
-import asyncio
 from editor_assistant.main import EditorAssistant
 from editor_assistant.data_models import Input, InputType, ProcessType
 
 # Skip if API keys are not set
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY_VOLC") and not os.getenv("DEEPSEEK_API_KEY"),
-    reason="DEEPSEEK_API_KEY_VOLC or DEEPSEEK_API_KEY not set"
+    not os.getenv("DEEPSEEK_API_KEY_VOLC"),
+    reason="DEEPSEEK_API_KEY_VOLC not set"
 )
 
 # Use cheap model for testing
@@ -67,8 +66,4 @@ async def test_async_process_multiple_real_api(tmp_path):
         assert run['status'] in ['success', 'failed']
         if run['status'] == 'failed':
             print(f"Run {run['id']} failed: {run.get('error_message')}")
-
-if __name__ == "__main__":
-    # Allow running directly for manual check
-    asyncio.run(test_async_process_multiple_real_api(Path(".")))
 

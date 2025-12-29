@@ -6,7 +6,19 @@ Integration tests with real APIs are in tests/integration/.
 """
 
 import pytest
-import os
+
+
+@pytest.fixture(autouse=True)
+def _set_dummy_api_key_for_unit_tests(monkeypatch):
+    """
+    IMPORTANT (beginner note):
+    `LLMClient.__init__()` *requires* an API key env var to exist, even if we never
+    make a network call.
+
+    For unit tests we set a dummy key so we can construct the object and test
+    purely-local behavior (config loading, request overrides, token accounting).
+    """
+    monkeypatch.setenv("DEEPSEEK_API_KEY_VOLC", "test-key-volc")
 
 
 class TestLLMClientImport:
@@ -23,10 +35,6 @@ class TestLLMClientInit:
     """Test LLMClient initialization (requires API key)."""
     
     @pytest.mark.unit
-    @pytest.mark.skipif(
-        not os.getenv("DEEPSEEK_API_KEY"),
-        reason="DEEPSEEK_API_KEY not set"
-    )
     def test_client_initializes_with_valid_model(self):
         """Test client initializes with a valid model name."""
         from editor_assistant.llm_client import LLMClient
@@ -37,10 +45,6 @@ class TestLLMClientInit:
         assert client.max_tokens > 0
     
     @pytest.mark.unit
-    @pytest.mark.skipif(
-        not os.getenv("DEEPSEEK_API_KEY"),
-        reason="DEEPSEEK_API_KEY not set"
-    )
     def test_client_sets_thinking_level(self):
         """Test thinking_level is applied."""
         from editor_assistant.llm_client import LLMClient
@@ -55,10 +59,6 @@ class TestLLMClientTokenUsage:
     """Test token usage tracking."""
     
     @pytest.mark.unit
-    @pytest.mark.skipif(
-        not os.getenv("DEEPSEEK_API_KEY"),
-        reason="DEEPSEEK_API_KEY not set"
-    )
     def test_initial_token_usage_is_zero(self):
         """Test token usage starts at zero."""
         from editor_assistant.llm_client import LLMClient
@@ -70,10 +70,6 @@ class TestLLMClientTokenUsage:
         assert usage["cost"]["total_cost"] == 0
     
     @pytest.mark.unit
-    @pytest.mark.skipif(
-        not os.getenv("DEEPSEEK_API_KEY"),
-        reason="DEEPSEEK_API_KEY not set"
-    )
     def test_token_usage_structure(self):
         """Test token usage has expected structure."""
         from editor_assistant.llm_client import LLMClient
