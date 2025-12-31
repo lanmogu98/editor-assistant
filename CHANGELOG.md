@@ -67,7 +67,7 @@ Major architecture refactor to Asynchronous I/O for high-performance batch proce
 ### Added
 - Unit coverage for content validation (blocked publishers, short content warnings).
 - Test fixtures now require `DEEPSEEK_API_KEY_VOLC` (DeepSeek via Volcengine); legacy key removed.
-- `TODO_codex.md` to track branch-specific tasks (tests vs reliability).
+- `TODO.md` to track current tasks (consolidated from agent-specific files).
 - Batch processing helper script (`scripts/batch_process.py`) for HTML/MD with task/model/preview options.
 - Content validation enforced in processing pipeline (blocked publisher hard stop, short-content warning).
 - CLI `--save-files` flag (default off) to control whether prompts/responses/token reports are written to disk; DB remains updated.

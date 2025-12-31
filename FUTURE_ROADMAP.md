@@ -29,6 +29,10 @@ This document outlines remaining architectural improvements that require signifi
 
 ## 2. Configuration File Support
 
+**Status:** ⏸️ Deferred to Phase 3 (与 GUI 一起实现)
+
+> 对非技术用户操作难度较大，在浏览器插件/Web UI 之前实用性有限。
+
 **Why it matters:**
 - Users must pass CLI args every time
 - No way to set project-specific defaults
@@ -155,11 +159,13 @@ class MyConverter(ConverterProtocol):
 
 | Priority | Item | Effort | Impact |
 |----------|------|--------|--------|
-| 1 | Configuration file support | 1 day | High (UX) |
-| 2 | Async processing | 2-3 days | High (Performance) |
+| 1 | Resume capability & Export | 1 day | High (完善 Persistence) |
+| 2 | Tiered Pricing System | 1 day | Medium (成本准确性) |
 | 3 | Dependency injection | 1-2 days | Medium (Testability) |
-| 4 | Plugin system | 2-3 days | Medium (Extensibility) |
-| 5 | Resume capability & Export | 1 day | Medium (UX) |
+| 4 | Plugin system (外部加载) | 2-3 days | Medium (Extensibility) |
+| ~~5~~ | ~~Configuration file support~~ | ~~1 day~~ | ~~Deferred to Phase 3~~ |
+
+> **Note**: Configuration file support 对非技术用户操作难度较大，在 GUI（如浏览器插件）之前实用性有限，已推迟至 Phase 3 与前端一起实现。
 
 ---
 
@@ -378,13 +384,12 @@ frontend/
 
 | Phase | Item | Effort | Impact |
 |-------|------|--------|--------|
-| **1 (Current)** | TODO.md 任务 | 1-2 weeks | Foundation |
-| **1** | Configuration file support | 1 day | High (UX) |
-| **1** | Async processing | 2-3 days | High (Performance) |
-| **2** | Tiered pricing | 1 day | Medium (Accuracy) |
-| **2** | Resume capability | 1 day | Medium (Reliability) |
+| **1 (Current)** | Resume capability & Export | 1 day | High (完善 Persistence) |
+| **1** | Tiered pricing | 1 day | Medium (成本准确性) |
+| **1** | Dependency injection | 1-2 days | Medium (Testability) |
 | **2** | Benchmark module | 2-3 weeks | High (Product) |
 | **2** | Interactive assistant (backend) | 3-4 weeks | High (Product) |
+| **3** | Configuration file support | 1 day | High (与 GUI 配合) |
 | **3** | Web UI | 4-6 weeks | High (Adoption) |
 | **3** | Browser extension | 2 weeks | Medium (UX) |
 | **3** | Desktop app | 2-3 weeks | Medium (Offline) |
