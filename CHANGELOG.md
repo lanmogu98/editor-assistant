@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - **Documentation**: Updated references to `docs/ENGINEERING_GUIDE.md` (now configured as Cursor user rules)
 
 ### Fixed
+- **pytest.ini**: Added `asyncio_mode = strict` (required for pytest-asyncio >=0.21), added missing `expensive` marker, removed unused markers
 - **Tests**: Fixed all test files to work with async v0.5.0 architecture
   - Updated tests to use `await` for async methods (`process_mds`, `generate_response`)
   - Fixed `generate_response` return type handling (now returns `Tuple[str, dict]`)
