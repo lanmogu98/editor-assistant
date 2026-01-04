@@ -168,38 +168,6 @@ class MyConverter(ConverterProtocol):
    - Current pattern fetches run ids, then queries inputs/outputs/token usage per run (multiple queries per run).
    - Explore batching approaches (e.g. `WHERE run_id IN (...)` + in-memory grouping) or a JOIN-based export query, then benchmark on large DB sizes.
 
-3. **Schema versioning + lightweight migrations**
-   - `schema_version`/`SCHEMA_VERSION` exists, but there is no version check/migration path before reading/writing.
-   - Add a startup check + minimal migrations (or fail-fast with an actionable message) to prevent silent breakage when schema evolves.
-
-4. **Input deduplication edge cases (empty/failed conversions)**
-   - Current dedup uses `content_hash = md5(content)`. Empty content can collapse unrelated inputs into one record.
-   - Consider hashing a safer fallback (e.g. include `source_path` when content is empty) or storing a sentinel to avoid cross-input collisions.
-
----
-
-## 5A. Correctness & Robustness Hardening (Low/Medium, from AI audits)
-
-These are not urgent, but they reduce future surprises and make “turning on features” safer.
-
-1. **Response cache correctness + accounting**
-   - Cache key currently ignores request overrides (e.g. thinking level / provider overrides) and cache hits return usage=0.
-   - If caching is enabled in the future, consider including overrides in the cache key and recording “cache-hit” usage metadata (rather than zeroing costs).
-
-2. **Context budgeting: make reserves more adaptive**
-   - Current context budgeting reserves fixed prompt overhead + output reserve; for smaller-context models this can cause false rejections or waste capacity.
-   - Consider per-model/per-task reserves and document defaults/override knobs.
-
-3. **`md_converter` side effects + logging consistency**
-   - `convert_content()` currently writes markdown files as a side effect; make persistence optional (caller-controlled) to avoid unexpected disk writes.
-   - Align error visibility between HTML conversion failures and MarkItDown failures (especially in debug mode).
-
-4. **LLMClient lifecycle management**
-   - Guard against long-lived `httpx.AsyncClient` leaks (ensure `close()` is always called or enforce context-manager usage).
-
-5. **Content validation warning duplication**
-   - `validate_content()` logs a warning and the caller may log the same warning again; unify responsibility to avoid duplicate messages.
-
 ---
 
 ## Priority Order
