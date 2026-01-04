@@ -9,6 +9,7 @@ This document outlines remaining architectural improvements that require signifi
 **Status:** ✅ Completed (v0.5.0)
 
 **Why it matters:**
+
 - Currently processes documents sequentially (N documents = N × time)
 - Network I/O wait time is wasted (LLM API calls take 2-30 seconds each)
 - (Solved: Streaming responses are now supported, but processing is still serial)
@@ -34,6 +35,7 @@ This document outlines remaining architectural improvements that require signifi
 > 对非技术用户操作难度较大，在浏览器插件/Web UI 之前实用性有限。
 
 **Why it matters:**
+
 - Users must pass CLI args every time
 - No way to set project-specific defaults
 - Environment variables are clunky for multiple settings
@@ -146,12 +148,25 @@ class MyConverter(ConverterProtocol):
 **Implementation Plan:**
 ```
 1. Add SQLite database (lightweight, no server needed) ✅
-2. Schema: sessions, requests, token_usage, cache ✅
-3. Add CLI commands: `history`, `stats` ✅, `resume` (Pending)
-4. Optional: Export to CSV/JSON (Pending)
+2. Schema: `inputs`, `runs`, `run_inputs`, `outputs`, `token_usage` ✅
+3. Add CLI commands: `history`, `stats`, `show`, `resume`, `export` ✅
+4. Optional: Export to CSV/JSON ✅
 ```
 
 **Estimated effort:** 2-3 days
+
+**Low-priority follow-ups (design/perf refinements):**
+
+1. **Resume semantics / DB record consistency**
+   - Current behavior can result in confusing history (e.g. original run marked `success` after resume, but outputs/token usage belong to the new run record).
+   - Explore options:
+     - Link runs (e.g. `resumed_from_run_id` / `resumed_by_run_id`) and keep original run as `aborted`/`superseded`
+     - Or reuse the original run_id when resuming so outputs/token usage attach to the same run record
+   - Goal: make `history/show/export` unambiguous and avoid “duplicate success” confusion.
+
+2. **Resume/Export query efficiency (avoid N+1 queries)**
+   - Current pattern fetches run ids, then queries inputs/outputs/token usage per run (multiple queries per run).
+   - Explore batching approaches (e.g. `WHERE run_id IN (...)` + in-memory grouping) or a JOIN-based export query, then benchmark on large DB sizes.
 
 ---
 

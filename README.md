@@ -6,12 +6,12 @@
 
 A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
 
-**Version: 0.5.1** | [See Breaking Changes](#-breaking-changes-in-v02)
+**Version: 0.5.1** | [See Breaking Changes](#breaking-changes-in-v02)
 
 ### 🚀 Features
 
 - **High-Performance Async Processing**: Built on `asyncio` and `httpx` for fast concurrent processing of multiple documents.
-- **Simple CLI Interface**: Command-line tool with 5 main commands
+- **Simple CLI Interface**: Command-line tool with subcommands: `brief`, `outline`, `translate`, `process`, `batch`, `convert`, `clean`, `history`, `stats`, `show`, `resume`, `export`
 - **Multi-format Input**: Processes PDFs, DOCs, web pages, URLs, and markdown files
 - **Three Content Types**:
   - **Brief News**: Convert research papers into short news articles
@@ -22,17 +22,17 @@ A simple AI-powered Python CLI tool for processing research papers and generatin
 
 ### 📋 Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - API keys for supported LLM providers:
 - **Deepseek**: `DEEPSEEK_API_KEY_VOLC` environment variable (via Volcengine)
   - **Gemini**: `GEMINI_API_KEY` environment variable
-  - **Kimi**: `KIMI_API_KEY` environment variable (via Volcengine)
+  - **Kimi**: `KIMI_API_KEY_VOLC` environment variable (via Volcengine)
   - **Doubao**: `DOUBAO_API_KEY` environment variable (via Volcengine)
   - **Qwen**: `QWEN_API_KEY` environment variable (via Alibaba Cloud)
   - **GLM**: `ZHIPU_API_KEY` environment variable (via Zhipu AI)
   - **GLM (OpenRouter)**: `ZHIPU_API_KEY_OPENROUTER` environment variable (via OpenRouter)
-  - **OpenAI (OpenRouter)**: `OPENAI_API_KEY` environment variable (via OpenRouter)
-  - **Anthropic (OpenRouter)**: `ANTHROPIC_API_KEY` environment variable (via OpenRouter)
+- **OpenAI (OpenRouter)**: `OPENAI_API_KEY_OPENROUTER` environment variable (via OpenRouter)
+- **Anthropic (OpenRouter)**: `ANTHROPIC_API_KEY_OPENROUTER` environment variable (via OpenRouter)
 
 ## 🛠️ Installation
 
@@ -69,7 +69,7 @@ export DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 export GEMINI_API_KEY=your_gemini_api_key
 
 # For Kimi models (via Volcengine)
-export KIMI_API_KEY=your_kimi_api_key
+export KIMI_API_KEY_VOLC=your_kimi_api_key
 
 # For Doubao models (via Volcengine)
 export DOUBAO_API_KEY=your_doubao_api_key
@@ -84,24 +84,24 @@ export ZHIPU_API_KEY=your_zhipu_api_key
 export ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
 
 # For OpenAI models (via OpenRouter)
-export OPENAI_API_KEY=your_openrouter_api_key
+export OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
 
 # For Anthropic models (via OpenRouter)
-export ANTHROPIC_API_KEY=your_openrouter_api_key
+export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
-Or create a `.env` file:
+Or create a `.env` file and load it into your shell environment:
 
 ```env
-DEEPSEEK_API_KEY=your_volcengine_api_key
+DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 GEMINI_API_KEY=your_gemini_api_key
-KIMI_API_KEY=your_kimi_api_key
+KIMI_API_KEY_VOLC=your_kimi_api_key
 DOUBAO_API_KEY=your_doubao_api_key
 QWEN_API_KEY=your_qwen_api_key
 ZHIPU_API_KEY=your_zhipu_api_key
 ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
-OPENAI_API_KEY=your_openrouter_api_key
-ANTHROPIC_API_KEY=your_openrouter_api_key
+OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
+ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
 ## 🎯 Usage
@@ -130,7 +130,7 @@ editor-assistant outline paper.pdf --save-files
 
 ```bash
 editor-assistant translate https://arxiv.org/paper.pdf
-editor-assistant translate document.pdf --model gemini-2.5-pro
+editor-assistant translate document.pdf --model gemini-3-pro
 editor-assistant translate research.md --model deepseek-r1 --debug
 # Optional file outputs
 editor-assistant translate research.md --save-files
@@ -157,7 +157,10 @@ editor-assistant batch ./papers/ --ext .html --task outline --save-files
 
 ```bash
 editor-assistant convert document.pdf
-editor-assistant convert *.docx -o converted/
+editor-assistant convert *.docx
+
+# For bulk conversion into an output directory, use the utility command:
+any2md *.docx -o converted/
 ```
 
 **Clean HTML to Markdown:**
@@ -188,16 +191,26 @@ editor-assistant show 1                     # Show details of run #1
 editor-assistant show 1 --output            # Show full output content
 ```
 
+**Resume Interrupted Runs and Export History:**
+
+```bash
+editor-assistant resume --dry-run
+editor-assistant resume --save-files
+editor-assistant export history.json
+editor-assistant export history.csv --limit 100
+```
+
 ### Global Options
 
 - `--model`: Choose LLM model (default: deepseek-v3.2)
 - `--thinking`: Reasoning level for Gemini 3+ models (`low`, `medium`, `high`). Default: model decides dynamically
 - `--no-stream`: Disable streaming output (default: streaming enabled)
-- `--save-files`: Persist prompts/responses/token reports to disk (default: off; DB is still updated)
+- `--save-files`: Persist generated responses and token report to disk (default: off; DB is still updated)
 - `--debug`: Enable detailed debug logging with file output
 - `--version`: Show version information
 
 ### Developer Docs
+
 - General engineering norms: Configured as Cursor user rules
 - Project-specific architecture/tests/configs: `DEVELOPER_GUIDE.md`
 
@@ -284,32 +297,24 @@ if __name__ == "__main__":
 
 ### 📊 Output Structure
 
-The tool creates organized output for each processed document:
+When `--save-files` is enabled, generated files are written under `llm_summaries/<model>/` (next to the input/converted markdown):
 
 ```text
 llm_summaries/
-├── document_name_model_name/
-│   ├── prompts/
-│   │   ├── document_name_brief.md
-│   │   ├── document_name_outline.md
-│   │   └── document_name_translate.md
-│   ├── responses/
-│   │   ├── document_name_brief.md
-│   │   ├── document_name_outline.md
-│   │   ├── document_name_translate_model.md
-│   │   └── bilingual_document_name_translate_model.md  # Bilingual side-by-side
-│   └── token_usage/
-│       ├── token_usage.json
-│       └── token_usage.txt
+└── <model>/
+    ├── response_<title_base><suffix>_<model>_<timestamp>.md
+    ├── response_bilingual_<title_base><suffix>_<model>_<timestamp>.md  # translate task only
+    └── token_usage_<title_base><suffix>_<model>_<timestamp>.txt
 ```
 
-### ⚠️ Breaking Changes in v0.2
+### Breaking Changes in v0.2
 
 **Important**: Version 0.2 introduces breaking changes. Please review before upgrading.
 
 #### CLI Syntax Changes
 
 **Old syntax (v0.1):**
+
 ```bash
 editor-assistant brief --article paper:paper.pdf --article news:article.md
 editor-assistant outline --article paper:research.pdf
@@ -325,36 +330,27 @@ editor-assistant outline research.pdf
 
 #### Model Name Changes
 
-Several model names have been updated or removed:
-
-| Old Name (v0.1) | New Name (v0.2) | Status |
-|----------------|----------------|--------|
-| `deepseek-r1-latest` | `deepseek-r1` | ✅ Use `deepseek-r1` |
-| `deepseek-v3-latest` | `deepseek-v3` | ✅ Use `deepseek-v3` |
-| `qwen-plus-latest` | `qwen3-max` or `qwen3-max-preview` | ✅ Use `qwen3-max` |
-| `gemini-2.5-flash-lite` | Removed | ❌ Use `gemini-2.5-flash` instead |
-| `glm-4.5-openrouter` | `glm-4.5-or` | ✅ Renamed for consistency |
+Model names are loaded dynamically from `src/editor_assistant/config/llm_config.yml`. Use `editor-assistant --help` to see the current `--model` choices.
 
 **New additions:**
-- `deepseek-v3.2` - Native Deepseek API support
+- `deepseek-v3.2`
 - `gpt-4o-or`, `gpt-4.1-or`, `gpt-5-or` - OpenAI models via OpenRouter
 - `claude-sonnet-4-or` - Anthropic Claude via OpenRouter
 
 #### Default Model Change
 
-- **Old default**: `glm-4.5-or`
-- **New default**: `glm-4.6-or`
+Current default model: `deepseek-v3.2` (see `--model` under Global Options).
 
 **Why?** Better balance of performance, cost, and reliability across different use cases.
 
 #### Migration Guide
 
 1. **Update CLI commands**: Replace `--article type:path` with `type=path`
-2. **Update model names**: Check the table above and update your scripts
+2. **Update model names**: See "Supported Models" (or check `src/editor_assistant/config/llm_config.yml`)
 3. **Set new environment variables** (if using new providers):
    ```bash
-   export OPENAI_API_KEY=your_openrouter_key
-   export ANTHROPIC_API_KEY=your_openrouter_key
+   export OPENAI_API_KEY_OPENROUTER=your_openrouter_key
+   export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_key
    ```
 4. **Test your workflow** with `--debug` flag to verify everything works
 
@@ -396,7 +392,7 @@ For support, please open an issue on GitHub or contact the maintainers.
 ### 🚀 功能特色
 
 - **高性能异步处理**: 基于 `asyncio` 和 `httpx` 构建，支持多文档的快速并发处理。
-- **简单CLI界面**：包含5个主要命令的命令行工具
+- **简单CLI界面**：包含多个子命令（brief/outline/translate/process/batch/convert/clean/history/stats/show/resume/export）
 - **多格式输入**：处理PDF、DOC、网页、URL和markdown文件
 - **三种内容类型**：
   - **简讯**：将研究论文转换为短新闻文章
@@ -407,17 +403,17 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 ### 📋 依赖条件
 
-- Python 3.8+
+- Python 3.9+
 - 支持的LLM提供商的API密钥：
-  - **Deepseek**：`DEEPSEEK_API_KEY`环境变量（通过火山引擎）
+  - **Deepseek**：`DEEPSEEK_API_KEY_VOLC`环境变量（通过火山引擎）
   - **Gemini**：`GEMINI_API_KEY`环境变量
-  - **Kimi**：`KIMI_API_KEY`环境变量（通过火山引擎）
+  - **Kimi**：`KIMI_API_KEY_VOLC`环境变量（通过火山引擎）
   - **Doubao**：`DOUBAO_API_KEY`环境变量（通过火山引擎）
   - **Qwen**：`QWEN_API_KEY`环境变量（通过阿里云）
   - **GLM**：`ZHIPU_API_KEY`环境变量（通过智谱AI）
   - **GLM (OpenRouter)**：`ZHIPU_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
-  - **OpenAI (OpenRouter)**：`OPENAI_API_KEY`环境变量（通过OpenRouter）
-  - **Anthropic (OpenRouter)**：`ANTHROPIC_API_KEY`环境变量（通过OpenRouter）
+  - **OpenAI (OpenRouter)**：`OPENAI_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
+  - **Anthropic (OpenRouter)**：`ANTHROPIC_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
 
 ### 🛠️ 安装
 
@@ -441,7 +437,7 @@ export DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 export GEMINI_API_KEY=your_gemini_api_key
 
 # 对于Kimi模型（通过火山引擎）
-export KIMI_API_KEY=your_kimi_api_key
+export KIMI_API_KEY_VOLC=your_kimi_api_key
 
 # 对于Doubao模型（通过火山引擎）
 export DOUBAO_API_KEY=your_doubao_api_key
@@ -473,7 +469,7 @@ editor-assistant outline paper.pdf --model deepseek-r1
 
 ```bash
 editor-assistant translate https://arxiv.org/paper.pdf
-editor-assistant translate document.pdf --model gemini-2.5-pro
+editor-assistant translate document.pdf --model gemini-3-pro
 editor-assistant translate research.md --model deepseek-r1 --debug
 ```
 
@@ -498,7 +494,10 @@ editor-assistant batch ./papers/ --ext .html --task outline --save-files
 
 ```bash
 editor-assistant convert document.pdf
-editor-assistant convert *.docx -o converted/
+editor-assistant convert *.docx
+
+# 批量转换到指定目录请使用兼容工具命令：
+any2md *.docx -o converted/
 ```
 
 **将HTML转换为格式干净的Markdown：**
@@ -508,15 +507,23 @@ editor-assistant clean "https://example.com/page.html" -o clean.md
 editor-assistant clean page.html --stdout
 ```
 
+**恢复中断任务与导出历史：**
+
+```bash
+editor-assistant resume --dry-run
+editor-assistant resume --save-files
+editor-assistant export history.json
+editor-assistant export history.csv --limit 100
+```
+
 
 ### 🤖 支持的模型
 
 #### 由火山引擎提供
 
 ##### Deepseek模型
-- `deepseek-v3.1` - 最新混合通用模型（2025年发布）
+- `deepseek-v3.2` - 最新通用模型（2025年发布）
 - `deepseek-r1` - 推理模型
-- `deepseek-v3` - 基础模型
 
 ##### Doubao模型
 - `doubao-seed-1.6` - 高级语言模型，支持256k上下文窗口
@@ -534,8 +541,8 @@ editor-assistant clean page.html --stdout
 #### 由谷歌云提供
 
 ##### Gemini模型 （google cloud）
-- `gemini-2.5-flash` - 平衡性能模型
-- `gemini-2.5-pro` - 高性能模型
+- `gemini-3-flash` - 平衡性能模型
+- `gemini-3-pro` - 高性能模型
 
 #### 由智谱提供
 

@@ -3,6 +3,7 @@
 This document provides technical documentation for developers contributing to Editor Assistant.
 
 ## Documentation Map
+
 - General engineering norms (reusable across projects): configured as Cursor user rules.
 - This file focuses on project-specific architecture, configs, models, tasks, storage, and test matrix.
 
@@ -18,9 +19,11 @@ This document provides technical documentation for developers contributing to Ed
 8. [Performance & Concurrency](#performance--concurrency)
 
 ## Documentation Synchronization
+
 (General engineering norms are configured as Cursor user rules)
 
 **Agent Protocol**:
+
 1. **Roadmap**: `FUTURE_ROADMAP.md` is the source of truth for planning. `TODO.md` is the current execution checklist. Always sync status back to Roadmap.
 2. **Developer Guide**: This file (`DEVELOPER_GUIDE.md`) must reflect the *current* architecture. If you add a module (e.g. `async_processor`), update the "Architecture Overview" and "Module Reference" immediately.
 3. **Changelog**: All user-facing changes go to `CHANGELOG.md`.
@@ -29,11 +32,12 @@ This document provides technical documentation for developers contributing to Ed
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                           CLI Layer                             │
 │                          (cli.py)                               │
-│  Commands: brief, outline, translate, convert, clean            │
+│  Commands: brief, outline, translate, process, batch, convert   │
+│            clean, history, stats, show, resume, export          │
 │  [Async Entry Point] via asyncio.run()                          │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
@@ -77,14 +81,14 @@ This document provides technical documentation for developers contributing to Ed
 
 ### Data Flow (Async)
 
-```
+```text
 Input (URL/PDF/MD) 
-    → MarkdownConverter.convert_content() [Sync]
+    → MarkdownConverter.convert_content() [Sync] (or direct `.md` read)
     → MDArticle (normalized content)
     → EditorAssistant.process_multiple() [Async Fan-out]
     → MDProcessor.process_mds() [Async] (Semaphore-limited)
     → LLMClient.generate_response() [Async]
-    → Output (MD files + token report)
+    → Output (SQLite run history + optional files under `llm_summaries/`)
 ```
 
 ---
@@ -94,8 +98,8 @@ Input (URL/PDF/MD)
 ### Core Modules
 
 | Module | Purpose | Key Classes/Functions |
-|--------|---------|----------------------|
-| `cli.py` | Async Command-line interface | `main()`, `cmd_generate_brief()` (async) |
+| ------ | ------- | ------------------- |
+| `cli.py` | Async Command-line interface | `main()`, `create_parser()`, `cmd_generate_brief()` (async), `cmd_resume()` (async), `cmd_export()` |
 | `main.py` | Async Orchestration | `EditorAssistant` |
 | `md_converter.py` | Format conversion (Sync) | `MarkdownConverter` |
 | `md_processor.py` | Async LLM processing | `MDProcessor` (uses `asyncio.Semaphore`) |
@@ -107,9 +111,9 @@ Input (URL/PDF/MD)
 ### Config Modules
 
 | Module | Purpose |
-|--------|---------|
+| ------ | ------- |
 | `config/llm_config.yml` | LLM provider settings (API URLs, models, pricing) |
-| `config/set_llm.py` | Model/Provider enums and YAML loader |
+| `config/llm_models.py` | YAML loader + model/provider lookup |
 | `config/constants.py` | All configurable constants |
 | `config/load_prompt.py` | Prompt template loader |
 | `config/logging_config.py` | Logging utilities |
@@ -262,6 +266,7 @@ RESPONSE_CACHE_TTL_SECONDS = 3600
 ### Model Configuration (`config/llm_config.yml`)
 
 Structure:
+
 ```yaml
 provider-name:
   api_key_env_var: "ENV_VAR_NAME"
@@ -322,7 +327,7 @@ Tests for async components must use `pytest-asyncio`.
 
 #### Test Data Thresholds
 - **Content Length**: Benchmark and Stress tests require input content length > **1000 characters**.
-  - *Reasoning*: The `MDProcessor` has logic to warn or reject suspiciously short content. Test generators (like `benchmark_async.py`) must ensure dummy data exceeds this threshold to avoid warnings or invalid test results.
+  - *Reasoning*: Content validation warns when extracted content is shorter than `MIN_CHARS_WARNING_THRESHOLD` (default: 1000). Test generators (like `benchmark_async.py`) should exceed this threshold to avoid noisy warnings.
 
 #### Unit Test Example (Async)
 
@@ -386,9 +391,19 @@ user_message(f"Output saved to: {path}")
 
 ```python
 from .content_validation import validate_content, BlockedPublisherError
+from .config.logging_config import error
 
 try:
-    validate_content(md_article)
+    source_url = (
+        md_article.source_path
+        if md_article.source_path and str(md_article.source_path).startswith("http")
+        else None
+    )
+    # validate_content() returns (is_valid, message) and may raise BlockedPublisherError
+    is_valid, warn_msg = validate_content(md_article.content or "", source_url=source_url)
+    if not is_valid:
+        error(f"Content invalid: {warn_msg}")
+        return None
 except BlockedPublisherError as e:
     error(f"Blocked publisher: {e}")
     return None
@@ -416,9 +431,9 @@ your-provider:
 
 The system uses `asyncio` + `httpx` to handle high-concurrency workloads.
 
-1.  **Orchestration**: `EditorAssistant.process_multiple` uses `asyncio.gather` to fan out tasks.
-2.  **Concurrency Control**: `MDProcessor` uses `asyncio.Semaphore` (default: 5) to prevent overwhelming the API or local resources.
-3.  **Non-blocking I/O**: Network requests yielded to the event loop, allowing other tasks to proceed.
+1. **Orchestration**: `EditorAssistant.process_multiple` uses `asyncio.gather` to fan out tasks.
+2. **Concurrency Control**: `MDProcessor` uses `asyncio.Semaphore` (default: 5) to prevent overwhelming the API or local resources.
+3. **Non-blocking I/O**: Network requests yielded to the event loop, allowing other tasks to proceed.
 
 ### Tuning
 
@@ -427,13 +442,83 @@ Adjust concurrency in `MDProcessor` (currently hardcoded or via init):
 ```python
 # md_processor.py
 class MDProcessor:
-    def __init__(self, ..., max_concurrent=5):
-        self.semaphore = asyncio.Semaphore(max_concurrent)
+    def __init__(self, ..., max_concurrent: int = 5):
+        self._semaphore = asyncio.Semaphore(max_concurrent)
 ```
 
 ### SQLite Persistence
 
 SQLite is thread-safe but not fully concurrent for writes. The `storage` module handles locking, but extremely high write concurrency might hit `database is locked` errors. The current implementation uses synchronous SQLite calls offloaded to a thread pool (`asyncio.to_thread`) to prevent blocking the event loop.
+
+### Run Lifecycle: Resume Command (`editor-assistant resume`)
+
+The `resume` command is a **best-effort re-execution mechanism** for runs that were interrupted or never completed. It is intentionally simple: it does **not** attempt to checkpoint/continue mid-request; it **re-runs** the task using the stored inputs and metadata.
+
+#### Current Behavior (as implemented)
+
+- **Source of truth**: SQLite `runs` + `run_inputs` + `inputs` tables via `RunRepository.get_resumable_runs()` (`storage/repository.py`).
+- **Eligibility**: runs with `status IN ('pending', 'aborted')`, ordered by `id ASC` (oldest first).
+- **Dry run**: `editor-assistant resume --dry-run` prints resumable runs and exits without executing.
+- **Execution path**:
+  - For each resumable run, reconstructs input list from stored `inputs.type` and `inputs.source_path`.
+  - Reconstructs execution settings from stored metadata (`task`, `model`, `thinking_level`, `stream`).
+  - Calls the normal pipeline: `EditorAssistant(...).process_multiple(inputs, task, save_files=...)`.
+- **Status updates**:
+  - On success: updates the **original run** status to `success`.
+  - On failure: updates the **original run** status to `failed` with an error message.
+  - Note: the resumed execution also creates a **new** run record (because `MDProcessor.process_mds()` always creates a new run in the DB). The `resume` command treats the original run as the “work item” to close out.
+
+#### Rationale (why this design)
+
+- **Correctness-first**: continuing mid-stream is hard (partial outputs, unknown token usage, provider-dependent streaming semantics). Full re-run avoids inconsistent state.
+- **Minimal surface area**: `resume` reuses the same production path (`process_multiple` → `process_mds`) instead of adding a parallel “resume pipeline”, lowering regression risk.
+- **Operational practicality**: DB `status` acts like a lightweight queue. `aborted` (e.g. Ctrl+C) and stuck `pending` items can be inspected and re-run later without manual reconstruction.
+- **Forward compatibility**: by re-running with current code/prompts/config, improved prompts/bug fixes automatically apply when resuming older runs.
+
+### Run History Storage Schema + Export Command (`editor-assistant export`)
+
+The run history database is normalized so that inputs can be **deduplicated** and reused across many runs, while outputs and token usage remain tied to a specific run.
+
+#### Schema relationships (conceptual)
+
+```text
+            (many-to-many)                     (one-to-many)
+  runs ───────────┐                     ┌───────────────► outputs
+                  │                     │                 (run_id FK)
+                  ▼                     │
+              run_inputs                │
+          (run_id, input_id)            │
+                  ▲                     │                 (0..1 per run)
+                  │                     └───────────────► token_usage
+                inputs                                     (run_id FK)
+          (dedup by content_hash)
+```
+
+- **`runs`**: one execution attempt (task/model/status/stream/thinking_level/currency/error_message, plus timestamp).
+- **`inputs`**: a document/source (paper/news) with a `content_hash` to deduplicate identical content across runs.
+- **`run_inputs`**: association table so a single run can have multiple inputs (e.g. `brief paper=... news=...`) and a single input can participate in many runs.
+- **`outputs`**: one run can produce multiple named outputs (`main`, `bilingual`, etc.).
+- **`token_usage`**: optional per-run aggregate usage/cost/time.
+
+#### Current export implementation (as implemented)
+
+The `export` command is a **snapshot export** of run history from SQLite to a file (`.json` or `.csv`):
+
+- **CLI entry**: `cmd_export()` in `cli.py` chooses format by `--format` or file extension, then calls `RunRepository.export_runs(...)`.
+- **Data assembly**: `export_runs()` loads runs (`ORDER BY id DESC`, optional `LIMIT`), and for each run:
+  - loads `inputs` via `inputs JOIN run_inputs WHERE run_id = ?`
+  - loads `outputs` via `outputs WHERE run_id = ?`
+  - loads `token_usage` via `token_usage WHERE run_id = ?` (may be missing)
+- **Output formats**:
+  - **JSON**: full nested structure (runs + inputs + outputs + token_usage).
+  - **CSV**: flattened summary (input titles combined; costs/tokens per run).
+
+#### Rationale (why this design)
+
+- **Avoid duplication**: storing full input content once (dedup by `content_hash`) keeps DB size smaller when reprocessing the same documents.
+- **Support multi-source tasks**: `run_inputs` naturally models `paper + multiple news` use cases.
+- **Flexible outputs**: `outputs` supports multiple output variants without schema changes.
+- **Simple export logic**: export uses small, readable queries per run; easier to validate and extend.
 
 ### Batch Processing UI
 The `batch` command uses the [Rich](https://github.com/Textualize/rich) library to display concurrent progress bars.
