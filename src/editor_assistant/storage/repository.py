@@ -457,4 +457,194 @@ class RunRepository:
         conn.close()
         
         return [dict(row) for row in rows]
+    
+    # =========================================================================
+    # Resume Operations
+    # =========================================================================
+    
+    def get_resumable_runs(self) -> List[Dict[str, Any]]:
+        """
+        Get runs that can be resumed (status='pending' or 'aborted').
+        
+        Returns:
+            List of resumable runs with their input information,
+            ordered by timestamp (oldest first for resume priority)
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        
+        # Get resumable runs
+        cursor.execute("""
+            SELECT 
+                r.id,
+                r.timestamp,
+                r.task,
+                r.model,
+                r.thinking_level,
+                r.stream,
+                r.currency,
+                r.status
+            FROM runs r
+            WHERE r.status IN ('pending', 'aborted')
+            ORDER BY r.id ASC
+        """)
+        
+        runs = []
+        for row in cursor.fetchall():
+            run = dict(row)
+            run_id = run["id"]
+            
+            # Get inputs for this run
+            cursor.execute("""
+                SELECT i.id, i.type, i.source_path, i.title, i.content_hash
+                FROM inputs i
+                JOIN run_inputs ri ON i.id = ri.input_id
+                WHERE ri.run_id = ?
+            """, (run_id,))
+            
+            run["inputs"] = [dict(inp) for inp in cursor.fetchall()]
+            runs.append(run)
+        
+        conn.close()
+        return runs
+    
+    # =========================================================================
+    # Export Operations
+    # =========================================================================
+    
+    def export_runs(
+        self,
+        output_path: Path,
+        format: str = "json",
+        limit: Optional[int] = None
+    ) -> None:
+        """
+        Export run history to file.
+        
+        Args:
+            output_path: Path to output file
+            format: Export format ('json' or 'csv')
+            limit: Optional limit on number of runs to export
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        
+        # Get all runs
+        query = """
+            SELECT 
+                r.id,
+                r.timestamp,
+                r.task,
+                r.model,
+                r.thinking_level,
+                r.stream,
+                r.currency,
+                r.status,
+                r.error_message
+            FROM runs r
+            ORDER BY r.id DESC
+        """
+        if limit:
+            query += f" LIMIT {limit}"
+        
+        cursor.execute(query)
+        
+        runs = []
+        for row in cursor.fetchall():
+            run = dict(row)
+            run_id = run["id"]
+            
+            # Get inputs
+            cursor.execute("""
+                SELECT i.id, i.type, i.source_path, i.title
+                FROM inputs i
+                JOIN run_inputs ri ON i.id = ri.input_id
+                WHERE ri.run_id = ?
+            """, (run_id,))
+            run["inputs"] = [dict(inp) for inp in cursor.fetchall()]
+            
+            # Get outputs
+            cursor.execute("""
+                SELECT output_type, content_type, content
+                FROM outputs
+                WHERE run_id = ?
+            """, (run_id,))
+            run["outputs"] = [dict(out) for out in cursor.fetchall()]
+            
+            # Get token usage
+            cursor.execute("""
+                SELECT input_tokens, output_tokens, cost_input, cost_output, process_time
+                FROM token_usage
+                WHERE run_id = ?
+            """, (run_id,))
+            usage_row = cursor.fetchone()
+            run["token_usage"] = dict(usage_row) if usage_row else None
+            
+            runs.append(run)
+        
+        conn.close()
+        
+        # Write to file
+        if format == "json":
+            self._export_json(output_path, runs)
+        elif format == "csv":
+            self._export_csv(output_path, runs)
+        else:
+            raise ValueError(f"Unsupported export format: {format}")
+    
+    def _export_json(self, output_path: Path, runs: List[Dict[str, Any]]) -> None:
+        """Export runs to JSON file."""
+        import json
+        
+        data = {
+            "exported_at": datetime.now().isoformat(),
+            "total_runs": len(runs),
+            "runs": runs
+        }
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    
+    def _export_csv(self, output_path: Path, runs: List[Dict[str, Any]]) -> None:
+        """Export runs to CSV file."""
+        import csv
+        
+        fieldnames = [
+            "id", "timestamp", "task", "model", "thinking_level", 
+            "stream", "currency", "status", "error_message",
+            "input_titles", "input_tokens", "output_tokens", 
+            "cost_input", "cost_output", "total_cost"
+        ]
+        
+        with open(output_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            
+            for run in runs:
+                # Flatten input titles
+                input_titles = ", ".join(
+                    inp.get("title", "") for inp in run.get("inputs", [])
+                )
+                
+                # Get token usage
+                usage = run.get("token_usage") or {}
+                
+                row = {
+                    "id": run.get("id"),
+                    "timestamp": run.get("timestamp"),
+                    "task": run.get("task"),
+                    "model": run.get("model"),
+                    "thinking_level": run.get("thinking_level"),
+                    "stream": run.get("stream"),
+                    "currency": run.get("currency"),
+                    "status": run.get("status"),
+                    "error_message": run.get("error_message"),
+                    "input_titles": input_titles,
+                    "input_tokens": usage.get("input_tokens"),
+                    "output_tokens": usage.get("output_tokens"),
+                    "cost_input": usage.get("cost_input"),
+                    "cost_output": usage.get("cost_output"),
+                    "total_cost": (usage.get("cost_input") or 0) + (usage.get("cost_output") or 0)
+                }
+                writer.writerow(row)
 

@@ -511,6 +511,106 @@ def cmd_show_run(args):
     print()
 
 
+async def cmd_resume(args):
+    """Resume interrupted/aborted runs."""
+    repo = RunRepository()
+    resumable = repo.get_resumable_runs()
+    
+    if not resumable:
+        print("\n✓ No interrupted runs to resume.\n")
+        return
+    
+    print(f"\n🔄 Found {len(resumable)} resumable run(s):\n")
+    
+    for run in resumable:
+        run_id = run.get('id')
+        task = run.get('task')
+        model = run.get('model')
+        status = run.get('status')
+        inputs = run.get('inputs', [])
+        input_titles = ", ".join(inp.get('title', 'Untitled')[:30] for inp in inputs)
+        
+        print(f"  #{run_id}: {task} with {model} ({status})")
+        print(f"       Inputs: {input_titles}")
+    
+    if args.dry_run:
+        print("\n[Dry run] No runs were executed.\n")
+        return
+    
+    print(f"\nResuming {len(resumable)} run(s)...\n")
+    
+    for run in resumable:
+        run_id = run.get('id')
+        task = run.get('task')
+        model = run.get('model')
+        thinking_level = run.get('thinking_level')
+        stream = bool(run.get('stream', 1))
+        inputs = run.get('inputs', [])
+        
+        if not inputs:
+            print(f"  ✗ Run #{run_id}: No inputs found, skipping")
+            repo.update_run_status(run_id, "failed", "No inputs found for resume")
+            continue
+        
+        try:
+            # Mark as in-progress (pending -> running conceptually)
+            # We'll update to success/failed after processing
+            
+            # Create Input objects from stored data
+            input_objs = []
+            for inp in inputs:
+                input_type = InputType.PAPER if inp.get('type') == 'paper' else InputType.NEWS
+                input_objs.append(Input(type=input_type, path=inp.get('source_path', '')))
+            
+            # Process
+            progress(f"Resuming run #{run_id}: {task} on {len(input_objs)} input(s)")
+            assistant = EditorAssistant(
+                model, 
+                debug_mode=args.debug, 
+                thinking_level=thinking_level, 
+                stream=stream
+            )
+            
+            await assistant.process_multiple(input_objs, task, save_files=args.save_files)
+            
+            # Mark original run as success
+            repo.update_run_status(run_id, "success")
+            print(f"  ✓ Run #{run_id} completed successfully")
+            
+        except Exception as e:
+            repo.update_run_status(run_id, "failed", str(e))
+            print(f"  ✗ Run #{run_id} failed: {e}")
+    
+    print()
+
+
+def cmd_export(args):
+    """Export run history to file."""
+    repo = RunRepository()
+    output_path = Path(args.output)
+    
+    # Determine format from extension if not specified
+    format_type = args.format
+    if not format_type:
+        if output_path.suffix.lower() == '.csv':
+            format_type = 'csv'
+        else:
+            format_type = 'json'
+    
+    try:
+        repo.export_runs(output_path, format=format_type, limit=args.limit)
+        print(f"✓ Exported runs to: {output_path}")
+        
+        # Show summary
+        runs = repo.get_recent_runs(limit=args.limit or 1000)
+        print(f"  Total runs exported: {len(runs)}")
+        print(f"  Format: {format_type.upper()}")
+        
+    except Exception as e:
+        print(f"✗ Export failed: {e}")
+        sys.exit(1)
+
+
 def create_parser():
     """Create the main argument parser with subcommands."""
     parser = argparse.ArgumentParser(
@@ -538,6 +638,12 @@ Examples:
   %(prog)s history --search "quantum"
   %(prog)s stats -d 30
   %(prog)s show 1 --output
+  
+  # Resume and export
+  %(prog)s resume --dry-run
+  %(prog)s resume --save-files
+  %(prog)s export history.json
+  %(prog)s export history.csv --limit 100
 """
     )
     
@@ -734,6 +840,51 @@ Examples:
         help="Include full output content"
     )
     show_parser.set_defaults(func=cmd_show_run)
+    
+    # Resume command
+    resume_parser = subparsers.add_parser(
+        "resume",
+        help="Resume interrupted or aborted runs",
+        description="Find and re-execute runs that were interrupted or aborted"
+    )
+    resume_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show resumable runs without executing them"
+    )
+    resume_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode"
+    )
+    resume_parser.add_argument(
+        "--save-files",
+        action="store_true",
+        help="Save output files to disk"
+    )
+    resume_parser.set_defaults(func=cmd_resume)
+    
+    # Export command
+    export_parser = subparsers.add_parser(
+        "export",
+        help="Export run history to file",
+        description="Export run history to CSV or JSON format"
+    )
+    export_parser.add_argument(
+        "output",
+        help="Output file path (e.g., history.json or history.csv)"
+    )
+    export_parser.add_argument(
+        "--format",
+        choices=["json", "csv"],
+        help="Export format (default: auto-detect from extension)"
+    )
+    export_parser.add_argument(
+        "-n", "--limit",
+        type=int,
+        help="Maximum number of runs to export"
+    )
+    export_parser.set_defaults(func=cmd_export)
     
     return parser
 

@@ -8,18 +8,20 @@
 
 ## 🔄 Phase 1: 当前待完成
 
-### 1. Resume Capability & Export
+### ~~1. Resume Capability & Export~~ ✅ 已完成
 **优先级: 高 | 预计工作量: 1天**
 
 > 完善 Persistence Layer，提升可靠性和数据可用性。
 
-- [ ] 实现 `resume` 命令 - 恢复中断的处理任务
-  - 从数据库读取 `status='aborted'` 的运行记录
+- [x] 实现 `resume` 命令 - 恢复中断的处理任务
+  - 从数据库读取 `status='pending'` 或 `'aborted'` 的运行记录
+  - 支持 `--dry-run` 查看但不执行
   - 重新执行未完成的输入
-- [ ] 实现 Export 功能
-  - `editor-assistant export --format csv` 导出历史记录
-  - `editor-assistant export --format json` 导出为 JSON
-- [ ] 更新文档 (README, DEVELOPER_GUIDE, CHANGELOG)
+- [x] 实现 Export 功能
+  - `editor-assistant export history.csv` 导出历史记录
+  - `editor-assistant export history.json` 导出为 JSON
+  - 支持 `--limit` 参数
+- [x] 更新文档 (CHANGELOG)
 
 ### 2. Tiered Pricing System
 **优先级: 中 | 预计工作量: 1天**

@@ -757,6 +757,270 @@ class TestDatabasePathEnvironmentVariables:
             self._restore_env_vars(saved)
 
 
+class TestResumableRuns:
+    """Tests for get_resumable_runs() - finding runs that can be resumed."""
+    
+    @pytest.fixture
+    def repo(self, temp_dir):
+        db_path = temp_dir / "test.db"
+        return RunRepository(db_path=db_path)
+    
+    def test_get_resumable_runs_empty(self, repo):
+        """Should return empty list when no resumable runs."""
+        runs = repo.get_resumable_runs()
+        assert runs == []
+    
+    def test_get_resumable_runs_finds_pending(self, repo):
+        """Should find runs with status='pending'."""
+        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        run_id = repo.create_run("brief", "model", [input_id])
+        # Status is 'pending' by default
+        
+        runs = repo.get_resumable_runs()
+        
+        assert len(runs) == 1
+        assert runs[0]["id"] == run_id
+        assert runs[0]["status"] == "pending"
+    
+    def test_get_resumable_runs_finds_aborted(self, repo):
+        """Should find runs with status='aborted'."""
+        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        run_id = repo.create_run("brief", "model", [input_id])
+        repo.update_run_status(run_id, "aborted")
+        
+        runs = repo.get_resumable_runs()
+        
+        assert len(runs) == 1
+        assert runs[0]["status"] == "aborted"
+    
+    def test_get_resumable_runs_excludes_success(self, repo):
+        """Should NOT include runs with status='success'."""
+        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        run_id = repo.create_run("brief", "model", [input_id])
+        repo.update_run_status(run_id, "success")
+        
+        runs = repo.get_resumable_runs()
+        
+        assert len(runs) == 0
+    
+    def test_get_resumable_runs_excludes_failed(self, repo):
+        """Should NOT include runs with status='failed'."""
+        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        run_id = repo.create_run("brief", "model", [input_id])
+        repo.update_run_status(run_id, "failed", "Some error")
+        
+        runs = repo.get_resumable_runs()
+        
+        assert len(runs) == 0
+    
+    def test_get_resumable_runs_includes_input_info(self, repo):
+        """Resumable runs should include input information for re-processing."""
+        input_id = repo.get_or_create_input("paper", "/path/to/paper.pdf", "My Paper", "Content")
+        run_id = repo.create_run("outline", "gemini-3-flash", [input_id], thinking_level="high")
+        
+        runs = repo.get_resumable_runs()
+        
+        assert len(runs) == 1
+        run = runs[0]
+        assert run["task"] == "outline"
+        assert run["model"] == "gemini-3-flash"
+        assert run["thinking_level"] == "high"
+        assert "inputs" in run
+        assert len(run["inputs"]) == 1
+        assert run["inputs"][0]["source_path"] == "/path/to/paper.pdf"
+        assert run["inputs"][0]["type"] == "paper"
+    
+    def test_get_resumable_runs_multiple_inputs(self, repo):
+        """Should include all inputs for a resumable run."""
+        id1 = repo.get_or_create_input("paper", "/p1.pdf", "Paper 1", "C1")
+        id2 = repo.get_or_create_input("news", "/n1.md", "News 1", "C2")
+        run_id = repo.create_run("brief", "model", [id1, id2])
+        
+        runs = repo.get_resumable_runs()
+        
+        assert len(runs[0]["inputs"]) == 2
+    
+    def test_get_resumable_runs_ordered_by_timestamp(self, repo):
+        """Should return runs in chronological order (oldest first for resume)."""
+        input_id = repo.get_or_create_input("paper", "/p.pdf", "T", "C")
+        run1 = repo.create_run("brief", "model", [input_id])
+        run2 = repo.create_run("outline", "model", [input_id])
+        run3 = repo.create_run("translate", "model", [input_id])
+        
+        runs = repo.get_resumable_runs()
+        
+        # Oldest first (ascending by id/timestamp)
+        assert runs[0]["id"] == run1
+        assert runs[1]["id"] == run2
+        assert runs[2]["id"] == run3
+
+
+class TestExportRuns:
+    """Tests for export_runs() - exporting run history."""
+    
+    @pytest.fixture
+    def repo(self, temp_dir):
+        db_path = temp_dir / "test.db"
+        return RunRepository(db_path=db_path)
+    
+    @pytest.fixture
+    def populated_repo(self, repo):
+        """Create a repo with sample data for export testing."""
+        # Create inputs
+        id1 = repo.get_or_create_input("paper", "/paper1.pdf", "First Paper", "Content1")
+        id2 = repo.get_or_create_input("news", "/news.md", "News Article", "Content2")
+        
+        # Create runs
+        run1 = repo.create_run("brief", "deepseek-v3.2", [id1], currency="¥")
+        repo.update_run_status(run1, "success")
+        repo.add_output(run1, "main", "Generated brief for paper 1")
+        repo.add_token_usage(run1, 5000, 500, 0.01, 0.005, 12.5)
+        
+        run2 = repo.create_run("outline", "gemini-3-flash", [id1], thinking_level="high")
+        repo.update_run_status(run2, "success")
+        repo.add_output(run2, "main", "Generated outline")
+        repo.add_token_usage(run2, 8000, 1000, 0.02, 0.01, 20.0)
+        
+        run3 = repo.create_run("brief", "gpt-4o", [id1, id2])
+        repo.update_run_status(run3, "failed", "Rate limit exceeded")
+        
+        return repo
+    
+    def test_export_runs_csv_format(self, populated_repo, temp_dir):
+        """Should export runs in CSV format."""
+        output_path = temp_dir / "export.csv"
+        
+        populated_repo.export_runs(output_path, format="csv")
+        
+        assert output_path.exists()
+        content = output_path.read_text()
+        
+        # Check header row exists
+        assert "id" in content
+        assert "task" in content
+        assert "model" in content
+        assert "status" in content
+        
+        # Check data rows
+        assert "brief" in content
+        assert "deepseek-v3.2" in content
+        assert "success" in content
+    
+    def test_export_runs_json_format(self, populated_repo, temp_dir):
+        """Should export runs in JSON format."""
+        import json
+        output_path = temp_dir / "export.json"
+        
+        populated_repo.export_runs(output_path, format="json")
+        
+        assert output_path.exists()
+        data = json.loads(output_path.read_text())
+        
+        assert "runs" in data
+        assert len(data["runs"]) == 3
+        
+        # Check structure
+        run = data["runs"][0]
+        assert "id" in run
+        assert "task" in run
+        assert "model" in run
+        assert "status" in run
+        assert "inputs" in run
+        assert "outputs" in run
+        assert "token_usage" in run
+    
+    def test_export_runs_includes_inputs(self, populated_repo, temp_dir):
+        """Exported data should include input information."""
+        import json
+        output_path = temp_dir / "export.json"
+        
+        populated_repo.export_runs(output_path, format="json")
+        
+        data = json.loads(output_path.read_text())
+        run = data["runs"][0]
+        
+        assert len(run["inputs"]) >= 1
+        assert "source_path" in run["inputs"][0]
+        assert "title" in run["inputs"][0]
+        assert "type" in run["inputs"][0]
+    
+    def test_export_runs_includes_outputs(self, populated_repo, temp_dir):
+        """Exported data should include output content."""
+        import json
+        output_path = temp_dir / "export.json"
+        
+        populated_repo.export_runs(output_path, format="json")
+        
+        data = json.loads(output_path.read_text())
+        # Find a run with outputs (status=success)
+        success_runs = [r for r in data["runs"] if r["status"] == "success"]
+        assert len(success_runs) >= 1
+        
+        run = success_runs[0]
+        assert len(run["outputs"]) >= 1
+        assert "content" in run["outputs"][0]
+    
+    def test_export_runs_includes_token_usage(self, populated_repo, temp_dir):
+        """Exported data should include token usage."""
+        import json
+        output_path = temp_dir / "export.json"
+        
+        populated_repo.export_runs(output_path, format="json")
+        
+        data = json.loads(output_path.read_text())
+        success_runs = [r for r in data["runs"] if r["status"] == "success"]
+        
+        run = success_runs[0]
+        assert run["token_usage"] is not None
+        assert "input_tokens" in run["token_usage"]
+        assert "output_tokens" in run["token_usage"]
+        assert "cost_input" in run["token_usage"]
+        assert "cost_output" in run["token_usage"]
+    
+    def test_export_runs_empty_database(self, repo, temp_dir):
+        """Should handle empty database gracefully."""
+        import json
+        output_path = temp_dir / "empty_export.json"
+        
+        repo.export_runs(output_path, format="json")
+        
+        assert output_path.exists()
+        data = json.loads(output_path.read_text())
+        assert data["runs"] == []
+    
+    def test_export_runs_with_limit(self, populated_repo, temp_dir):
+        """Should respect limit parameter."""
+        import json
+        output_path = temp_dir / "limited.json"
+        
+        populated_repo.export_runs(output_path, format="json", limit=2)
+        
+        data = json.loads(output_path.read_text())
+        assert len(data["runs"]) == 2
+    
+    def test_export_runs_csv_escapes_special_chars(self, repo, temp_dir):
+        """CSV export should properly escape special characters."""
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", 
+            'Title with "quotes" and, commas', 
+            "Content"
+        )
+        run_id = repo.create_run("brief", "model", [input_id])
+        repo.update_run_status(run_id, "success")
+        repo.add_output(run_id, "main", 'Output with\nnewlines and "quotes"')
+        
+        output_path = temp_dir / "special.csv"
+        repo.export_runs(output_path, format="csv")
+        
+        # File should be readable as valid CSV
+        import csv
+        with open(output_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        
+        assert len(rows) == 1
+
+
 class TestProductionDatabaseIsolation:
     """
     CRITICAL: Tests to ensure testing never pollutes production database.

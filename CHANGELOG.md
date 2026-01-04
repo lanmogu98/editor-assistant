@@ -4,12 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Resume Command**: `editor-assistant resume` to find and re-execute interrupted/aborted runs
+  - Finds runs with status `pending` or `aborted`
+  - `--dry-run` flag to preview without executing
+  - Automatically recovers run configuration (model, task, thinking level, inputs)
+- **Export Command**: `editor-assistant export <file>` to export run history
+  - Supports JSON and CSV formats (auto-detected from file extension)
+  - Includes full run details: inputs, outputs, token usage
+  - `--limit` flag to limit number of exported runs
+
 ### Changed
 - **Model Config Refactor**: YAML is now the single source of truth for model/provider configuration.
   - Removed hardcoded `LLMModel` and `ServiceProvider` enums from `set_llm.py`
   - Model list is now dynamically loaded from `llm_config.yml`
   - Adding new models only requires editing YAML, no Python code changes needed
 - **Documentation**: Updated references to `docs/ENGINEERING_GUIDE.md` (now configured as Cursor user rules)
+- **TODO Consolidation**: Merged `TODO_claude.md`, `TODO_codex.md`, `TODO_gemini.md` into single `TODO.md`
 
 ### Fixed
 - **pytest.ini**: Added `asyncio_mode = strict` (required for pytest-asyncio >=0.21), added missing `expensive` marker, removed unused markers

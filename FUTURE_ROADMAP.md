@@ -131,9 +131,9 @@ class MyConverter(ConverterProtocol):
 
 ---
 
-## 5. Persistence Layer (Partial)
+## 5. Persistence Layer
 
-**Status:** ✅ Core Implemented (Schema + History/Stats CLI), `resume` command pending.
+**Status:** ✅ Completed (Schema + History/Stats/Resume/Export CLI)
 
 **Why it matters:**
 
@@ -159,11 +159,11 @@ class MyConverter(ConverterProtocol):
 
 | Priority | Item | Effort | Impact |
 |----------|------|--------|--------|
-| 1 | Resume capability & Export | 1 day | High (完善 Persistence) |
-| 2 | Tiered Pricing System | 1 day | Medium (成本准确性) |
-| 3 | Dependency injection | 1-2 days | Medium (Testability) |
-| 4 | Plugin system (外部加载) | 2-3 days | Medium (Extensibility) |
-| ~~5~~ | ~~Configuration file support~~ | ~~1 day~~ | ~~Deferred to Phase 3~~ |
+| ~~1~~ | ~~Resume capability & Export~~ | ~~1 day~~ | ✅ Completed |
+| 1 | Tiered Pricing System | 1 day | Medium (成本准确性) |
+| 2 | Dependency injection | 1-2 days | Medium (Testability) |
+| 3 | Plugin system (外部加载) | 2-3 days | Medium (Extensibility) |
+| ~~4~~ | ~~Configuration file support~~ | ~~1 day~~ | ~~Deferred to Phase 3~~ |
 
 > **Note**: Configuration file support 对非技术用户操作难度较大，在 GUI（如浏览器插件）之前实用性有限，已推迟至 Phase 3 与前端一起实现。
 
@@ -172,14 +172,15 @@ class MyConverter(ConverterProtocol):
 ## Completed Items (This Session)
 
 ✅ Async/Concurrent Processing: `httpx` + `asyncio` refactor, 5x performance boost (v0.5.0)
-✅ Persistence Layer: SQLite storage, Schema, `history`/`stats` commands (Phase 1)
+✅ Persistence Layer: SQLite storage, Schema, `history`/`stats`/`resume`/`export` commands
 ✅ Performance: O(n²) string fix, lazy loading, single-pass extraction
 ✅ Maintenance: Typos, dead code, error handling, type hints
 ✅ Scaling: Rate limiting, response caching
 ✅ Validation: Content validation module
 ✅ Code quality: Centralized constants, circular import fix
+✅ Resume & Export: `resume` command for interrupted runs, `export` for history
 
-**Total: 16 issues resolved, 48 tests added**
+**Total: 17 issues resolved, 147 tests**
 
 ---
 
@@ -384,8 +385,8 @@ frontend/
 
 | Phase | Item | Effort | Impact |
 |-------|------|--------|--------|
-| **1 (Current)** | Resume capability & Export | 1 day | High (完善 Persistence) |
-| **1** | Tiered pricing | 1 day | Medium (成本准确性) |
+| ~~**1**~~ | ~~Resume capability & Export~~ | ~~1 day~~ | ✅ Completed |
+| **1 (Current)** | Tiered pricing | 1 day | Medium (成本准确性) |
 | **1** | Dependency injection | 1-2 days | Medium (Testability) |
 | **2** | Benchmark module | 2-3 weeks | High (Product) |
 | **2** | Interactive assistant (backend) | 3-4 weeks | High (Product) |
