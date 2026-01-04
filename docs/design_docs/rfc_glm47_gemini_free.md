@@ -110,22 +110,18 @@ Google 提供 Gemini API 的免费层级，允许有限的免费调用。这对�
 
 ### 3.2 支持的模型
 
-仍然支持最先进的 **3 系列模型**：
-- `gemini-3-flash-free` (gemini-3-flash-preview)
-- `gemini-3-pro-free` (gemini-3-pro-preview)
+**Free Tier 不支持 3-pro**，使用 2.5 系列：
+- `gemini-2.5-flash-free` (gemini-2.5-flash)
+- `gemini-2.5-flash-lite-free` (gemini-2.5-flash-lite)
 
 ### 3.3 Free Tier 限制
 
-不同模型的 RPM/RPD 限制不同，Pro 限制高于 Flash。
+从 AI Studio 获取的实际限制 (2026-01-04)：
 
-由于尚未调用过 API，具体限制暂时不可见。**采用非常保守的初始配置**，待测试成功后根据 AI Studio 数据更新。
-
-#### 初始保守配置
-
-| 模型 | RPM (保守) | min_interval_seconds | 备注 |
-|------|------------|---------------------|------|
-| gemini-3-flash-free | 5 | 12.0 | 非常保守，待测试后调整 |
-| gemini-3-pro-free | 2 | 30.0 | Pro 限制可能更严格，更保守 |
+| 模型 | RPM | TPM | RPD |
+|------|-----|-----|-----|
+| gemini-2.5-flash | 5 | 250K | 20 |
+| gemini-2.5-flash-lite | 10 | 250K | 20 |
 
 ### 3.4 llm_config.yml 变更
 
@@ -135,22 +131,19 @@ gemini-free:
   api_key_env_var: "GEMINI_FT_API_KEY"
   api_base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
   temperature: 1.0
-  max_tokens: 65536  # 与付费版相同，如有限制后续调整
+  max_tokens: 65536
   context_window: 1000000
   pricing_currency: "$"
-  # 非常保守的 rate limiting - 待测试后调整
   rate_limit:
-    min_interval_seconds: 12.0  # 5 RPM for flash
+    min_interval_seconds: 12.0  # 5 RPM
     max_requests_per_minute: 5
   models:
-    gemini-3-flash-free:
-      id: "gemini-3-flash-preview"
+    gemini-2.5-flash-free:
+      id: "gemini-2.5-flash"
       pricing: { input: 0.0, output: 0.0 }
-    gemini-3-pro-free:
-      id: "gemini-3-pro-preview"
+    gemini-2.5-flash-lite-free:
+      id: "gemini-2.5-flash-lite"
       pricing: { input: 0.0, output: 0.0 }
-      # Pro 可能需要更严格的 rate limit，但 per-model rate limit 暂不支持
-      # 如需独立控制，可创建 gemini-free-pro provider
 ```
 
 ### 3.5 后续更新

@@ -30,7 +30,7 @@ def pytest_addoption(parser):
         action="store",
         default="base",
         choices=["base", "advanced"],
-        help="Model tier for integration tests: base (deepseek-v3.2) or advanced (gemini-3-flash-free)"
+        help="Model tier for integration tests: base (deepseek-v3.2) or advanced (gemini-2.5-flash-free)"
     )
 
 
@@ -226,8 +226,8 @@ def mock_failing_llm_client():
 
 # Model constants for integration tests
 INTEGRATION_MODELS = {
-    "base": "deepseek-v3.2",           # Cheap, fast - default for integration tests
-    "advanced": "gemini-3-flash-free"   # Free tier Gemini - for advanced model testing
+    "base": "deepseek-v3.2",              # Cheap, fast - default for integration tests
+    "advanced": "gemini-2.5-flash-free"   # Free tier Gemini 2.5 - for advanced model testing
 }
 
 

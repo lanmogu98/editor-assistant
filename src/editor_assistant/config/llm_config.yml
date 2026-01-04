@@ -74,24 +74,26 @@ gemini:
       pricing: { input: 2.00, output: 12.00 } # USD per 1M tokens
 
 # Gemini Free Tier - uses separate API key with stricter rate limits
-# Rate limits are conservative; update after testing with AI Studio data
+# Rate limits from AI Studio (2026-01-04):
+#   gemini-2.5-flash: 5 RPM, 250K TPM, 20 RPD
+#   gemini-2.5-flash-lite: 10 RPM, 250K TPM, 20 RPD
+# Note: Free tier does NOT support 3-pro
 gemini-free:
   api_key_env_var: "GEMINI_FT_API_KEY"
   api_base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
   temperature: 1.0
   max_tokens: 65536
-  context_window: 1000000
+  context_window: 1000000  # 1M context
   pricing_currency: "$"
-  # Conservative rate limiting - update after testing
   rate_limit:
-    min_interval_seconds: 12.0  # ~5 RPM, very conservative
+    min_interval_seconds: 12.0  # 5 RPM
     max_requests_per_minute: 5
   models:
-    gemini-3-flash-free:
-      id: "gemini-3-flash-preview"
+    gemini-2.5-flash-free:
+      id: "gemini-2.5-flash"
       pricing: { input: 0.0, output: 0.0 }
-    gemini-3-pro-free:
-      id: "gemini-3-pro-preview"
+    gemini-2.5-flash-lite-free:
+      id: "gemini-2.5-flash-lite"
       pricing: { input: 0.0, output: 0.0 } 
 
 kimi-volcengine:

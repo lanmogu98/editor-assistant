@@ -17,12 +17,11 @@
   - [x] 设置 `glm-4.7-or` 为默认模型
 - [x] Gemini Free Tier 支持
   - [x] 新增 `gemini-free` provider
-  - [x] 模型: `gemini-3-flash-free`, `gemini-3-pro-free`
-  - [x] 保守 rate limiting (5 RPM)
+  - [x] 模型: `gemini-2.5-flash-free`, `gemini-2.5-flash-lite-free`
+  - [x] Rate limit: 5 RPM, 250K TPM, 20 RPD (from AI Studio)
 - [x] Integration 测试选项
   - [x] `--integration-model base` (deepseek-v3.2, 默认)
-  - [x] `--integration-model advanced` (gemini-3-flash-free)
-- [ ] 待测试后更新 rate limit 配置
+  - [x] `--integration-model advanced` (gemini-2.5-flash-free)
 
 ### ~~1. Resume Capability & Export~~ ✅ 已完成
 **优先级: 高 | 预计工作量: 1天**

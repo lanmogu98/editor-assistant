@@ -18,12 +18,12 @@ All notable changes to this project will be documented in this file.
   - OpenRouter: `--model glm-4.7-or` (now default)
   - 200K context window, 128K+ max output
 - **Gemini Free Tier**: Added support for Gemini Free Tier API
-  - `--model gemini-3-flash-free` and `--model gemini-3-pro-free`
+  - `--model gemini-2.5-flash-free` and `--model gemini-2.5-flash-lite-free`
   - Uses `GEMINI_FT_API_KEY` environment variable
-  - Conservative rate limiting (5 RPM) for stability
+  - Rate limits: 5 RPM / 250K TPM / 20 RPD (from AI Studio)
 - **Integration Test Options**: `pytest --integration-model` to select test model
   - `base` (default): deepseek-v3.2
-  - `advanced`: gemini-3-flash-free
+  - `advanced`: gemini-2.5-flash-free
 
 ### Changed
 - **Default Model**: Changed from `deepseek-v3.2` to `glm-4.7-or`
