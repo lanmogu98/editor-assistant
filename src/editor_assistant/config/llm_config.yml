@@ -151,11 +151,6 @@ zhipu-openrouter:
   max_tokens: 131100  # GLM-4.7 max output on OpenRouter
   context_window: 200000  # GLM-4.7 supports 200K context
   pricing_currency: "$"
-  # overides for the OpenRouter provider
-  request_overrides:
-    provider:
-      only: ["z-ai"]
-      allow_fallbacks: false
   models:
     glm-4.5-or:
       id: "z-ai/glm-4.5"
