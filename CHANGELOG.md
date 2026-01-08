@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
 - **GLM-4.7 Support**: Added Zhipu's latest GLM-4.7 model
   - Native Zhipu: `--model glm-4.7`
   - OpenRouter: `--model glm-4.7-or` (now default)
-  - 200K context window, 128K+ max output
+  - 200K context window; native max output 128K, OpenRouter pinned route max output 65,536
 - **Gemini Free Tier**: Added support for Gemini Free Tier API
   - `--model gemini-2.5-flash-free` and `--model gemini-2.5-flash-lite-free`
   - Uses `GEMINI_FT_API_KEY` environment variable

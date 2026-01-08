@@ -1,8 +1,8 @@
 # RFC: GLM-4.7 支持 + Gemini Free Tier 集成
 
-> 创建日期: 2025-01-04
+> 创建日期: 2026-01-04
 > 状态: ✅ Implemented
-> 更新: 2025-01-04 - 完成实现
+> 更新: 2026-01-04 - 完成实现
 
 ---
 
@@ -35,7 +35,7 @@
 | **API URL** | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | 与现有 zhipu provider 相同 |
 | **Context Window** | 200,000 tokens | |
 | **Max Output** | 128,000 tokens | |
-| **定价 (per 1M tokens)** | input: $0.11, output: $0.11 | 根据官方信息 |
+| **定价 (per 1M tokens)** | input: $0.60, output: $2.20 | 以当前 `llm_config.yml` 为准 |
 
 #### OpenRouter
 
@@ -47,7 +47,7 @@
 | **命名** | `glm-4.7-or` | 遵循现有 `-or` 后缀规范 |
 | **定价 (per 1M tokens)** | input: $0.60, output: $2.20 | Z.AI provider (最高) |
 | **Context Window** | 200,000 tokens | |
-| **Max Output** | 128,000 tokens | |
+| **Max Output** | 65,536 tokens | 与当前 OpenRouter pinned route 配置一致 |
 
 ### 2.3 默认模型切换
 
@@ -78,12 +78,12 @@ zhipu:
       pricing: {input: 0.60, output: 2.20}
     glm-4.7:  # 新增
       id: "glm-4.7"
-      pricing: {input: 0.11, output: 0.11}
+      pricing: {input: 0.60, output: 2.20}
 
 # 更新 zhipu-openrouter provider - 添加 glm-4.7-or
 zhipu-openrouter:
   # ... 保持其他配置不变 ...
-  max_tokens: 128000  # 更新
+  max_tokens: 65536  # 避免 pinned provider 路由下超过输出上限导致 OpenRouter 404
   context_window: 200000  # 更新
   models:
     glm-4.5-or:
@@ -161,7 +161,7 @@ gemini-free:
 
 提供两个模型选项供用户选择：
 - **基础模型**: `deepseek-v3.2` (默认)
-- **高级模型**: `gemini-3-flash-free`
+- **高级模型**: `gemini-2.5-flash-free`
 
 ### 4.2 实现方案
 
@@ -175,9 +175,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--integration-model",
         action="store",
-        default="basic",
-        choices=["basic", "advanced"],
-        help="Integration test model: basic (deepseek-v3.2) or advanced (gemini-3-flash-free)"
+        default="base",
+        choices=["base", "advanced"],
+        help="Integration test model: base (deepseek-v3.2) or advanced (gemini-2.5-flash-free)"
     )
 
 @pytest.fixture
@@ -185,8 +185,8 @@ def integration_model_name(request):
     """Get the model name for integration tests based on CLI option."""
     choice = request.config.getoption("--integration-model")
     if choice == "advanced":
-        return "gemini-3-flash-free"
-    return "deepseek-v3.2"  # default: basic
+        return "gemini-2.5-flash-free"
+    return "deepseek-v3.2"  # default: base
 ```
 
 #### 使用示例
@@ -289,7 +289,7 @@ editor-assistant brief paper=test.pdf --model glm-4.7
 editor-assistant brief paper=test.pdf --model glm-4.7-or
 
 # 测试 Gemini Free Tier
-editor-assistant brief paper=test.pdf --model gemini-3-flash-free
+editor-assistant brief paper=test.pdf --model gemini-2.5-flash-free
 
 # Integration 测试（基础模型）
 pytest tests/integration/ -m integration

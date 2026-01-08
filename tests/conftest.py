@@ -247,7 +247,7 @@ def real_llm_client(budget_model_name):
 
 @pytest.fixture
 def advanced_model_name() -> str:
-    """Return the advanced model name (gemini-3-flash-free)."""
+    """Return the advanced model name (gemini-2.5-flash-free)."""
     return INTEGRATION_MODELS["advanced"]
 
 
