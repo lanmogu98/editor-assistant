@@ -1,12 +1,27 @@
 # Editor Assistant - TODO
 
-> 最后更新: 2025-12-31
+> 最后更新: 2026-01-04
 > 
 > 此文件是当前待完成任务的执行清单，与 [FUTURE_ROADMAP.md](./FUTURE_ROADMAP.md) 保持同步。
 
 ---
 
 ## 🔄 Phase 1: 当前待完成
+
+### ~~0. GLM-4.7 + Gemini Free Tier~~ ✅ 已完成
+**优先级: 最高 | 完成时间: 2026-01-04**
+
+- [x] GLM-4.7 模型支持
+  - [x] zhipu native: `glm-4.7`
+  - [x] zhipu-openrouter: `glm-4.7-or`
+  - [x] 设置 `glm-4.7-or` 为默认模型
+- [x] Gemini Free Tier 支持
+  - [x] 新增 `gemini-free` provider
+  - [x] 模型: `gemini-2.5-flash-free`, `gemini-2.5-flash-lite-free`
+  - [x] Rate limit: 5 RPM, 250K TPM, 20 RPD (from AI Studio)
+- [x] Integration 测试选项
+  - [x] `--integration-model base` (deepseek-v3.2, 默认)
+  - [x] `--integration-model advanced` (gemini-2.5-flash-free)
 
 ### ~~1. Resume Capability & Export~~ ✅ 已完成
 **优先级: 高 | 预计工作量: 1天**

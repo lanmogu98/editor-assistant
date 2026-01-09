@@ -29,7 +29,7 @@ from .config.logging_config import progress
 from .storage import RunRepository
 
 
-DEFAULT_MODEL = "deepseek-v3.2"
+DEFAULT_MODEL = "glm-4.7-or"
 
 
 def add_common_arguments(parser):

@@ -13,8 +13,20 @@ All notable changes to this project will be documented in this file.
   - Supports JSON and CSV formats (auto-detected from file extension)
   - Includes full run details: inputs, outputs, token usage
   - `--limit` flag to limit number of exported runs
+- **GLM-4.7 Support**: Added Zhipu's latest GLM-4.7 model
+  - Native Zhipu: `--model glm-4.7`
+  - OpenRouter: `--model glm-4.7-or` (now default)
+  - 200K context window; native max output 128K, OpenRouter pinned route max output 65,536
+- **Gemini Free Tier**: Added support for Gemini Free Tier API
+  - `--model gemini-2.5-flash-free` and `--model gemini-2.5-flash-lite-free`
+  - Uses `GEMINI_FT_API_KEY` environment variable
+  - Rate limits: 5 RPM / 250K TPM / 20 RPD (from AI Studio)
+- **Integration Test Options**: `pytest --integration-model` to select test model
+  - `base` (default): deepseek-v3.2
+  - `advanced`: gemini-2.5-flash-free
 
 ### Changed
+- **Default Model**: Changed from `deepseek-v3.2` to `glm-4.7-or`
 - **Model Config Refactor**: YAML is now the single source of truth for model/provider configuration.
   - Removed hardcoded `LLMModel` and `ServiceProvider` enums from `set_llm.py`
   - Model list is now dynamically loaded from `llm_config.yml`

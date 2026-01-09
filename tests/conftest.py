@@ -23,12 +23,24 @@ from unittest.mock import Mock, MagicMock
 # PYTEST CONFIGURATION
 # ============================================================================
 
+def pytest_addoption(parser):
+    """Add custom pytest command-line options."""
+    parser.addoption(
+        "--integration-model",
+        action="store",
+        default="base",
+        choices=["base", "advanced"],
+        help="Model tier for integration tests: base (deepseek-v3.2) or advanced (gemini-2.5-flash-free)"
+    )
+
+
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "unit: Fast unit tests (mocked)")
     config.addinivalue_line("markers", "integration: Integration tests (real API)")
     config.addinivalue_line("markers", "slow: Slow running tests")
     config.addinivalue_line("markers", "expensive: Tests that cost money")
+    config.addinivalue_line("markers", "advanced: Tests requiring advanced models (gemini)")
 
 
 # ============================================================================
@@ -212,10 +224,18 @@ def mock_failing_llm_client():
 # REAL CLIENT FIXTURES (for integration tests)
 # ============================================================================
 
+# Model constants for integration tests
+INTEGRATION_MODELS = {
+    "base": "deepseek-v3.2",              # Cheap, fast - default for integration tests
+    "advanced": "gemini-2.5-flash-free"   # Free tier Gemini 2.5 - for advanced model testing
+}
+
+
 @pytest.fixture
-def budget_model_name() -> str:
-    """Return the cheapest model for testing."""
-    return "deepseek-v3.2"
+def budget_model_name(request) -> str:
+    """Return the model for integration testing based on --integration-model option."""
+    tier = request.config.getoption("--integration-model")
+    return INTEGRATION_MODELS.get(tier, INTEGRATION_MODELS["base"])
 
 
 @pytest.fixture
@@ -223,6 +243,18 @@ def real_llm_client(budget_model_name):
     """Create a real LLM client for integration tests."""
     from editor_assistant.llm_client import LLMClient
     return LLMClient(budget_model_name)
+
+
+@pytest.fixture
+def advanced_model_name() -> str:
+    """Return the advanced model name (gemini-2.5-flash-free)."""
+    return INTEGRATION_MODELS["advanced"]
+
+
+@pytest.fixture
+def base_model_name() -> str:
+    """Return the base model name (deepseek-v3.2)."""
+    return INTEGRATION_MODELS["base"]
 
 
 # ============================================================================
