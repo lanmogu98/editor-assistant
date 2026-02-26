@@ -60,9 +60,11 @@ backup/
 scripts/
 dev_notes/
 
-# Documentation (agent-specific - not CLAUDE.md which is project instructions)
+# Agent-specific (not AGENTS.md which is project task management)
 GEMINI.md
 CLAUDE.md
+.claude/settings.local.json
+.claude/settings.json
 # docs/dev_notes/  <-- Keep dev notes tracked for RFCs
 
 # Test output (keep test code tracked)

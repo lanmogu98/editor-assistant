@@ -24,8 +24,8 @@ This document provides technical documentation for developers contributing to Ed
 
 **Agent Protocol**:
 
-1. **Roadmap**: `FUTURE_ROADMAP.md` is the source of truth for planning. `TODO.md` is the current execution checklist. Always sync status back to Roadmap.
-2. **Developer Guide**: This file (`DEVELOPER_GUIDE.md`) must reflect the *current* architecture. If you add a module (e.g. `async_processor`), update the "Architecture Overview" and "Module Reference" immediately.
+1. **Tasks**: `AGENTS.md` is the single source of truth for task management. Update task status there after completing work.
+2. **Developer Guide**: This file (`DEVELOPER_GUIDE.md`) must reflect the *current* architecture. If you add a module, update the "Architecture Overview" and "Module Reference" immediately.
 3. **Changelog**: All user-facing changes go to `CHANGELOG.md`.
 
 ---
