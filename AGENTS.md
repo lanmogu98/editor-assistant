@@ -1,213 +1,155 @@
-# AGENTS.md — 任务管理
+# AGENTS.md — Editor Assistant AI Context
 
-> 本文件是 agent 的任务入口。每次启动时读此文件，了解项目上下文和当前任务。
-> 完成任务后更新状态，归档已完成任务到底部。
+## Project Overview
 
-## 项目上下文
+Editor Assistant is an AI-powered CLI tool and Python library for processing documents (PDF, DOCX, HTML, URLs, etc.) with LLMs. It generates research briefs, outlines, and translations using multiple LLM providers.
 
-- **项目**：Editor Assistant — AI-powered CLI + Python library for processing documents with LLMs
-- **版本**：0.5.1
-- **README**：[README.md](README.md) — 安装、使用方法、支持模型列表
-- **技术参考**：[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) — 架构、模块、配置、测试、常见模式
-- **变更日志**：[CHANGELOG.md](CHANGELOG.md) — 版本历史
-- **开发环境**：多 agent 环境（Cursor + Claude Code + Codex）
+双重角色：独立 CLI 工具 + 可被其他项目 `pip install -e .` 引用的库依赖（LLMClient、config 模块）。
 
-### 双重角色
+## Project Shape
 
-1. **独立 CLI 工具**：`editor-assistant brief/outline/translate/batch/...`，处理 PDF/DOCX/URL 等多格式文档，生成研究简讯、大纲、翻译
-2. **库依赖**：通过 `pip install -e .` 被其他项目引用，提供：
-   - `LLMClient` — 异步多模型 API 客户端（Deepseek、Gemini、OpenAI、Anthropic、GLM 等）
-   - `config.llm_models.get_model_details()` — 模型配置查询
-   - `config.constants` — 可配置常量（超时、速率限制等）
+- **Project Type**: software (CLI + library)
+- **Primary Artifacts**: Python package, CLI commands
+- **Language / Runtime**: Python 3.10+
+- **Package Manager**: uv (`pyproject.toml`, PEP 621)
+- **Project Layout**: `src/editor_assistant/` (src layout)
+- **Storage**: SQLite (runtime history, stats)
+- **Key Tools / Libraries**: httpx, pydantic, rich, jinja2, markitdown, trafilatura, readabilipy
+- **Verification**: pytest (unit + integration), black, flake8, mypy
 
-### 核心模块
+## Current Implementation Status
 
-| 模块 | 职责 |
-|------|------|
-| `cli.py` | CLI 入口，asyncio.run() |
-| `main.py` | 编排层，EditorAssistant 类 |
-| `llm_client.py` | 异步 LLM API 客户端（httpx），多 provider 路由 |
-| `md_processor.py` | 异步处理（Semaphore 并发控制） |
-| `md_converter.py` | 格式转换（PDF/DOCX/HTML → Markdown） |
-| `tasks/` | 可插拔任务系统（TaskRegistry + @register） |
-| `storage/` | SQLite 持久化（运行历史、统计） |
-| `config/` | 模型配置（llm_config.yml）、常量、prompt 模板 |
+> AI agents should read this table first in new sessions.
 
----
+| Module | Status | Note |
+|--------|--------|------|
+| `cli.py` | done | CLI 入口，asyncio.run()，8 个子命令 |
+| `main.py` | done | 编排层，EditorAssistant 类 |
+| `llm_client.py` | done | 异步 LLM API 客户端（httpx），多 provider 路由 |
+| `md_processor.py` | done | 异步处理，Semaphore 并发控制 |
+| `md_converter.py` | done | 格式转换（PDF/DOCX/HTML → Markdown） |
+| `clean_html_to_md.py` | done | HTML 清理工具 |
+| `content_validation.py` | done | 输入内容验证 |
+| `data_models.py` | done | Pydantic 数据模型 |
+| `utils.py` | done | 工具函数 |
+| `config/` | done | 模型配置（llm_config.yml）、常量、prompt 模板 |
+| `tasks/` | done | 可插拔任务系统（TaskRegistry + @register） |
+| `storage/` | done | SQLite 持久化（runs/inputs/outputs/token_usage） |
 
-## 当前任务
+## Key Design Conventions
 
-### TASK-001：Tiered Pricing System
+### Async Architecture
 
-- **状态**：`pending`
-- **Phase**：1
-- **优先级**：中
-- **预计工作量**：1 天
-- **目标**：支持阶梯计费模型（如 Gemini 3 Pro: <200k vs >200k tokens）
-- **执行步骤**：
-  1. 扩展 `llm_config.yml` 支持 `pricing_tiers` 字段
-  2. 修改 `LLMClient` 计费逻辑
-  3. 更新成本统计显示
-  4. 更新文档
+- All I/O is async (httpx, not requests)
+- Semaphore-based concurrency control (default 5 concurrent)
+- CLI entry point uses `asyncio.run()`
 
-### TASK-002：模型参数完善
+### Task System
 
-- **状态**：`pending`
-- **Phase**：1
-- **优先级**：低
-- **预计工作量**：0.5 天
-- **目标**：正确计算输入 token 限制
-- **执行步骤**：
-  1. 在 `llm_config.yml` 添加 `input_max_tokens` 字段（或运行时计算 `context_window - max_tokens`）
-  2. 更新验证逻辑使用正确的输入限制
-  3. 更新文档说明各参数含义
+- Tasks register via `@TaskRegistry.register()` decorator
+- Each task in `tasks/` is a self-contained module inheriting from `Task` base class
+- New tasks: create file in `tasks/`, use `@register`, inherit `Task`
 
-### TASK-003：Reliability Hardening
+### LLM Client
 
-- **状态**：`pending`
-- **Phase**：1
-- **优先级**：中
-- **预计工作量**：0.5 天
-- **目标**：遗留的可靠性改进
-- **执行步骤**：
-  1. Make file output optional via CLI flag (default off)
-  2. No DB writes for failed inputs
-  3. Add targeted tests for reliability features
+- Multi-provider routing: Deepseek, Gemini, OpenAI, Anthropic, GLM, OpenRouter
+- Model config in `config/llm_config.yml` — single source of truth for all model/provider settings
+- Rate limiting and response caching built in
+- Adding models: edit `llm_config.yml` only, no Python code changes
 
-### TASK-004：Dependency Injection
+### Library API Contract
 
-- **状态**：`backlog`
-- **Phase**：2
-- **预计工作量**：1–2 天
-- **目标**：解耦组件，提升可测试性
-- **执行步骤**：
-  1. 定义接口/协议 (LLMClientProtocol, ConverterProtocol)
-  2. 重构为依赖注入模式
-  3. 添加简单的工厂/容器
-  4. 更新测试使用 mock
+外部项目通过以下接口引用本项目：
+- `LLMClient` — 异步多模型 API 客户端
+- `config.llm_models.get_model_details()` — 模型配置查询
+- `config.constants` — 可配置常量（超时、速率限制等）
 
-### TASK-005：Plugin System — 外部加载
+Breaking changes to these APIs require version bump.
 
-- **状态**：`backlog`
-- **Phase**：2
-- **前置**：核心 Registry Pattern 已实现（TaskRegistry）
-- **预计工作量**：2–3 天
-- **目标**：支持外部插件目录加载
-- **执行步骤**：
-  1. 实现插件目录扫描 (`~/.editor-assistant/plugins/`)
-  2. 启动时动态加载插件
-  3. 编写插件开发文档
-  4. 添加示例插件
+## Directory Responsibilities
 
-### TASK-006：ClassifyTask 结构化输出
+| Directory | Responsibility | Key Files |
+|-----------|---------------|-----------|
+| `src/editor_assistant/` | Main package | `cli.py`, `main.py`, `llm_client.py`, `md_processor.py` |
+| `src/editor_assistant/config/` | Model config, constants, prompt templates | `llm_config.yml`, `constants.py`, `prompts/` |
+| `src/editor_assistant/tasks/` | Pluggable task modules | `base.py`, `brief.py`, `outline.py`, `translate.py` |
+| `src/editor_assistant/storage/` | SQLite persistence | `database.py`, `repository.py` |
+| `tests/unit/` | Unit tests | 11 test files |
+| `tests/integration/` | Integration tests (real API calls) | 6 test files |
+| `docs/design_docs/` | RFCs and design proposals | `rfc_async_refactor.md` |
+| `docs/decisions/` | Architecture Decision Records | `001-async-architecture.md` |
+| `docs/reports/` | Verification reports | `async_verification_report.md` |
 
-- **状态**：`backlog`
-- **Phase**：2
-- **预计工作量**：1 天
-- **目标**：新增分类任务，输出结构化 JSON
+## Code Style
 
-### TASK-007：SciContent Benchmark Module
+- `black` for formatting
+- `flake8` for linting
+- `mypy` for type checking
+- Type hints on all public APIs
+- Async/await throughout hot paths
 
-- **状态**：`backlog`
-- **Phase**：2
-- **预计工作量**：2–3 周
-- **目标**：科技内容创作/科研阅读场景的系统化评估框架
-- **说明**：
-  - 任务覆盖：写作风格（新闻/学术/科普）、学科、话题
-  - 评估维度：生成质量、速度、成本效率、一致性
-  - CLI: `editor-assistant benchmark`
-  - 输出: JSON Lines
+## Entry / Workflow Commands
 
-### TASK-008：Interactive AI Assistant
+```bash
+# Primary CLI commands
+editor-assistant brief <input>       # Generate research brief
+editor-assistant outline <input>     # Generate outline
+editor-assistant translate <input>   # Translate document
+editor-assistant batch <dir>         # Batch process directory
+editor-assistant resume <run_id>     # Resume interrupted run
+editor-assistant export <run_id>     # Export results (JSON/CSV)
+editor-assistant history             # Show run history
+editor-assistant stats               # Show usage statistics
+editor-assistant show <run_id>       # Show run details
 
-- **状态**：`backlog`
-- **Phase**：2+
-- **预计工作量**：3–4 周
-- **目标**：自主选题 + 内容生成 + 反馈收集闭环
+# Utility commands
+any2md <file>                        # Convert any format to Markdown
+html2md <file>                       # Clean HTML to Markdown
+```
 
-### TASK-009：Configuration File Support
+## Workflow Commands
 
-- **状态**：`backlog`
-- **Phase**：3（与 GUI 一起实现）
-- **预计工作量**：1 天
-- **目标**：YAML 配置文件支持（`~/.editor-assistant/config.yml` + 项目级 `.editor-assistant.yml`）
-- **说明**：CLI 对非技术用户操作难度较大，在 Web UI 之前实用性有限
+- Install: `pip install -e .`
+- Install dev: `pip install -e ".[dev]"`
+- Test unit: `pytest tests/unit/`
+- Test integration: `pytest tests/integration/`
+- Lint: `flake8 src/`
+- Type check: `mypy src/`
+- Format: `black src/ tests/`
 
-### TASK-010：Web UI / Browser Extension
+## Commit Conventions
 
-- **状态**：`backlog`
-- **Phase**：3
-- **预计工作量**：4–6 周（Web UI MVP）
-- **目标**：FastAPI + Vue/React SPA，Chrome Extension
+Use conventional commits: `<type>: <subject>`
 
-### TASK-011：Persistence Layer 优化
+Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`
 
-- **状态**：`backlog`
-- **Phase**：远期
-- **目标**：
-  - Resume semantics / DB record consistency（原始 run 与 resumed run 的关联）
-  - Resume/Export query efficiency（避免 N+1 查询）
+## Task Entry
 
----
+- **Direction**: See `ROADMAP.md` for milestones and project phases
+- **Current work**: `gh issue list --label p1` for high-priority items
+- **Pick a task**: `gh issue list --state open --assignee @me` or unassigned p1/p2 issues
+- **Deep context**: Check `.agents/projects/` for evolution logs on complex work
+- **File new issues**: Use the `file-issue` skill or `gh issue create`
+- **Recommended labels**: Priority — `p1` (this week), `p2` (this quarter), `p3` (later). Type — `bug`, `enhancement`, `docs`, `agent-generated`
 
-## 已完成任务
+## Working Memory
 
-### GLM-4.7 + Gemini Free Tier ✓
+- AI agents store project-level memory in `.memory/` (not the default `~/.claude/projects/` path)
+- `.memory/MEMORY.md` is the index; individual memories are separate files
+- This convention ensures cross-agent availability and survives project path changes
 
-- **完成日期**：2026-01-04
-- **产出**：
-  - GLM-4.7 模型支持（zhipu native + OpenRouter），设为默认模型
-  - Gemini Free Tier 支持（gemini-2.5-flash-free, gemini-2.5-flash-lite-free）
-  - Integration 测试 `--integration-model base/advanced` 选项
+## Security Constraints
 
-### GPT-5.2 / Claude 4.6 / Gemini 3.1 Pro 模型更新 ✓
+- Never commit: `.env`, `*.db`, API keys, tokens
+- Test API calls must be mocked (unit tests)
+- Logs must not contain full API keys or tokens
 
-- **完成日期**：2026-01（commit 73be695）
-- **产出**：新增 GPT-5.2、Claude Opus 4.6、Claude Sonnet 4.6、Gemini 3.1 Pro；修复 OpenRouter max_tokens
+## Open Questions
 
-### Resume & Export ✓
+1. Tiered pricing model structure — how to represent variable rates (e.g., Gemini 3 Pro: <200k vs >200k tokens) in `llm_config.yml`
+2. Plugin system external loading architecture — how to discover and load plugins from `~/.editor-assistant/plugins/`
+3. Web UI framework choice: FastAPI + Vue vs FastAPI + React
 
-- **完成日期**：2025-12
-- **产出**：
-  - `editor-assistant resume` 命令（恢复中断任务）
-  - `editor-assistant export` 命令（JSON/CSV 导出）
+## Technical Reference
 
-### v0.5.x Async Refactor ✓
-
-- **完成日期**：2025-12-19
-- **产出**：
-  - 全异步架构（asyncio + httpx），4.46x 性能提升
-  - Semaphore 并发控制（默认 5 并发）
-  - Rich batch UI 进度条
-  - 147 个测试
-
-### SQLite Storage + CLI ✓
-
-- **完成日期**：2025-12-18
-- **产出**：
-  - SQLite 持久化（runs/inputs/outputs/token_usage）
-  - `history`、`stats`、`show` 命令
-
-### Task Architecture ✓
-
-- **完成日期**：2025-12-18
-- **产出**：TaskRegistry + @register 装饰器，brief/outline/translate 重构
-
-### v0.3.1 代码质量大修 ✓
-
-- **完成日期**：2025-12-17
-- **产出**：
-  - 修复 17 个代码质量问题（O(n²)、typo、dead code、error handling 等）
-  - 新增：centralized constants、rate limiting、response caching、content validation
-
----
-
-## 任务状态说明
-
-| 状态 | 含义 |
-|------|------|
-| `active` | 当前正在执行，agent 看到后直接开始 |
-| `pending` | 已就绪，等待人工确认后改为 active |
-| `blocked` | 有外部依赖，无法执行 |
-| `backlog` | 远期规划，非当前优先级 |
-| `done` | 已完成并验收，归档到"已完成任务"区 |
+Full architecture documentation: `DEVELOPER_GUIDE.md`

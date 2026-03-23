@@ -59,10 +59,10 @@ test_output/
 backup/
 scripts/
 dev_notes/
+scratch/
 
-# Agent-specific (not AGENTS.md which is project task management)
+# Agent-specific (not AGENTS.md/CLAUDE.md which are project AI context)
 GEMINI.md
-CLAUDE.md
 .claude/settings.local.json
 .claude/settings.json
 # docs/dev_notes/  <-- Keep dev notes tracked for RFCs
