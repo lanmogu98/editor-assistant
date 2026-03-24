@@ -4,14 +4,14 @@
 
 Editor Assistant is an AI-powered CLI tool and Python library for processing documents (PDF, DOCX, HTML, URLs, etc.) with LLMs. It generates research briefs, outlines, and translations using multiple LLM providers.
 
-双重角色：独立 CLI 工具 + 可被其他项目 `pip install -e .` 引用的库依赖（LLMClient、config 模块）。
+双重角色：独立 CLI 工具 + 可被其他项目引用的库依赖（LLMClient、config 模块）。
 
 ## Project Shape
 
 - **Project Type**: software (CLI + library)
 - **Primary Artifacts**: Python package, CLI commands
 - **Language / Runtime**: Python 3.10+
-- **Package Manager**: uv (`pyproject.toml`, PEP 621)
+- **Package Manager**: uv (`pyproject.toml`, PEP 621, `uv.lock`)
 - **Project Layout**: `src/editor_assistant/` (src layout)
 - **Storage**: SQLite (runtime history, stats)
 - **Key Tools / Libraries**: httpx, pydantic, rich, jinja2, markitdown, trafilatura, readabilipy
@@ -109,13 +109,13 @@ html2md <file>                       # Clean HTML to Markdown
 
 ## Workflow Commands
 
-- Install: `pip install -e .`
-- Install dev: `pip install -e ".[dev]"`
-- Test unit: `pytest tests/unit/`
-- Test integration: `pytest tests/integration/`
-- Lint: `flake8 src/`
-- Type check: `mypy src/`
-- Format: `black src/ tests/`
+- Install: `uv sync --no-dev`
+- Install dev: `uv sync`
+- Test unit: `uv run pytest tests/unit/`
+- Test integration: `uv run pytest tests/integration/`
+- Lint: `uv run flake8 src/`
+- Type check: `uv run mypy src/`
+- Format: `uv run black src/ tests/`
 
 ## Commit Conventions
 

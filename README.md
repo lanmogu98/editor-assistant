@@ -41,7 +41,7 @@ A simple AI-powered Python CLI tool for processing research papers and generatin
 ```bash
 git clone https://github.com/yourusername/editor_assistant.git
 cd editor_assistant
-pip install -e .
+uv sync
 ```
 
 ### Dependencies
@@ -321,6 +321,7 @@ editor-assistant outline --article paper:research.pdf
 ```
 
 **New syntax (v0.2):**
+
 ```bash
 editor-assistant brief paper=paper.pdf news=article.md
 editor-assistant outline research.pdf
@@ -333,6 +334,7 @@ editor-assistant outline research.pdf
 Model names are loaded dynamically from `src/editor_assistant/config/llm_config.yml`. Use `editor-assistant --help` to see the current `--model` choices.
 
 **New additions:**
+
 - `deepseek-v3.2`
 - `gpt-4o-or`, `gpt-4.1-or`, `gpt-5-or` - OpenAI models via OpenRouter
 - `claude-sonnet-4-or` - Anthropic Claude via OpenRouter
@@ -348,10 +350,12 @@ Current default model: `deepseek-v3.2` (see `--model` under Global Options).
 1. **Update CLI commands**: Replace `--article type:path` with `type=path`
 2. **Update model names**: See "Supported Models" (or check `src/editor_assistant/config/llm_config.yml`)
 3. **Set new environment variables** (if using new providers):
+
    ```bash
    export OPENAI_API_KEY_OPENROUTER=your_openrouter_key
    export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_key
    ```
+
 4. **Test your workflow** with `--debug` flag to verify everything works
 
 ### 🛡️ Error Handling
@@ -422,7 +426,7 @@ For support, please open an issue on GitHub or contact the maintainers.
 ```bash
 git clone https://github.com/yourusername/editor_assistant.git
 cd editor_assistant
-pip install -e .
+uv sync
 ```
 
 ### 🔧 配置
@@ -516,56 +520,61 @@ editor-assistant export history.json
 editor-assistant export history.csv --limit 100
 ```
 
-
 ### 🤖 支持的模型
 
 #### 由火山引擎提供
 
 ##### Deepseek模型
+
 - `deepseek-v3.2` - 最新通用模型（2025年发布）
 - `deepseek-r1` - 推理模型
 
 ##### Doubao模型
+
 - `doubao-seed-1.6` - 高级语言模型，支持256k上下文窗口
 
 ##### Kimi模型
+
 - `kimi-k2` - 高级推理模型
 
 #### 由阿里云提供
 
 ##### Qwen模型（阿里云）
+
 - `qwen-plus` - 具有思考能力的通用模型
 - `qwen3-max` - 最新的增强推理通用模型
 - `qwen3-max-preview` - Qwen3-Max预览版
 
 #### 由谷歌云提供
 
-##### Gemini模型 （google cloud）
+##### Gemini模型（Google Cloud）
+
 - `gemini-3-flash` - 平衡性能模型
 - `gemini-3-pro` - 高性能模型
 
 #### 由智谱提供
 
 ##### GLM模型
+
 - `glm-4.5` - 高性能模型（智谱AI）
 - `glm-4.6` - 最新模型（智谱AI）
 
-#### 由openrouter提供
+#### 由OpenRouter提供
 
 ##### GLM模型
+
 - `glm-4.5-or` - 高性能模型（智谱，通过OpenRouter）
 - `glm-4.6-or` - 最新模型（智谱，通过OpenRouter）
 
 ##### OpenAI模型
+
 - `gpt-4o-or` - GPT-4 Omni模型，支持视觉功能
 - `gpt-4.1-or` - 最新GPT-4 Turbo模型
 - `gpt-5-or` - 下一代GPT-5模型
 
 ##### Anthropic模型
+
 - `claude-sonnet-4-or` - Claude Sonnet 4模型，支持200k上下文
-
-
-
 
 ### 📝 许可证
 

@@ -290,16 +290,16 @@ provider-name:
 
 ```bash
 # All tests
-pytest
+uv run pytest
 
 # Specific test file
-pytest tests/unit/test_md_processor.py
+uv run pytest tests/unit/test_md_processor.py
 
 # With coverage
-pytest --cov=src/editor_assistant
+uv run pytest --cov=src/editor_assistant
 
 # Verbose output
-pytest -v
+uv run pytest -v
 ```
 
 ### Test Structure

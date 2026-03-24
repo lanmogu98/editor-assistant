@@ -24,7 +24,7 @@ Read `AGENTS.md` at project root for full context before making any changes.
 ## Architecture
 
 - Project root detected by locating `pyproject.toml`
-- Package manager: uv (`pip install -e .` for dev)
+- Package manager: uv (`uv sync` for dev)
 - src layout: `src/editor_assistant/`
 
 ## Do NOT
