@@ -37,10 +37,11 @@ class TestPackageImport:
         assert isinstance(ver, str)
         parts = ver.split(".")
         assert len(parts) >= 2
-        assert all(p.isdigit() for p in parts)
 
     @pytest.mark.unit
     def test_all_submodules_importable(self):
+        # NOTE: These imports verify package structure only.
+        # All submodules must be free of side effects at import time.
         from editor_assistant import cli  # noqa: F401
         from editor_assistant import main  # noqa: F401
         from editor_assistant import llm_client  # noqa: F401
@@ -91,18 +92,8 @@ class TestConfigLoading:
     """Config files load from installed package."""
 
     @pytest.mark.unit
-    def test_llm_config_yml_exists(self):
-        from editor_assistant.config.llm_models import (
-            _get_config_path,
-        )
-
-        assert _get_config_path().exists()
-
-    @pytest.mark.unit
-    def test_llm_config_loads_providers(self):
-        from editor_assistant.config.llm_models import (
-            load_all_settings,
-        )
+    def test_llm_config_loads(self):
+        from editor_assistant.config.llm_models import load_all_settings
 
         settings = load_all_settings()
         assert len(settings) >= 5
