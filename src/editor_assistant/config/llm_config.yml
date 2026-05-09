@@ -126,17 +126,20 @@ gemini-free:
       id: "gemini-3.1-flash-lite-preview"
       pricing: { input: 0.0, output: 0.0 }
 
-kimi-volcengine:
-  api_key_env_var: "KIMI_API_KEY_VOLC"
-  api_base_url: *volcengine_endpoint
-  temperature: 0.5
-  max_tokens: 32000
-  context_window: 128000
-  pricing_currency: "¥"
-  models:
-    kimi-k2:
-      id: "kimi-k2-250905"
-      pricing: {input: 4.00, output: 16.00}
+# kimi-volcengine: sunset by Volcengine (model id "kimi-k2-250905" returns 404
+# as of 2026-05-09; Moonshot's official K2 series sunset is 2026-05-25). Block
+# preserved as commented placeholder for K2.5 / K2.6 (tracked in #20).
+# kimi-volcengine:
+#   api_key_env_var: "KIMI_API_KEY_VOLC"
+#   api_base_url: *volcengine_endpoint
+#   temperature: 0.5
+#   max_tokens: 32000
+#   context_window: 128000
+#   pricing_currency: "¥"
+#   models:
+#     kimi-k2:
+#       id: "kimi-k2-250905"
+#       pricing: {input: 4.00, output: 16.00}
 
 # Alibaba Bailian (百炼) — same OpenAI-compatible endpoint as legacy DashScope.
 # Tiered pricing for qwen3-max above 32K input is tracked in #6.

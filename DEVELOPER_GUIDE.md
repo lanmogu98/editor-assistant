@@ -298,7 +298,6 @@ Top-level keys starting with `_` (e.g. `_shared_endpoints`) are skipped by the l
 | `deepseek-volcengine` | Volcengine Ark | ¥ | DeepSeek V3.2, R1 (proxied via Volcengine) |
 | `gemini` | Gemini API direct | $ | Gemini 3-flash, 3.1-flash-lite, 3.1-pro |
 | `gemini-free` | Gemini API direct (free key) | $ | Free tier: 2.5-flash, 2.5-flash-lite, 3-flash-preview, 3.1-flash-lite-preview |
-| `kimi-volcengine` | Volcengine Ark | ¥ | Kimi K2 |
 | `qwen` | Bailian (DashScope-compatible) | ¥ | Qwen Turbo / Plus / 3.5-plus / 3-max |
 | `zhipu` | `open.bigmodel.cn` (direct) | $ | GLM-4.5 / 4.6 / 4.7 / 5 / 5.1 |
 | `zhipu-openrouter` | OpenRouter (pinned to `z-ai`) | $ | GLM via OpenRouter |
