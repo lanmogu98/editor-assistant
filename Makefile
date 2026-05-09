@@ -134,4 +134,4 @@ validate-cli:  ## Test the new CLI syntax quickly
 	uv run editor-assistant translate --help
 
 models-list:  ## Show available models
-	@uv run python -c "from src.editor_assistant.llm_client import LLMClient; print('Available models:'); [print(f'  {m}') for m in LLMClient.get_supported_models()]"
+	@uv run python -c "from editor_assistant.llm_client import LLMClient; print('Available models:'); [print(f'  {m}') for m in LLMClient.get_supported_models()]"
