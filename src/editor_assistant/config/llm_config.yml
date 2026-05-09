@@ -92,12 +92,15 @@ gemini:
 
 # Gemini Free Tier - uses separate API key with stricter rate limits.
 # Provider-wide rate_limit applies to ALL models in this block; we use the most
-# restrictive cap to avoid throttling violations on any one model.
-# Per-model limits (per ai.google.dev/gemini-api/docs/rate-limits, 2026-Q2):
-#   gemini-2.5-flash:        ~10 RPM, 250K TPM, ~250 RPD
-#   gemini-2.5-flash-lite:   ~15 RPM, 250K TPM, ~1K RPD
-#   gemini-3-flash-preview:  TBD (lower than 2.5-flash; verify in AI Studio)
-# Note: Free tier does NOT support 3-pro / 3.1-pro.
+# restrictive cap (10 RPM) to avoid throttling violations on any free-tier model.
+# Verified per ai.google.dev/gemini-api/docs/pricing (May 2026 — free tier was
+# tightened 2026-04-01: Pro models moved to paid; Flash retained at reduced RPD):
+#   gemini-2.5-flash:               10 RPM, 250K TPM
+#   gemini-2.5-flash-lite:          15 RPM, 250K TPM
+#   gemini-3-flash-preview:         10 RPM (lowest published flash cap)
+#   gemini-3.1-flash-lite-preview:  free, RPM unpublished — fall back to 10
+# Note: Free tier does NOT support gemini-3-pro / gemini-3.1-pro (paid only).
+# Exact per-project RPD/TPM is shown in AI Studio dashboard, not this comment.
 gemini-free:
   api_key_env_var: "GEMINI_FT_API_KEY"
   api_base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
@@ -106,8 +109,8 @@ gemini-free:
   context_window: 1000000  # 1M context
   pricing_currency: "$"
   rate_limit:
-    min_interval_seconds: 12.0  # conservative: respects 3-flash-preview unknown cap
-    max_requests_per_minute: 5
+    min_interval_seconds: 6.0  # 10 RPM = 60s / 10
+    max_requests_per_minute: 10
   models:
     gemini-2.5-flash-free:
       id: "gemini-2.5-flash"

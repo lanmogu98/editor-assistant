@@ -269,18 +269,44 @@ Structure:
 
 ```yaml
 provider-name:
-  api_key_env_var: "ENV_VAR_NAME"
-  api_base_url: "https://..."
+  api_key_env_var: "ENV_VAR_NAME"      # env var holding the API key
+  api_base_url: "https://..."           # OpenAI-compatible /chat/completions URL
   temperature: 0.6
-  max_tokens: 32000
-  context_window: 128000
-  pricing_currency: "$"
-  request_overrides: {}  # Optional: extra API params
+  max_tokens: 32000                     # default max output tokens (provider-wide)
+  context_window: 128000                # default context window (provider-wide)
+  pricing_currency: "$"                 # "$" or "¥"
+  rate_limit:                           # optional, provider-wide
+    min_interval_seconds: 1.0           # min seconds between requests (default 0.5)
+    max_requests_per_minute: 30         # 0 = unlimited (default 60)
+  request_overrides:                    # optional dict merged into every request payload
+    provider:                           # example: pin OpenRouter routing
+      only: ["z-ai"]
+      allow_fallbacks: false
   models:
     model-name:
       id: "actual-api-id"
-      pricing: {input: X, output: Y}
+      pricing: {input: X, output: Y}    # USD or CNY per 1M tokens
 ```
+
+Top-level keys starting with `_` (e.g. `_shared_endpoints`) are skipped by the loader and used for YAML anchor / alias deduplication. Schema is enforced by Pydantic in `config/llm_models.py` (`ProviderSettings`, `ModelDetails`).
+
+#### Supported Providers (current)
+
+| Provider key | Endpoint | Currency | Used for |
+| --- | --- | --- | --- |
+| `deepseek` | `api.deepseek.com` (official) | $ | DeepSeek V3.2, R1, V4-Flash, V4-Pro |
+| `deepseek-volcengine` | Volcengine Ark | ¥ | DeepSeek V3.2, R1 (proxied via Volcengine) |
+| `gemini` | Gemini API direct | $ | Gemini 3-flash, 3.1-flash-lite, 3.1-pro |
+| `gemini-free` | Gemini API direct (free key) | $ | 2.5/3-flash free tier |
+| `kimi-volcengine` | Volcengine Ark | ¥ | Kimi K2 |
+| `qwen` | Bailian (DashScope-compatible) | ¥ | Qwen Turbo / Plus / 3.5-plus / 3-max |
+| `zhipu` | `open.bigmodel.cn` (direct) | $ | GLM-4.5 / 4.6 / 4.7 / 5 / 5.1 |
+| `zhipu-openrouter` | OpenRouter (pinned to `z-ai`) | $ | GLM via OpenRouter |
+| `doubao` | Volcengine Ark | ¥ | Doubao Seed 1.6 family |
+| `openai-openrouter` | OpenRouter | $ | GPT-4o / 4.1 / 5.x via OpenRouter |
+| `anthropic-openrouter` | OpenRouter | $ | Claude Sonnet 4.x / Opus 4.6+ / Haiku 4.5 |
+
+Adding a new provider is a config-only change (see [§3](#adding-a-new-llm-model)). The Pydantic schema in `config/llm_models.py` is the source of truth — modify it only when adding a new structural field, and update this section accordingly.
 
 ---
 
