@@ -43,6 +43,10 @@ deepseek-volcengine:
 # DeepSeek official API. V4 and V4-Pro are exclusive to this endpoint (not on Volcengine).
 # Block defaults match V3.2 / R1 limits; V4 family is capped here pending #21
 # (per-model max_tokens / context_window override).
+# Model IDs sourced from api-docs.deepseek.com/quick_start/pricing (May 2026).
+# Recommend a live curl test before first production use — research was based on
+# search snippets, not direct page render. Aliases `deepseek-chat` and
+# `deepseek-reasoner` retire 2026-07-24.
 deepseek:
   api_key_env_var: "DEEPSEEK_API_KEY"
   api_base_url: "https://api.deepseek.com/chat/completions"
@@ -120,6 +124,9 @@ gemini-free:
       pricing: { input: 0.0, output: 0.0 }
     gemini-3-flash-free:
       id: "gemini-3-flash-preview"
+      pricing: { input: 0.0, output: 0.0 }
+    gemini-3.1-flash-lite-free:
+      id: "gemini-3.1-flash-lite-preview"
       pricing: { input: 0.0, output: 0.0 }
 
 kimi-volcengine:
@@ -230,6 +237,8 @@ doubao:
     doubao-seed-1.6:
       id: "doubao-seed-1-6-250615"
       pricing: {input: 0.80, output: 2.00}
+    # Volcengine output price for lite (¥2.40) appears higher than base (¥2.00).
+    # Reason TBD — base output may be ¥8 per Volcengine docs (tracked in #20).
     doubao-seed-1.6-lite:
       id: "doubao-seed-1-6-lite-250615"
       pricing: {input: 0.30, output: 2.40}
