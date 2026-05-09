@@ -294,7 +294,7 @@ Top-level keys starting with `_` (e.g. `_shared_endpoints`) are skipped by the l
 
 | Provider key | Endpoint | Currency | Used for |
 | --- | --- | --- | --- |
-| `deepseek` | `api.deepseek.com` (official) | $ | DeepSeek V3.2, R1, V4-Flash, V4-Pro |
+| `deepseek` | `api.deepseek.com` (official) | $ | DeepSeek V4-Flash, V4-Pro (V3.2 / R1 only on Volcengine) |
 | `deepseek-volcengine` | Volcengine Ark | ¥ | DeepSeek V3.2, R1 (proxied via Volcengine) |
 | `gemini` | Gemini API direct | $ | Gemini 3-flash, 3.1-flash-lite, 3.1-pro |
 | `gemini-free` | Gemini API direct (free key) | $ | Free tier: 2.5-flash, 2.5-flash-lite, 3-flash-preview, 3.1-flash-lite-preview |

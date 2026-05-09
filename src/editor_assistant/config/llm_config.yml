@@ -54,13 +54,10 @@ deepseek:
   max_tokens: 64000  # V3.2/R1 max output; V4-Flash/V4-Pro support 384K (capped here)
   context_window: 128000  # V3.2/R1 context; V4-Flash/V4-Pro support 1M (capped here)
   pricing_currency: "$"
+  # Live test (2026-05-09) confirmed: official API rejects versioned IDs
+  # (deepseek-v3.2, deepseek-r1) with "supported API model names are
+  # deepseek-v4-pro or deepseek-v4-flash". V3.2 and R1 are Volcengine-only now.
   models:
-    deepseek-v3.2-official:
-      id: "deepseek-v3.2"
-      pricing: { input: 0.28, output: 0.42 }
-    deepseek-r1-official:
-      id: "deepseek-r1"
-      pricing: { input: 0.55, output: 2.19 }
     deepseek-v4-flash:
       id: "deepseek-v4-flash"
       pricing: { input: 0.14, output: 0.28 }
@@ -152,7 +149,7 @@ qwen:
   pricing_currency: "¥"
   models:
     qwen-turbo:
-      id: "qwen-turbo"
+      id: "qwen-turbo-latest"  # bare "qwen-turbo" returns 400; -latest alias works
       pricing: {input: 0.30, output: 0.60}
     qwen-plus:
       id: "qwen-plus"
@@ -237,11 +234,6 @@ doubao:
     doubao-seed-1.6:
       id: "doubao-seed-1-6-250615"
       pricing: {input: 0.80, output: 2.00}
-    # Volcengine output price for lite (¥2.40) appears higher than base (¥2.00).
-    # Reason TBD — base output may be ¥8 per Volcengine docs (tracked in #20).
-    doubao-seed-1.6-lite:
-      id: "doubao-seed-1-6-lite-250615"
-      pricing: {input: 0.30, output: 2.40}
 
 openai-openrouter:
   api_key_env_var: "OPENAI_API_KEY_OPENROUTER"
