@@ -4,384 +4,310 @@
 
 ## English
 
-A simple AI-powered Python CLI tool for processing research papers and generating content using Large Language Models (LLMs). Designed for personal research workflow automation.
+Editor Assistant is an AI-powered Python CLI and library for turning research papers, articles, web pages, and converted documents into briefs, outlines, and translations with LLMs. It is built for personal research workflows, but the core client and config modules can also be imported by other Python projects.
 
-**Version: 0.5.1** | [See Breaking Changes](#breaking-changes-in-v02)
+**Version: 0.5.1**
 
-### 🚀 Features
+### Features
 
-- **High-Performance Async Processing**: Built on `asyncio` and `httpx` for fast concurrent processing of multiple documents.
-- **Simple CLI Interface**: Command-line tool with subcommands: `brief`, `outline`, `translate`, `process`, `batch`, `convert`, `clean`, `history`, `stats`, `show`, `resume`, `export`
-- **Multi-format Input**: Processes PDFs, DOCs, web pages, URLs, and markdown files
-- **Three Content Types**:
-  - **Brief News**: Convert research papers into short news articles
-  - **Research Outlines**: Generate detailed outlines with Chinese translation
-  - **Translation**: Standalone Chinese translation with bilingual output
-- **Multiple LLM Support**: Works with Deepseek, Gemini, and other providers
-- **Debug Logging**: Optional detailed logging for troubleshooting
+- **Async processing**: Uses `asyncio` and `httpx` for concurrent conversion and LLM calls.
+- **Unified CLI**: `brief`, `outline`, `translate`, `process`, `batch`, `convert`, `clean`, `history`, `stats`, `show`, `resume`, and `export`.
+- **Typed source inputs**: `brief` and `process` accept typed sources such as `paper=...` and `news=...`; multiple supplied inputs are processed independently.
+- **SQLite run history**: Runs, inputs, outputs, and token usage are saved to a local database.
+- **Optional file outputs**: Add `--save-files` to write generated markdown and token reports to disk.
+- **Multi-provider models**: DeepSeek, Gemini, Qwen, GLM/Zhipu, Doubao, OpenAI via OpenRouter, and Anthropic via OpenRouter.
 
-### 📋 Prerequisites
+### Requirements
 
-- Python 3.9+
-- API keys for supported LLM providers:
-- **Deepseek**: `DEEPSEEK_API_KEY_VOLC` environment variable (via Volcengine)
-  - **Gemini**: `GEMINI_API_KEY` environment variable
-  - **Kimi**: `KIMI_API_KEY_VOLC` environment variable (via Volcengine)
-  - **Doubao**: `DOUBAO_API_KEY` environment variable (via Volcengine)
-  - **Qwen**: `QWEN_API_KEY` environment variable (via Alibaba Cloud)
-  - **GLM**: `ZHIPU_API_KEY` environment variable (via Zhipu AI)
-  - **GLM (OpenRouter)**: `ZHIPU_API_KEY_OPENROUTER` environment variable (via OpenRouter)
-- **OpenAI (OpenRouter)**: `OPENAI_API_KEY_OPENROUTER` environment variable (via OpenRouter)
-- **Anthropic (OpenRouter)**: `ANTHROPIC_API_KEY_OPENROUTER` environment variable (via OpenRouter)
+- Python 3.10+
+- `uv` for project installation and command execution
+- API keys for the model provider(s) you use
 
-## 🛠️ Installation
-
-### From Source
+### Installation
 
 ```bash
-git clone https://github.com/yourusername/editor_assistant.git
-cd editor_assistant
+git clone https://github.com/lanmogu98/editor-assistant.git
+cd editor-assistant
 uv sync
 ```
 
-### Dependencies
-
-The package automatically installs these dependencies:
-
-- `httpx` - Async HTTP client for high-performance API calls
-- `markitdown` - Microsoft's document conversion library
-- `pydantic` - Data validation and settings management
-- `trafilatura` - Web content extraction
-- `readabilipy` - Clean HTML content extraction
-- `html2text` - HTML to markdown conversion
-- `pyyaml` - YAML configuration parsing
-- `jinja2` - Template rendering for prompts
-
-## 🔧 Configuration
-
-Set up your API keys:
+For a runtime-only environment:
 
 ```bash
-# For Deepseek models (via Volcengine)
+uv sync --no-dev
+```
+
+When running from the source checkout, prefer `uv run`:
+
+```bash
+uv run editor-assistant --help
+```
+
+If you activate the project virtual environment or install the package elsewhere, the primary console scripts are also available directly as `editor-assistant` and `any2md`.
+
+### Configuration
+
+Set only the API keys for providers you plan to use:
+
+```bash
+# DeepSeek via Volcengine
 export DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 
-# For Gemini models
+# DeepSeek official API
+export DEEPSEEK_API_KEY=your_deepseek_api_key
+
+# Gemini paid API key
 export GEMINI_API_KEY=your_gemini_api_key
 
-# For Kimi models (via Volcengine)
-export KIMI_API_KEY_VOLC=your_kimi_api_key
+# Gemini AI Studio free-tier key
+export GEMINI_FT_API_KEY=your_gemini_free_tier_api_key
 
-# For Doubao models (via Volcengine)
-export DOUBAO_API_KEY=your_doubao_api_key
-
-# For Qwen models (via Alibaba Cloud)
+# Qwen via Alibaba Bailian / DashScope-compatible endpoint
 export QWEN_API_KEY=your_qwen_api_key
 
-# For GLM models (via Zhipu AI)
+# GLM via Zhipu AI
 export ZHIPU_API_KEY=your_zhipu_api_key
 
-# For GLM models (via OpenRouter)
+# GLM via OpenRouter
 export ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
 
-# For OpenAI models (via OpenRouter)
+# Doubao via Volcengine
+export DOUBAO_API_KEY=your_doubao_api_key
+
+# OpenAI models via OpenRouter
 export OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
 
-# For Anthropic models (via OpenRouter)
+# Anthropic models via OpenRouter
 export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
-Or create a `.env` file and load it into your shell environment:
+Run history is stored in `~/.editor_assistant/runs.db` by default. Set `EDITOR_ASSISTANT_DB_DIR` to use a different directory.
 
-```env
-DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
-GEMINI_API_KEY=your_gemini_api_key
-KIMI_API_KEY_VOLC=your_kimi_api_key
-DOUBAO_API_KEY=your_doubao_api_key
-QWEN_API_KEY=your_qwen_api_key
-ZHIPU_API_KEY=your_zhipu_api_key
-ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
-OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
-ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
-```
+### CLI Usage
 
-## 🎯 Usage
+All examples below use `uv run` because this is the recommended source-checkout workflow.
 
-### Unified CLI Interface
+#### Generate Briefs
 
-**Generate Brief News (multi-source supported):**
+`brief` supports one or more typed sources. Valid source types are `paper` and `news`. When you pass multiple sources, each source is processed independently; the current CLI does not merge `paper` and `news` into a single prompt.
 
 ```bash
-editor-assistant brief paper=https://example.com/research-article
-editor-assistant brief paper=paper.pdf news=https://example.com/related-news news=context.md --model deepseek-r1 --debug
-# Optional: enable file outputs (default off)
-editor-assistant brief paper=paper.pdf --save-files
+uv run editor-assistant brief paper=https://example.com/research-article
+uv run editor-assistant brief paper=paper-a.pdf paper=paper-b.pdf --model deepseek-r1 --debug
+uv run editor-assistant brief paper=paper.pdf --save-files
 ```
 
-**Generate Research Outlines (single source):**
+#### Generate Outlines
+
+`outline` accepts a single input path or URL.
 
 ```bash
-editor-assistant outline https://arxiv.org/paper.pdf
-editor-assistant outline paper.pdf --model deepseek-r1
-# Optional file outputs
-editor-assistant outline paper.pdf --save-files
+uv run editor-assistant outline https://arxiv.org/paper.pdf
+uv run editor-assistant outline paper.pdf --model deepseek-r1
+uv run editor-assistant outline paper.pdf --save-files
 ```
 
-**Generate Chinese Translations with Bilingual Output (single source):**
+#### Translate Documents
+
+`translate` accepts a single input path or URL and creates Chinese output. The translation task also stores a bilingual output variant.
 
 ```bash
-editor-assistant translate https://arxiv.org/paper.pdf
-editor-assistant translate document.pdf --model gemini-3-pro
-editor-assistant translate research.md --model deepseek-r1 --debug
-# Optional file outputs
-editor-assistant translate research.md --save-files
+uv run editor-assistant translate https://arxiv.org/paper.pdf
+uv run editor-assistant translate document.pdf --model gemini-2.5-flash-free
+uv run editor-assistant translate research.md --model deepseek-r1 --debug
+uv run editor-assistant translate research.md --save-files
 ```
 
-*Note: Translation generates both Chinese-only and bilingual side-by-side versions*
+#### Run Multiple Tasks
 
-**Batch Processing (High-Performance):**
-
-Efficiently process a folder of files concurrently using async I/O.
+`process` uses the same typed source format as `brief`. It runs the selected tasks serially for each supplied source, so choose tasks that make sense for every source you pass.
 
 ```bash
-# Translate all .md files in a directory
-editor-assistant batch ./docs/ --ext .md --task translate
-
-# Generate briefs for all PDFs using a specific model
-editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
-
-# Save outputs to files (default is DB only)
-editor-assistant batch ./papers/ --ext .html --task outline --save-files
+uv run editor-assistant process paper=paper.pdf --tasks brief,outline
+uv run editor-assistant process paper=paper-a.pdf paper=paper-b.pdf --tasks brief --no-stream
+uv run editor-assistant process paper=paper.pdf --tasks brief,outline --no-stream --save-files
 ```
 
-**Convert Files to Markdown:**
+#### Batch Processing
+
+`batch` processes files in a directory concurrently with one task.
 
 ```bash
-editor-assistant convert document.pdf
-editor-assistant convert *.docx
-
-# For bulk conversion into an output directory, use the utility command:
-any2md *.docx -o converted/
+uv run editor-assistant batch ./docs/ --ext .md --task translate
+uv run editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
+uv run editor-assistant batch ./papers/ --ext .html --task outline --save-files
 ```
 
-**Clean HTML to Markdown:**
+#### Convert and Clean Inputs
 
 ```bash
-editor-assistant clean "https://example.com/page.html" -o clean.md
-editor-assistant clean page.html --stdout
+uv run editor-assistant convert document.pdf
+uv run editor-assistant convert *.docx
+uv run editor-assistant clean "https://example.com/page.html" -o clean.md
+uv run editor-assistant clean page.html --stdout
+
+# Utility console scripts are also available through uv:
+uv run any2md *.docx -o converted/
 ```
 
-**Multi-task Processing (Concurrent Execution):**
+#### Inspect Run History
 
 ```bash
-editor-assistant process paper=paper.pdf --tasks "brief,outline"
-editor-assistant process paper=paper.pdf news=news.md --tasks "brief,outline,translate"
-# Optional file outputs (default off)
-editor-assistant process paper=paper.pdf --tasks "brief,outline" --save-files
+uv run editor-assistant history
+uv run editor-assistant history -n 50
+uv run editor-assistant history --search "arxiv"
+uv run editor-assistant stats
+uv run editor-assistant stats -d 30
+uv run editor-assistant show 1
+uv run editor-assistant show 1 --output
 ```
 
-**View Run History and Statistics:**
+#### Resume and Export
 
 ```bash
-editor-assistant history                    # List recent runs
-editor-assistant history -n 50              # Show last 50 runs
-editor-assistant history --search "arxiv"   # Search by title
-editor-assistant stats                      # Show usage statistics (last 7 days)
-editor-assistant stats -d 30                # Show stats for last 30 days
-editor-assistant show 1                     # Show details of run #1
-editor-assistant show 1 --output            # Show full output content
+uv run editor-assistant resume --dry-run
+uv run editor-assistant resume --save-files
+uv run editor-assistant export history.json
+uv run editor-assistant export history.csv --limit 100
 ```
 
-**Resume Interrupted Runs and Export History:**
+### Common Options
 
-```bash
-editor-assistant resume --dry-run
-editor-assistant resume --save-files
-editor-assistant export history.json
-editor-assistant export history.csv --limit 100
-```
+These options are available on generation commands such as `brief`, `outline`, `translate`, `process`, and `batch`:
 
-### Global Options
+- `--model`: Choose an LLM model. Default: `glm-4.7-or`.
+- `--thinking`: Reasoning level for supported Gemini models: `low`, `medium`, or `high`.
+- `--no-stream`: Disable streaming output.
+- `--save-files`: Persist generated markdown files and token reports to disk. The SQLite run database is still updated either way.
+- `--debug`: Enable detailed debug logging.
 
-- `--model`: Choose LLM model (default: deepseek-v3.2)
-- `--thinking`: Reasoning level for Gemini 3+ models (`low`, `medium`, `high`). Default: model decides dynamically
-- `--no-stream`: Disable streaming output (default: streaming enabled)
-- `--save-files`: Persist generated responses and token report to disk (default: off; DB is still updated)
-- `--debug`: Enable detailed debug logging with file output
-- `--version`: Show version information
+Global options:
 
-### Developer Docs
+- `--version`: Show version information.
+- `--help`: Show CLI help. Use subcommand help, such as `uv run editor-assistant brief --help`, to see current model choices.
 
-- General engineering norms: Configured as Cursor user rules
-- Project-specific architecture/tests/configs: `DEVELOPER_GUIDE.md`
+### Supported Models
 
-### Python API (Async)
+Model names are loaded from `src/editor_assistant/config/llm_config.yml`, which is the source of truth. Use `uv run editor-assistant brief --help` to see the current `--model` choices.
+
+Current default model: `glm-4.7-or`.
+
+#### DeepSeek
+
+- Volcengine (`DEEPSEEK_API_KEY_VOLC`): `deepseek-v3.2`, `deepseek-r1`
+- Official API (`DEEPSEEK_API_KEY`): `deepseek-v4-flash`, `deepseek-v4-pro`
+
+#### Gemini
+
+- Paid key (`GEMINI_API_KEY`): `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro`
+- Free-tier key (`GEMINI_FT_API_KEY`): `gemini-2.5-flash-free`, `gemini-2.5-flash-lite-free`, `gemini-3-flash-free`, `gemini-3.1-flash-lite-free`
+
+#### Qwen
+
+- `qwen-turbo`, `qwen-plus`, `qwen3.5-plus`, `qwen3-max-preview`, `qwen3-max`
+
+#### GLM / Zhipu
+
+- Zhipu API (`ZHIPU_API_KEY`): `glm-4.5`, `glm-4.6`, `glm-4.7`, `glm-5`, `glm-5.1`
+- OpenRouter (`ZHIPU_API_KEY_OPENROUTER`): `glm-4.5-or`, `glm-4.6-or`, `glm-4.7-or`, `glm-5-or`, `glm-5.1-or`, `glm-5-turbo-or`
+
+#### Doubao
+
+- `doubao-seed-1.6`
+
+#### OpenAI via OpenRouter
+
+- `gpt-4o-or`, `gpt-4.1-or`, `gpt-5-or`, `gpt-5.2-or`, `gpt-5.4-or`, `gpt-5.5-or`
+
+#### Anthropic via OpenRouter
+
+- `claude-sonnet-4-or`, `claude-opus-4.6-or`, `claude-sonnet-4.6-or`, `claude-opus-4.7-or`, `claude-haiku-4.5-or`
+
+### Python API
 
 ```python
 import asyncio
+
+from editor_assistant.data_models import Input, InputType, ProcessType
 from editor_assistant.main import EditorAssistant
-from editor_assistant.data_models import ProcessType, InputType, Input
+
 
 async def main():
-    # Initialize with your preferred model
-    assistant = EditorAssistant("deepseek-r1", debug_mode=True)
+    assistant = EditorAssistant("glm-4.7-or", debug_mode=True)
 
-    # Generate research outline (single paper)
     await assistant.process_multiple(
-        [Input(type=InputType.PAPER, path="path/to/paper.pdf")],
-        ProcessType.OUTLINE
+        [Input(type=InputType.PAPER, path="paper.pdf")],
+        ProcessType.OUTLINE,
     )
 
-    # Generate multi-source brief (paper + news)
     await assistant.process_multiple(
-        [
-            Input(type=InputType.PAPER, path="paper.pdf"),
-            Input(type=InputType.NEWS, path="https://example.com/news"),
-            Input(type=InputType.NEWS, path="context.md"),
-        ],
-        ProcessType.BRIEF
+        [Input(type=InputType.PAPER, path="paper.pdf")],
+        ProcessType.BRIEF,
     )
+
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### 🤖 Supported Models
+### Supported Input Formats
 
-#### Deepseek Models (via Volcengine)
+The converter supports common document and web formats through MarkItDown plus local HTML extraction helpers:
 
-- `deepseek-v3.2` - Latest general-purpose model (2025 release)
-- `deepseek-r1` - Advanced reasoning model
+- Documents: PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, EPUB
+- Web content: HTML files and URLs
+- Text/data: TXT, MD, CSV, JSON, XML, ZIP
+- Media formats supported by MarkItDown, such as images and audio, may also work depending on installed extras
 
-#### Gemini Models
+### Output and Storage
 
-- `gemini-3-flash` - Balanced performance model
-- `gemini-3-pro` - High-performance model
-
-#### Kimi Models (via Volcengine)
-
-- `kimi-k2` - Advanced reasoning model
-
-#### Doubao Models (via Volcengine)
-
-- `doubao-seed-1.6` - Advanced language model with 256k context window
-
-#### Qwen Models (via Alibaba Cloud)
-
-- `qwen-plus` - General-purpose model with thinking capabilities
-- `qwen3-max` - Latest general model with enhanced reasoning
-- `qwen3-max-preview` - Preview version of Qwen3-Max
-
-#### GLM Models
-
-- `glm-4.5` - High-performance model (via Zhipu AI)
-- `glm-4.6` - High-performance model (via Zhipu AI)
-- `glm-4.5-or` - High-performance model (via OpenRouter)
-- `glm-4.6-or` - Latest model (via OpenRouter)
-
-#### OpenAI Models (via OpenRouter)
-
-- `gpt-4o-or` - GPT-4 Omni model with vision capabilities
-- `gpt-4.1-or` - Latest GPT-4 Turbo model
-- `gpt-5-or` - Next-generation GPT-5 model
-
-#### Anthropic Models (via OpenRouter)
-
-- `claude-sonnet-4-or` - Latest Claude Sonnet 4 model with 200k context
-
-### 📁 Supported Input Formats
-
-- **Documents**: PDF, DOCX, DOC, PPTX, PPT, XLSX, XLS, EPUB
-- **Web Content**: HTML pages, URLs
-- **Media**: JPG, PNG, GIF, MP3, WAV, M4A
-- **Data**: CSV, JSON, XML, TXT, MD, ZIP
-
-### 📊 Output Structure
-
-When `--save-files` is enabled, generated files are written under `llm_summaries/<model>/` (next to the input/converted markdown):
+- Run history, inputs, outputs, and token usage are stored in SQLite.
+- Default database: `~/.editor_assistant/runs.db`
+- Override database directory: `EDITOR_ASSISTANT_DB_DIR=/path/to/dir`
+- With `--save-files`, generated files are written next to the source/converted markdown under `llm_summaries/<model>/`.
 
 ```text
 llm_summaries/
 └── <model>/
-    ├── response_<title_base><suffix>_<model>_<timestamp>.md
-    ├── response_bilingual_<title_base><suffix>_<model>_<timestamp>.md  # translate task only
-    └── token_usage_<title_base><suffix>_<model>_<timestamp>.txt
+    ├── response_<title><task_suffix>_<model>_<timestamp>.md
+    ├── response_bilingual_<title>_translate_<model>_<timestamp>.md  # translate only
+    └── token_usage_<title><task_suffix>_<model>_<timestamp>.txt
 ```
 
-### Breaking Changes in v0.2
-
-**Important**: Version 0.2 introduces breaking changes. Please review before upgrading.
-
-#### CLI Syntax Changes
-
-**Old syntax (v0.1):**
+### Developer Workflow
 
 ```bash
-editor-assistant brief --article paper:paper.pdf --article news:article.md
-editor-assistant outline --article paper:research.pdf
+uv sync
+uv run pytest tests/unit/
+uv run flake8 src/
+uv run mypy src/
+uv run black src/ tests/
 ```
 
-**New syntax (v0.2):**
+See `DEVELOPER_GUIDE.md` for architecture details and `docs/design_docs/`, `docs/decisions/`, and `docs/reports/` for supporting design notes and reports.
 
-```bash
-editor-assistant brief paper=paper.pdf news=article.md
-editor-assistant outline research.pdf
-```
+<a id="breaking-changes-in-v02"></a>
+### Migration Notes
 
-**Why the change?** The new syntax is cleaner, more intuitive, and follows common CLI conventions like `key=value` pairs used in tools like `git` and `docker`.
+Important current CLI conventions:
 
-#### Model Name Changes
+- Source checkout commands should generally use `uv run ...`.
+- `brief` and `process` require typed source arguments: `paper=...` or `news=...`; multiple supplied inputs are processed independently.
+- `outline` and `translate` take a single plain input path or URL.
+- Generated responses are saved to SQLite by default; file output is opt-in with `--save-files`.
+- The default model is `glm-4.7-or`.
 
-Model names are loaded dynamically from `src/editor_assistant/config/llm_config.yml`. Use `editor-assistant --help` to see the current `--model` choices.
+Older v0.1 syntax such as `--article paper:paper.pdf` is no longer supported.
 
-**New additions:**
+### License
 
-- `deepseek-v3.2`
-- `gpt-4o-or`, `gpt-4.1-or`, `gpt-5-or` - OpenAI models via OpenRouter
-- `claude-sonnet-4-or` - Anthropic Claude via OpenRouter
+This project is licensed under the MIT License.
 
-#### Default Model Change
+### Acknowledgments
 
-Current default model: `deepseek-v3.2` (see `--model` under Global Options).
-
-**Why?** Better balance of performance, cost, and reliability across different use cases.
-
-#### Migration Guide
-
-1. **Update CLI commands**: Replace `--article type:path` with `type=path`
-2. **Update model names**: See "Supported Models" (or check `src/editor_assistant/config/llm_config.yml`)
-3. **Set new environment variables** (if using new providers):
-
-   ```bash
-   export OPENAI_API_KEY_OPENROUTER=your_openrouter_key
-   export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_key
-   ```
-
-4. **Test your workflow** with `--debug` flag to verify everything works
-
-### 🛡️ Error Handling
-
-- **Robust Processing**: Continues even if individual documents fail
-- **Content Size Validation**: Checks content against model context windows
-- **Graceful Degradation**: Provides meaningful error messages
-- **Process Time Safety**: Prevents division by zero errors in reporting
-
-### 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### 🙏 Acknowledgments
-
-- **Microsoft MarkItDown** for document conversion capabilities
-- **Readabilipy** and **Trafilatura** for web content extraction
-- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **Kimi**, **Doubao** for LLM capabilities
-
-### 📞 Support
-
-For support, please open an issue on GitHub or contact the maintainers.
-
----
-
-**Note**: This tool is designed for research and educational purposes. Please ensure you have the necessary rights to process and summarize the content you're working with, and be mindful of API usage costs when processing large volumes of content.
+- Microsoft MarkItDown for document conversion
+- Readabilipy and Trafilatura for web content extraction
+- DeepSeek, Google Gemini, Qwen, GLM/Zhipu, Doubao, OpenAI, Anthropic, and OpenRouter for LLM capabilities
 
 ---
 
@@ -389,203 +315,305 @@ For support, please open an issue on GitHub or contact the maintainers.
 
 ### 编辑助手 (Editor Assistant)
 
-一个简单的AI驱动的Python命令行工具，用于处理研究论文并使用大型语言模型（LLM）生成内容。专为个人研究工作流程自动化设计。
+Editor Assistant 是一个 AI 驱动的 Python CLI 和库，用于把研究论文、文章、网页和转换后的文档处理成简讯、大纲和翻译。它主要服务个人研究工作流，也可以被其他 Python 项目复用其 LLM client 和配置模块。
 
-**版本: 0.5.1**
+**版本：0.5.1**
 
-### 🚀 功能特色
+### 功能特色
 
-- **高性能异步处理**: 基于 `asyncio` 和 `httpx` 构建，支持多文档的快速并发处理。
-- **简单CLI界面**：包含多个子命令（brief/outline/translate/process/batch/convert/clean/history/stats/show/resume/export）
-- **多格式输入**：处理PDF、DOC、网页、URL和markdown文件
-- **三种内容类型**：
-  - **简讯**：将研究论文转换为短新闻文章
-  - **研究大纲**：生成详细大纲并提供中文翻译
-  - **翻译**：独立的中文翻译，支持双语输出
-- **多LLM支持**：兼容Deepseek、Gemini等提供商
-- **调试日志**：可选的详细日志记录用于故障排除
+- **异步处理**：基于 `asyncio` 和 `httpx`，支持并发转换和 LLM 请求。
+- **统一 CLI**：包含 `brief`、`outline`、`translate`、`process`、`batch`、`convert`、`clean`、`history`、`stats`、`show`、`resume`、`export`。
+- **带类型输入**：`brief` 和 `process` 支持 `paper=...`、`news=...` 这类带类型的输入；传入多个输入时会逐个独立处理。
+- **SQLite 历史记录**：运行记录、输入、输出和 token 用量会写入本地数据库。
+- **可选文件输出**：使用 `--save-files` 才会把生成的 Markdown 和 token 报告写到磁盘。
+- **多模型提供商**：支持 DeepSeek、Gemini、Qwen、GLM/智谱、Doubao、OpenRouter 上的 OpenAI 和 Anthropic 模型。
 
-### 📋 依赖条件
+### 环境要求
 
-- Python 3.9+
-- 支持的LLM提供商的API密钥：
-  - **Deepseek**：`DEEPSEEK_API_KEY_VOLC`环境变量（通过火山引擎）
-  - **Gemini**：`GEMINI_API_KEY`环境变量
-  - **Kimi**：`KIMI_API_KEY_VOLC`环境变量（通过火山引擎）
-  - **Doubao**：`DOUBAO_API_KEY`环境变量（通过火山引擎）
-  - **Qwen**：`QWEN_API_KEY`环境变量（通过阿里云）
-  - **GLM**：`ZHIPU_API_KEY`环境变量（通过智谱AI）
-  - **GLM (OpenRouter)**：`ZHIPU_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
-  - **OpenAI (OpenRouter)**：`OPENAI_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
-  - **Anthropic (OpenRouter)**：`ANTHROPIC_API_KEY_OPENROUTER`环境变量（通过OpenRouter）
+- Python 3.10+
+- 使用 `uv` 安装和运行项目
+- 至少配置一个要使用的模型提供商 API key
 
-### 🛠️ 安装
-
-#### 从源码安装
+### 安装
 
 ```bash
-git clone https://github.com/yourusername/editor_assistant.git
-cd editor_assistant
+git clone https://github.com/lanmogu98/editor-assistant.git
+cd editor-assistant
 uv sync
 ```
 
-### 🔧 配置
-
-设置您的API密钥：
+仅安装运行依赖：
 
 ```bash
-# 对于Deepseek模型（通过火山引擎）
+uv sync --no-dev
+```
+
+在源码目录运行时，推荐使用 `uv run`：
+
+```bash
+uv run editor-assistant --help
+```
+
+如果已经激活项目虚拟环境，或把包安装到了其他环境中，也可以直接使用 `editor-assistant` 和 `any2md` 这些主要 console scripts。
+
+### 配置
+
+只需要设置你实际使用的模型提供商 API key：
+
+```bash
+# DeepSeek via Volcengine
 export DEEPSEEK_API_KEY_VOLC=your_volcengine_api_key
 
-# 对于Gemini模型
+# DeepSeek official API
+export DEEPSEEK_API_KEY=your_deepseek_api_key
+
+# Gemini paid API key
 export GEMINI_API_KEY=your_gemini_api_key
 
-# 对于Kimi模型（通过火山引擎）
-export KIMI_API_KEY_VOLC=your_kimi_api_key
+# Gemini AI Studio free-tier key
+export GEMINI_FT_API_KEY=your_gemini_free_tier_api_key
 
-# 对于Doubao模型（通过火山引擎）
+# Qwen via Alibaba Bailian / DashScope-compatible endpoint
+export QWEN_API_KEY=your_qwen_api_key
+
+# GLM via Zhipu AI
+export ZHIPU_API_KEY=your_zhipu_api_key
+
+# GLM via OpenRouter
+export ZHIPU_API_KEY_OPENROUTER=your_openrouter_api_key
+
+# Doubao via Volcengine
 export DOUBAO_API_KEY=your_doubao_api_key
+
+# OpenAI models via OpenRouter
+export OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
+
+# Anthropic models via OpenRouter
+export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
-### 🎯 使用方法
+运行历史默认保存到 `~/.editor_assistant/runs.db`。如需更换目录，可以设置 `EDITOR_ASSISTANT_DB_DIR`。
 
-#### 统一CLI界面
+### CLI 用法
 
-**生成简讯（支持多来源）：**
+下面的示例都使用 `uv run`，适用于源码 checkout 中的日常使用。
+
+#### 生成简讯
+
+`brief` 支持一个或多个带类型的来源，类型为 `paper` 或 `news`。传入多个来源时，每个来源会被独立处理；当前 CLI 不会把 `paper` 和 `news` 合并到同一个 prompt。
 
 ```bash
-editor-assistant brief paper=https://example.com/research-article
-editor-assistant brief \
-  paper=paper.pdf \
-  news=https://example.com/related-news \
-  news=context.md \
-  --model deepseek-r1 --debug
+uv run editor-assistant brief paper=https://example.com/research-article
+uv run editor-assistant brief paper=paper-a.pdf paper=paper-b.pdf --model deepseek-r1 --debug
+uv run editor-assistant brief paper=paper.pdf --save-files
 ```
 
-**生成研究大纲（仅单来源，paper）：**
+#### 生成大纲
+
+`outline` 接收单个输入路径或 URL。
 
 ```bash
-editor-assistant outline https://arxiv.org/paper.pdf
-editor-assistant outline paper.pdf --model deepseek-r1
+uv run editor-assistant outline https://arxiv.org/paper.pdf
+uv run editor-assistant outline paper.pdf --model deepseek-r1
+uv run editor-assistant outline paper.pdf --save-files
 ```
 
-**生成双语对照中文翻译（仅单来源，paper）：**
+#### 翻译文档
+
+`translate` 接收单个输入路径或 URL，生成中文译文，并同时保存双语对照输出。
 
 ```bash
-editor-assistant translate https://arxiv.org/paper.pdf
-editor-assistant translate document.pdf --model gemini-3-pro
-editor-assistant translate research.md --model deepseek-r1 --debug
+uv run editor-assistant translate https://arxiv.org/paper.pdf
+uv run editor-assistant translate document.pdf --model gemini-2.5-flash-free
+uv run editor-assistant translate research.md --model deepseek-r1 --debug
+uv run editor-assistant translate research.md --save-files
 ```
 
-*注意：翻译功能同时生成纯中文版本和双语对照版本*
+#### 多任务处理
 
-**批量处理（高性能）：**
-
-利用异步IO高效并发处理文件夹中的文件。
+`process` 使用与 `brief` 相同的带类型输入格式。它会对每个来源串行执行所选任务，所以请只传入适合这些任务的来源。
 
 ```bash
-# 批量翻译目录下的所有 .md 文件
-editor-assistant batch ./docs/ --ext .md --task translate
-
-# 使用指定模型为所有 PDF 生成简讯
-editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
-
-# 保存输出到文件（默认只存数据库）
-editor-assistant batch ./papers/ --ext .html --task outline --save-files
+uv run editor-assistant process paper=paper.pdf --tasks brief,outline
+uv run editor-assistant process paper=paper-a.pdf paper=paper-b.pdf --tasks brief --no-stream
+uv run editor-assistant process paper=paper.pdf --tasks brief,outline --no-stream --save-files
 ```
 
-**转换文件为Markdown：**
+#### 批量处理
+
+`batch` 会对目录中的文件并发执行一个指定任务。
 
 ```bash
-editor-assistant convert document.pdf
-editor-assistant convert *.docx
-
-# 批量转换到指定目录请使用兼容工具命令：
-any2md *.docx -o converted/
+uv run editor-assistant batch ./docs/ --ext .md --task translate
+uv run editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
+uv run editor-assistant batch ./papers/ --ext .html --task outline --save-files
 ```
 
-**将HTML转换为格式干净的Markdown：**
+#### 转换和清理输入
 
 ```bash
-editor-assistant clean "https://example.com/page.html" -o clean.md
-editor-assistant clean page.html --stdout
+uv run editor-assistant convert document.pdf
+uv run editor-assistant convert *.docx
+uv run editor-assistant clean "https://example.com/page.html" -o clean.md
+uv run editor-assistant clean page.html --stdout
+
+uv run any2md *.docx -o converted/
 ```
 
-**恢复中断任务与导出历史：**
+#### 查看历史和统计
 
 ```bash
-editor-assistant resume --dry-run
-editor-assistant resume --save-files
-editor-assistant export history.json
-editor-assistant export history.csv --limit 100
+uv run editor-assistant history
+uv run editor-assistant history -n 50
+uv run editor-assistant history --search "arxiv"
+uv run editor-assistant stats
+uv run editor-assistant stats -d 30
+uv run editor-assistant show 1
+uv run editor-assistant show 1 --output
 ```
 
-### 🤖 支持的模型
+#### 恢复和导出
 
-#### 由火山引擎提供
+```bash
+uv run editor-assistant resume --dry-run
+uv run editor-assistant resume --save-files
+uv run editor-assistant export history.json
+uv run editor-assistant export history.csv --limit 100
+```
 
-##### Deepseek模型
+### 常用选项
 
-- `deepseek-v3.2` - 最新通用模型（2025年发布）
-- `deepseek-r1` - 推理模型
+以下选项适用于 `brief`、`outline`、`translate`、`process`、`batch` 等生成命令：
 
-##### Doubao模型
+- `--model`：选择 LLM 模型。默认值：`glm-4.7-or`。
+- `--thinking`：支持的 Gemini 模型推理强度，可选 `low`、`medium`、`high`。
+- `--no-stream`：关闭流式输出。
+- `--save-files`：把生成的 Markdown 文件和 token 报告写入磁盘。无论是否启用，SQLite 数据库都会更新。
+- `--debug`：启用详细调试日志。
 
-- `doubao-seed-1.6` - 高级语言模型，支持256k上下文窗口
+全局选项：
 
-##### Kimi模型
+- `--version`：显示版本。
+- `--help`：显示帮助。使用子命令帮助，例如 `uv run editor-assistant brief --help`，可以查看当前模型选择列表。
 
-- `kimi-k2` - 高级推理模型
+### 支持的模型
 
-#### 由阿里云提供
+模型名称来自 `src/editor_assistant/config/llm_config.yml`，这是当前单一事实来源。可用 `uv run editor-assistant brief --help` 查看最新 `--model` 选项。
 
-##### Qwen模型（阿里云）
+当前默认模型：`glm-4.7-or`。
 
-- `qwen-plus` - 具有思考能力的通用模型
-- `qwen3-max` - 最新的增强推理通用模型
-- `qwen3-max-preview` - Qwen3-Max预览版
+#### DeepSeek
 
-#### 由谷歌云提供
+- 火山引擎 (`DEEPSEEK_API_KEY_VOLC`)：`deepseek-v3.2`、`deepseek-r1`
+- 官方 API (`DEEPSEEK_API_KEY`)：`deepseek-v4-flash`、`deepseek-v4-pro`
 
-##### Gemini模型（Google Cloud）
+#### Gemini
 
-- `gemini-3-flash` - 平衡性能模型
-- `gemini-3-pro` - 高性能模型
+- 付费 key (`GEMINI_API_KEY`)：`gemini-3-flash`、`gemini-3.1-flash-lite`、`gemini-3.1-pro`
+- 免费层 key (`GEMINI_FT_API_KEY`)：`gemini-2.5-flash-free`、`gemini-2.5-flash-lite-free`、`gemini-3-flash-free`、`gemini-3.1-flash-lite-free`
 
-#### 由智谱提供
+#### Qwen
 
-##### GLM模型
+- `qwen-turbo`、`qwen-plus`、`qwen3.5-plus`、`qwen3-max-preview`、`qwen3-max`
 
-- `glm-4.5` - 高性能模型（智谱AI）
-- `glm-4.6` - 最新模型（智谱AI）
+#### GLM / 智谱
 
-#### 由OpenRouter提供
+- 智谱 API (`ZHIPU_API_KEY`)：`glm-4.5`、`glm-4.6`、`glm-4.7`、`glm-5`、`glm-5.1`
+- OpenRouter (`ZHIPU_API_KEY_OPENROUTER`)：`glm-4.5-or`、`glm-4.6-or`、`glm-4.7-or`、`glm-5-or`、`glm-5.1-or`、`glm-5-turbo-or`
 
-##### GLM模型
+#### Doubao
 
-- `glm-4.5-or` - 高性能模型（智谱，通过OpenRouter）
-- `glm-4.6-or` - 最新模型（智谱，通过OpenRouter）
+- `doubao-seed-1.6`
 
-##### OpenAI模型
+#### OpenAI via OpenRouter
 
-- `gpt-4o-or` - GPT-4 Omni模型，支持视觉功能
-- `gpt-4.1-or` - 最新GPT-4 Turbo模型
-- `gpt-5-or` - 下一代GPT-5模型
+- `gpt-4o-or`、`gpt-4.1-or`、`gpt-5-or`、`gpt-5.2-or`、`gpt-5.4-or`、`gpt-5.5-or`
 
-##### Anthropic模型
+#### Anthropic via OpenRouter
 
-- `claude-sonnet-4-or` - Claude Sonnet 4模型，支持200k上下文
+- `claude-sonnet-4-or`、`claude-opus-4.6-or`、`claude-sonnet-4.6-or`、`claude-opus-4.7-or`、`claude-haiku-4.5-or`
 
-### 📝 许可证
+### Python API
 
-该项目根据MIT许可证授权 - 有关详细信息，请参阅[LICENSE](LICENSE)文件。
+```python
+import asyncio
 
-### 🙏 致谢
+from editor_assistant.data_models import Input, InputType, ProcessType
+from editor_assistant.main import EditorAssistant
 
-- **Microsoft MarkItDown** 提供文档转换功能
-- **Readabilipy** 和 **Trafilatura** 提供网页内容提取
-- **Deepseek**, **Google Gemini**, **Qwen**, **GLM**, **Kimi**, **Doubao** 提供LLM功能
 
----
+async def main():
+    assistant = EditorAssistant("glm-4.7-or", debug_mode=True)
 
-**注意**：该工具专为研究和教育目的而设计。请确保您有必要的权利来处理和总结您正在使用的内容，并在处理大量内容时注意API使用成本。
+    await assistant.process_multiple(
+        [Input(type=InputType.PAPER, path="paper.pdf")],
+        ProcessType.OUTLINE,
+    )
+
+    await assistant.process_multiple(
+        [Input(type=InputType.PAPER, path="paper.pdf")],
+        ProcessType.BRIEF,
+    )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### 支持的输入格式
+
+转换功能基于 MarkItDown 和本项目的 HTML 提取工具，支持常见文档和网页格式：
+
+- 文档：PDF、DOCX、DOC、PPTX、PPT、XLSX、XLS、EPUB
+- 网页内容：HTML 文件和 URL
+- 文本/数据：TXT、MD、CSV、JSON、XML、ZIP
+- MarkItDown extras 支持的图片、音频等媒体格式也可能可用
+
+### 输出和存储
+
+- 运行历史、输入、输出和 token 用量会保存到 SQLite。
+- 默认数据库：`~/.editor_assistant/runs.db`
+- 自定义数据库目录：`EDITOR_ASSISTANT_DB_DIR=/path/to/dir`
+- 使用 `--save-files` 时，生成文件会写到输入/转换后的 Markdown 旁边的 `llm_summaries/<model>/`。
+
+```text
+llm_summaries/
+└── <model>/
+    ├── response_<title><task_suffix>_<model>_<timestamp>.md
+    ├── response_bilingual_<title>_translate_<model>_<timestamp>.md  # 仅 translate
+    └── token_usage_<title><task_suffix>_<model>_<timestamp>.txt
+```
+
+### 开发工作流
+
+```bash
+uv sync
+uv run pytest tests/unit/
+uv run flake8 src/
+uv run mypy src/
+uv run black src/ tests/
+```
+
+架构细节见 `DEVELOPER_GUIDE.md`，设计记录和报告见 `docs/design_docs/`、`docs/decisions/`、`docs/reports/`。
+
+### 迁移说明
+
+当前 CLI 约定：
+
+- 源码目录中建议使用 `uv run ...`。
+- `brief` 和 `process` 使用 `paper=...` 或 `news=...` 这类带类型输入；传入多个输入时会逐个独立处理。
+- `outline` 和 `translate` 接收单个普通路径或 URL。
+- 生成结果默认写入 SQLite；文件输出需要显式加 `--save-files`。
+- 默认模型为 `glm-4.7-or`。
+
+旧版 v0.1 的 `--article paper:paper.pdf` 语法已经不再支持。
+
+### 许可证
+
+本项目使用 MIT License。
+
+### 致谢
+
+- Microsoft MarkItDown 提供文档转换能力
+- Readabilipy 和 Trafilatura 提供网页内容提取
+- DeepSeek、Google Gemini、Qwen、GLM/智谱、Doubao、OpenAI、Anthropic、OpenRouter 提供 LLM 能力
