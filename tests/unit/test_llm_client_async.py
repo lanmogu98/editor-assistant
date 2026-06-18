@@ -3,7 +3,7 @@ Unit tests for AsyncLLMClient (Async Refactor).
 """
 
 import pytest
-import os
+import httpx
 from unittest.mock import MagicMock, AsyncMock, patch
 
 pytestmark = pytest.mark.unit
@@ -115,3 +115,75 @@ class TestAsyncLLMClient:
         
         # After exit, internal client should be None (closed)
         assert client._async_client is None
+
+    async def test_http_error_includes_response_body(
+        self, monkeypatch, mock_env_vars, mock_httpx_client
+    ):
+        """Final HTTP errors include the response body."""
+        import editor_assistant.llm_client as llm_client_module
+        from editor_assistant.llm_client import LLMClient
+
+        monkeypatch.setattr(llm_client_module, "MAX_API_RETRIES", 1)
+
+        client = LLMClient("deepseek-v3.2")
+        request = httpx.Request("POST", client.api_url)
+        mock_httpx_client.post.return_value = httpx.Response(
+            404,
+            request=request,
+            content=b'{"error":"model not found"}',
+        )
+
+        with pytest.raises(Exception) as exc_info:
+            await client.generate_response("Hello")
+
+        assert (
+            'Response body: {"error":"model not found"}'
+            in str(exc_info.value)
+        )
+
+    async def test_openrouter_pinned_404_downshifts_max_tokens_and_retries(
+        self, monkeypatch, mock_httpx_client
+    ):
+        """Pinned OpenRouter 404 can retry with a smaller output budget."""
+        import editor_assistant.llm_client as llm_client_module
+        from editor_assistant.llm_client import LLMClient
+
+        monkeypatch.setenv("ZHIPU_API_KEY_OPENROUTER", "test-openrouter-key")
+        monkeypatch.setattr(llm_client_module, "MAX_API_RETRIES", 2)
+        monkeypatch.setattr(
+            llm_client_module, "INITIAL_RETRY_DELAY_SECONDS", 0
+        )
+
+        client = LLMClient("glm-4.7-or")
+        request = httpx.Request("POST", client.api_url)
+        responses = [
+            httpx.Response(
+                404,
+                request=request,
+                content=(
+                    b'{"error":"No allowed providers found for the request"}'
+                ),
+            ),
+            httpx.Response(
+                200,
+                request=request,
+                json={
+                    "choices": [{"message": {"content": "Recovered"}}],
+                    "usage": {"prompt_tokens": 3, "completion_tokens": 4},
+                },
+            ),
+        ]
+        payloads = []
+
+        async def post_side_effect(*args, **kwargs):
+            payloads.append(dict(kwargs["json"]))
+            return responses.pop(0)
+
+        mock_httpx_client.post.side_effect = post_side_effect
+
+        response, usage = await client.generate_response("Hello")
+
+        assert response == "Recovered"
+        assert usage["total_output_tokens"] == 4
+        assert payloads[0]["max_tokens"] == 65536
+        assert payloads[1]["max_tokens"] == 8192

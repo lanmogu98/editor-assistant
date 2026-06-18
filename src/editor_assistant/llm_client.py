@@ -338,13 +338,44 @@ class LLMClient:
                 retry_delay *= 2  # Exponential backoff
             except httpx.HTTPStatusError as e:
                 # Handle HTTP errors (e.g. 429, 500)
-                if e.response.status_code == 429:
-                     warning(f"Rate limit exceeded (429), retrying in {retry_delay} seconds...")
+                body = ""
+                try:
+                    body = e.response.text
+                except Exception:
+                    body = ""
+
+                status_code = e.response.status_code
+                provider = data.get("provider", {})
+                is_pinned_openrouter = (
+                    "openrouter.ai" in self.api_url
+                    and isinstance(provider, dict)
+                    and provider.get("allow_fallbacks") is False
+                )
+
+                if status_code == 429:
+                    warning(
+                        f"Rate limit exceeded (429), retrying in "
+                        f"{retry_delay} seconds..."
+                    )
+                elif (
+                    status_code == 404
+                    and is_pinned_openrouter
+                    and "no allowed providers" in body.lower()
+                    and isinstance(data.get("max_tokens"), int)
+                    and data["max_tokens"] > 8192
+                ):
+                    old_max = data["max_tokens"]
+                    data["max_tokens"] = max(1024, min(8192, old_max // 2))
+                    warning(
+                        f"HTTP error 404; lowering max_tokens "
+                        f"{old_max} -> {data['max_tokens']} and retrying..."
+                    )
                 else:
-                     warning(f"HTTP error {e.response.status_code}, retrying...")
+                    warning(f"HTTP error {status_code}, retrying...")
                 
                 if attempt == MAX_API_RETRIES - 1:
-                    raise Exception(f"HTTP Error: {e}")
+                    extra = f"\nResponse body: {body}" if body else ""
+                    raise Exception(f"HTTP Error: {e}{extra}")
                 
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 2
