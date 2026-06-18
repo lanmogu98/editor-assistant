@@ -1,40 +1,58 @@
 from .md_processor import MDProcessor
-from .data_models import MDArticle, InputType, Input, ProcessType
+from .data_models import MDArticle, Input, ProcessType
 from .md_converter import MarkdownConverter
-from .config.logging_config import setup_logging, progress, error, warning, user_message
+from .config.logging_config import (
+    setup_logging,
+    progress,
+    error,
+    warning,
+    user_message,
+)
 import logging
 import asyncio
 from pathlib import Path
 from typing import Union, Optional, Tuple, Dict, Callable
 
+
 class EditorAssistant:
-    def __init__(self, model_name, debug_mode=False, thinking_level=None, stream=True):
+    def __init__(
+        self, model_name, debug_mode=False, thinking_level=None, stream=True
+    ):
         setup_logging(debug_mode)
         self.logger = logging.getLogger(__name__)
-        self.md_processor = MDProcessor(model_name, thinking_level=thinking_level, stream=stream)
+        self.md_processor = MDProcessor(
+            model_name, thinking_level=thinking_level, stream=stream
+        )
         self.md_converter = MarkdownConverter()
-    
-    async def _process_input_to_article(self, input: Input) -> Tuple[Optional[MDArticle], Optional[str]]:
-        """Helper to convert/read input to MDArticle (Async via thread pool)."""
+
+    async def _process_input_to_article(
+        self, input: Input
+    ) -> Tuple[Optional[MDArticle], Optional[str]]:
+        """Helper to convert/read input to MDArticle."""
         try:
             if input.path.endswith(".md"):
                 # File I/O in thread
                 def read_md():
-                    with open(input.path, 'r', encoding='utf-8') as f:
+                    with open(input.path, "r", encoding="utf-8") as f:
                         return f.read()
-                
+
                 content = await asyncio.to_thread(read_md)
-                return MDArticle(
-                    type=input.type,
-                    content=content,
-                    title=Path(input.path).stem,
-                    source_path=input.path,
-                    output_path=input.path,
-                ), None
+                return (
+                    MDArticle(
+                        type=input.type,
+                        content=content,
+                        title=Path(input.path).stem,
+                        source_path=input.path,
+                        output_path=input.path,
+                    ),
+                    None,
+                )
             else:
                 # Conversion in thread (CPU/IO bound)
                 md_article = await asyncio.to_thread(
-                    self.md_converter.convert_content, input.path, type=input.type
+                    self.md_converter.convert_content,
+                    input.path,
+                    type=input.type,
                 )
                 if md_article:
                     return md_article, None
@@ -44,25 +62,37 @@ class EditorAssistant:
             return None, str(e)
 
     # LLM processor for multiple files (Async)
-    async def process_multiple(self, inputs: list[Input], process_type: Union[ProcessType, str], 
-                             output_to_console=True, save_files=False,
-                             progress_callbacks: Dict[str, Callable[[str], None]] = None,
-                             done_callback: Optional[Callable[[str, bool], None]] = None):       
+    async def process_multiple(
+        self,
+        inputs: list[Input],
+        process_type: Union[ProcessType, str],
+        output_to_console=True,
+        save_files=False,
+        progress_callbacks: Dict[str, Callable[[str], None]] = None,
+        done_callback: Optional[Callable[[str, bool], None]] = None,
+    ):
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
             return
 
         # Normalize task name (support both ProcessType enum and string)
-        task_name = process_type.value if isinstance(process_type, ProcessType) else process_type
+        task_name = (
+            process_type.value
+            if isinstance(process_type, ProcessType)
+            else process_type
+        )
 
         # show clean progress message to user
-        progress(f"Start to {task_name} with {self.md_processor.llm_client.model_name}")
+        model_name = self.md_processor.llm_client.model_name
+        progress(f"Start to {task_name} with {model_name}")
 
         # Step 1: Pre-process inputs (Convert/Read) - Parallel
         progress(f"Converting/Reading {len(inputs)} inputs in parallel...")
-        
-        conversion_tasks = [self._process_input_to_article(inp) for inp in inputs]
+
+        conversion_tasks = [
+            self._process_input_to_article(inp) for inp in inputs
+        ]
         conversion_results = await asyncio.gather(*conversion_tasks)
 
         md_articles = []
@@ -81,11 +111,12 @@ class EditorAssistant:
             for path, msg in failed_inputs:
                 warning(f"Failed to convert {path}: {msg}")
             user_message(
-                f"{len(failed_inputs)} input(s) failed conversion; continuing with remaining."
+                f"{len(failed_inputs)} input(s) failed conversion; "
+                "continuing with remaining."
             )
 
         progress("Inputs ready. Starting parallel processing...")
-        
+
         # process the md files concurrently
         # Logic: We launch a task for each article.
         tasks = []
@@ -93,13 +124,15 @@ class EditorAssistant:
             # Find callback for this file if available
             callback = None
             if progress_callbacks:
-                # Key is the source path (absolute or relative as passed in input)
+                # Key is the source path as passed in input.
                 # We expect strict string matching
                 callback = progress_callbacks.get(str(article.source_path))
 
             async def process_wrapper(art, task, out, save, cb, done_cb):
                 try:
-                    res = await self.md_processor.process_mds([art], task, out, save_files=save, stream_callback=cb)
+                    res = await self.md_processor.process_mds(
+                        [art], task, out, save_files=save, stream_callback=cb
+                    )
                     success = res[0] if isinstance(res, tuple) else False
                     if done_cb:
                         done_cb(str(art.source_path), success)
@@ -116,26 +149,33 @@ class EditorAssistant:
                     output_to_console,
                     save_files,
                     callback,
-                    done_callback
+                    done_callback,
                 )
             )
 
         try:
             # Run all tasks concurrently
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # Check results
             for i, result in enumerate(results):
                 article_title = md_articles[i].title
                 if isinstance(result, Exception):
-                    self.logger.warning(f"Failed to process {article_title}: {result}")
+                    self.logger.warning(
+                        f"Failed to process {article_title}: {result}"
+                    )
                 else:
                     success, _ = result
                     if not success:
-                        self.logger.warning(f"Failed to process {article_title} (Task returned failure)")
-                        
+                        self.logger.warning(
+                            f"Failed to process {article_title} "
+                            "(Task returned failure)"
+                        )
+
         except Exception as e:
-            self.logger.warning(f"Critical error during concurrent processing: {str(e)}")
+            self.logger.warning(
+                f"Critical error during concurrent processing: {str(e)}"
+            )
             return
-         
-        return 
+
+        return

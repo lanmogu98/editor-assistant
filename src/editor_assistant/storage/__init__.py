@@ -12,8 +12,7 @@ from .repository import RunRepository
 
 __all__ = [
     "get_database_path",
-    "init_database", 
+    "init_database",
     "get_connection",
     "RunRepository",
 ]
-

@@ -11,8 +11,7 @@ decide on borderline content.
 
 from typing import Optional, Tuple
 from .config.constants import MIN_CHARS_WARNING_THRESHOLD
-from .config.logging_config import warning, error
-
+from .config.logging_config import warning
 
 # Known blocked publishers/sources that don't allow scraping or have paywalls
 BLOCKED_PUBLISHERS = [
@@ -27,16 +26,19 @@ BLOCKED_PUBLISHERS = [
 
 class ContentValidationError(Exception):
     """Base exception for content validation errors."""
+
     pass
 
 
 class BlockedPublisherError(ContentValidationError):
     """Raised when content is from a blocked publisher."""
+
     pass
 
 
 class ContentTooShortWarning(ContentValidationError):
     """Raised when content is suspiciously short."""
+
     pass
 
 
@@ -72,8 +74,7 @@ def validate_content_source(url: str) -> None:
 
 
 def validate_content_length(
-    content: str,
-    source: Optional[str] = None
+    content: str, source: Optional[str] = None
 ) -> Tuple[bool, Optional[str]]:
     """
     Check if content length is acceptable.
@@ -108,7 +109,7 @@ def validate_content(
     content: str,
     source_url: Optional[str] = None,
     check_publisher: bool = True,
-    check_length: bool = True
+    check_length: bool = True,
 ) -> Tuple[bool, Optional[str]]:
     """
     Perform full content validation.
