@@ -1,7 +1,7 @@
 """
 Centralized constants for Editor Assistant.
 
-This module contains all configurable constants used throughout the application.
+This module contains all configurable constants used throughout the app.
 Keeping them in one place makes tuning easier and documents assumptions.
 """
 
@@ -17,7 +17,8 @@ import logging
 # English/ASCII text: ~3.5-4 characters per token
 CHAR_TOKEN_RATIO_EN = 3.5
 
-# Chinese/CJK text: ~1.5-2 characters per token (each Chinese char ≈ 2-3 tokens)
+# Chinese/CJK text: ~1.5-2 characters per token.
+# Each Chinese char is approximately 2-3 tokens.
 CHAR_TOKEN_RATIO_ZH = 1.5
 
 # Default ratio (backward compatibility)
@@ -47,10 +48,12 @@ MAX_API_RETRIES = 3
 INITIAL_RETRY_DELAY_SECONDS = 1
 
 # Timeout for LLM HTTP requests (seconds).
-# Large documents (40K+ tokens) with complex tasks (outline) may need 60-120+ seconds.
+# Large documents (40K+ tokens) with complex outline tasks may need
+# 60-120+ seconds.
 # Beginner note:
 # - This timeout is passed to httpx.AsyncClient(timeout=...).
-# - It is intentionally conservative for large-paper workflows; smaller prompts will usually return faster.
+# - It is intentionally conservative for large-paper workflows; smaller
+#   prompts will usually return faster.
 API_REQUEST_TIMEOUT_SECONDS = 180
 
 

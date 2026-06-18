@@ -1,7 +1,7 @@
 """
 Task Registry and Base Classes
 
-Provides a pluggable task system for extending Editor Assistant with new task types.
+Provides a pluggable task system for extending Editor Assistant.
 """
 
 from .base import Task, TaskRegistry
@@ -13,7 +13,6 @@ __all__ = [
     "Task",
     "TaskRegistry",
     "BriefTask",
-    "OutlineTask", 
+    "OutlineTask",
     "TranslateTask",
 ]
-
