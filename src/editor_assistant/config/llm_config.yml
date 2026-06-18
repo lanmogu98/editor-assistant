@@ -195,9 +195,9 @@ zhipu-openrouter:
   api_key_env_var: "ZHIPU_API_KEY_OPENROUTER"
   api_base_url: *openrouter_endpoint
   temperature: 0.6
-  # Note: when pinning provider routing (see request_overrides below), OpenRouter
-  # will return 404 ("No allowed providers...") if max_tokens exceeds the pinned
-  # provider's max output. GLM-4.7 max output shown on OpenRouter is ~65.5K.
+  # OpenRouter currently reports z-ai/glm-4.7 max_completion_tokens=131072.
+  # Keep this shared default below that limit to leave input context headroom
+  # across GLM variants while still allowing long-form outputs.
   max_tokens: 65536
   context_window: 202752  # OpenRouter z-ai routes report 202752, not 200000
   pricing_currency: "$"
