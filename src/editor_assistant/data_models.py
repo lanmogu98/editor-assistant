@@ -11,38 +11,31 @@ class InputType(str, Enum):
     """
     The type of source.
     """
-
     PAPER = "paper"
     NEWS = "news"
-
 
 # class for the input source
 class Input(BaseModel):
     """
     The type of input source.
     """
-
     type: InputType
     path: str
-
 
 # for the process type
 class ProcessType(str, Enum):
     """
     Type of process to perform on the markdown content.
     """
-
-    OUTLINE = "outline"  # outline the research paper
-    BRIEF = "brief"  # generate brief news from the input content
-    TRANSLATE = "translate"  # translate the outline to Chinese
-
+    OUTLINE = 'outline' # outline the research paper
+    BRIEF = 'brief' # generate brief news from the input content
+    TRANSLATE = 'translate' # translate the outline to Chinese
 
 # for the converted markdown article, the output of the markdown converter
 class MDArticle(BaseModel):
     """
     A structure for a converted markdown article.
     """
-
     type: InputType
     content: Optional[str] = None
     title: Optional[str] = None
@@ -58,6 +51,5 @@ class SaveType(str, Enum):
     """
     Type of content to save.
     """
-
     PROMPT = "prompt"
     RESPONSE = "response"

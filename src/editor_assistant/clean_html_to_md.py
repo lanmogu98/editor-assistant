@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This module is used to convert html to clean markdown,
+This module is used to convert html to clean markdown, 
 extracting only the main content from a webpage
 and removing all the noise like ads, headers, footers, etc.
 """
@@ -12,13 +12,13 @@ import logging
 from typing import Optional
 from enum import Enum
 
-HEADERS = {"User-Agent": DEFAULT_USER_AGENT}
-
+HEADERS = {
+    "User-Agent": DEFAULT_USER_AGENT
+}
 
 class Converter(Enum):
     READABILIPY = "readabilipy"
     TRAFILATURA = "trafilatura"
-
 
 # class to convert html to markdown
 class CleanHTML2Markdown:
@@ -30,7 +30,6 @@ class CleanHTML2Markdown:
     # initialize html2text
     def _init_html2text(self):
         import html2text
-
         self.h2t = html2text.HTML2Text()
         self.h2t.ignore_links = False
         self.h2t.ignore_images = False
@@ -47,7 +46,8 @@ class CleanHTML2Markdown:
                 return response.text
             except Exception as e:
                 self.logger.error(
-                    f"Error fetching html content from {path}: " f"{str(e)}"
+                    f"Error fetching html content from {path}: "
+                    f"{str(e)}"
                 )
                 return None
         else:
@@ -57,7 +57,8 @@ class CleanHTML2Markdown:
                     return f.read()
             except Exception as e:
                 self.logger.error(
-                    f"Error fetching html content from {path}: " f"{str(e)}"
+                    f"Error fetching html content from {path}: "
+                    f"{str(e)}"
                 )
                 return None
 
@@ -70,7 +71,7 @@ class CleanHTML2Markdown:
                 "readabilipy is not installed."
                 "Please install it with 'pip install readabilipy'."
             )
-
+        
         # fetch html content
         content = self._fetch_html_content(path)
         if not content:
@@ -79,18 +80,18 @@ class CleanHTML2Markdown:
 
         # Use Readability to extract the main content
         article = simple_json_from_html_string(content, use_readability=True)
-
+    
         # Initialize html2text
         h2t = self._init_html2text()
-
+        
         # Convert HTML to Markdown
-        markdown_content = h2t.handle(article["content"])
+        markdown_content = h2t.handle(article['content'])
 
         return MDArticle(
             type=InputType.PAPER,
             content=markdown_content,
-            title=article["title"],
-            authors=article["byline"],
+            title=article['title'],
+            authors=article['byline'],
             source_path=path,
             converter="readabilipy",
         )
@@ -108,9 +109,7 @@ class CleanHTML2Markdown:
         # fetch html content
         html_content = self._fetch_html_content(path)
         if not html_content:
-            self.logger.error(
-                f"trafilatura failed to fetch content from {path}"
-            )
+            self.logger.error(f"trafilatura failed to fetch content from {path}")
             return None
 
         # Single extraction call for both content and metadata
@@ -120,28 +119,24 @@ class CleanHTML2Markdown:
             include_tables=True,
             include_links=True,
             include_comments=False,
-            output_format="markdown",
-            with_metadata=True,
+            output_format='markdown',
+            with_metadata=True
         )
 
-        if not result or not result.get("text"):
-            self.logger.error(
-                f"trafilatura failed to extract content from {path}"
-            )
+        if not result or not result.get('text'):
+            self.logger.error(f"trafilatura failed to extract content from {path}")
             return None
 
         return MDArticle(
             type=InputType.PAPER,
-            content=result.get("text", ""),
-            title=result.get("title", ""),
-            authors=result.get("author", ""),
+            content=result.get('text', ''),
+            title=result.get('title', ''),
+            authors=result.get('author', ''),
             source_path=path,
             converter="trafilatura",
         )
 
-    def convert(
-        self, path, converter_name=Converter.READABILIPY.value
-    ) -> Optional[MDArticle]:
+    def convert(self, path, converter_name = Converter.READABILIPY.value) -> Optional[MDArticle]:
         match converter_name:
             case Converter.READABILIPY.value:
                 return self._convert_by_readabilipy(path)
@@ -153,26 +148,19 @@ class CleanHTML2Markdown:
 
 def main():
     import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Convert an HTML page to clean markdown."
-    )
-    parser.add_argument(
-        "path", help="URL or local file path of the HTML to convert."
-    )
-    parser.add_argument(
-        "-o", "--output", help="Path to save the output markdown file."
-    )
+    parser = argparse.ArgumentParser(description="Convert an HTML page to clean markdown.")
+    parser.add_argument("path", help="URL or local file path of the HTML to convert.")
+    parser.add_argument("-o", "--output", help="Path to save the output markdown file.")
     parser.add_argument(
         "--converter",
         choices=[Converter.TRAFILATURA, Converter.READABILIPY],
         default=Converter.TRAFILATURA,
-        help="The converter library to use.",
+        help="The converter library to use."
     )
     args = parser.parse_args()
 
     converter = CleanHTML2Markdown()
-
+    
     print(f"Converting {args.path} using {args.converter}...")
     result = converter.convert(args.path, converter_name=args.converter)
 

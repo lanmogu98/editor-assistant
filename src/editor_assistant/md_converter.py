@@ -2,7 +2,7 @@
 """
 markdown converter
 
-Processes various types of input (files, URLs) and converts them to markdown
+Processes various types of input (files, URLs) and converts them to markdown 
 for further processing.
 
 Two converters are employed:
@@ -26,14 +26,13 @@ import urllib.request
 import urllib.error
 from .data_models import MDArticle, InputType
 from .config.markitdown_formats import SUPPORTED_FORMATS
-from .config.logging_config import error
+from .config.logging_config import error, warning
 from .config.constants import DEFAULT_LOGGING_LEVEL, URL_HEAD_TIMEOUT_SECONDS
 import logging
 
 markitdown_supported_formats = SUPPORTED_FORMATS["file_extentions"]
 
 # Logging will be configured by main application
-
 
 class MarkdownConverter:
     """Handles various types of input and converts them to markdown."""
@@ -48,7 +47,6 @@ class MarkdownConverter:
         """Lazy-load and reuse MarkItDown instance."""
         if self._markitdown is None:
             from markitdown import MarkItDown
-
             self._markitdown = MarkItDown()
         return self._markitdown
 
@@ -56,7 +54,8 @@ class MarkdownConverter:
         """Check if a string is a URL."""
 
         parsed_url = urlparse(path)
-        return all([parsed_url.scheme in ("http", "https"), parsed_url.netloc])
+        return all([parsed_url.scheme in ('http', 'https'), parsed_url.netloc])
+
 
     def _is_url_html(self, url: str) -> bool:
         """
@@ -64,42 +63,32 @@ class MarkdownConverter:
             url: The URL string to check.
 
         Returns:
-            True if the URL is valid and the Content-Type indicates HTML,
+            True if the URL is valid and the Content-Type indicates HTML, 
             False otherwise.
         """
         if not self._is_url(url):
             return False
 
         try:
-            # Create a request object explicitly setting the method to HEAD.
+            # Create a request object explicitly setting the method to HEAD. 
             # This is to avoid downloading the entire page.
-            req = urllib.request.Request(url, method="HEAD")
-            req.add_header("User-Agent", "Mozilla/5.0")
+            req = urllib.request.Request(url, method='HEAD')
+            req.add_header('User-Agent', 'Mozilla/5.0')
 
-            with urllib.request.urlopen(
-                req, timeout=URL_HEAD_TIMEOUT_SECONDS
-            ) as response:
+            with urllib.request.urlopen(req, timeout=URL_HEAD_TIMEOUT_SECONDS) as response:
                 # Check the status code (optional, but good practice)
-                if response.getcode() == 200:
-                    content_type = response.headers.get("Content-Type")
-                    if content_type and (
-                        content_type.strip().lower().startswith("text/html")
-                        or content_type.strip()
-                        .lower()
-                        .startswith("application/xhtml+xml")
-                    ):
+                if response.getcode () == 200:
+                    content_type = response.headers.get ('Content-Type')
+                    if content_type and (content_type.strip().lower().
+                       startswith ('text/html') or
+                       content_type.strip().lower().
+                       startswith ('application/xhtml+xml')):
                         return True
                     else:
-                        self.logger.debug(
-                            f"URL '{url}' has Content-Type: "
-                            f"{content_type} (not HTML)"
-                        )
+                        self.logger.debug(f"URL '{url}' has Content-Type: {content_type} (not HTML)")
                         return False
                 else:
-                    raise ConnectionError(
-                        f"Error accessing URL '{url}': "
-                        f"HTTP {response.getcode()}"
-                    )
+                    raise ConnectionError(f"Error accessing URL '{url}': HTTP {response.getcode()}")
 
         except urllib.error.URLError as e:
             raise ConnectionError(f"Error accessing URL '{url}': {e.reason}")
@@ -113,54 +102,48 @@ class MarkdownConverter:
         """
         Args:
             path: The string to check
-
+            
         Returns:
             True if the string is a url or path to a file, False otherwise
         """
-        is_supported_file = (
-            Path(path).suffix.lower() in markitdown_supported_formats
-        )
+        is_supported_file = Path(path).suffix.lower() in markitdown_supported_formats
         return is_supported_file
-
-    def convert_content(
-        self, content_path: str, type: InputType = InputType.PAPER
-    ) -> Optional[MDArticle]:
+  
+    def convert_content(self, content_path: str, type: InputType = InputType.PAPER) -> Optional[MDArticle]:
         """
         Process content from various sources and convert to a standard format.
-
+        
         Args:
             content_path: Path to a file or URL
-
+            
         Returns:
             Tuple of (processed_content, metadata)
         """
 
         # initialize the processed content
-        md_article = None
+        md_article= None
 
+            
         # try to convert htmls with html_converter
-        if self._is_url_html(content_path) or self._is_html_file(content_path):
-            self.logger.debug(
-                f"Converting html with html_converter: {content_path}"
-            )
+        if (self._is_url_html(content_path) or self._is_html_file(content_path)):
+            self.logger.debug (f"Converting html with html_converter: {content_path}")
             try:
-                # clean_html.convert returns a dictionary.
+                # clean_html.convert returns a dictionary, default to use readability
                 from .clean_html_to_md import CleanHTML2Markdown
-
                 md_article = CleanHTML2Markdown().convert(content_path)
                 if md_article is None:
-                    self.logger.debug(
-                        "Failed to convert with CleanHTML2Markdown:"
+                    self.logger.debug (
+                        "Failed to convert with CleanHTML2Markdown:" 
                         f"{content_path}"
                     )
-
+                      
             except Exception as e:
-                self.logger.debug(
+                self.logger.debug (
                     "Failed to convert with CleanHTML2Markdown:"
                     f"{str(e)} - {content_path}"
                 )
-
-        # If html conversion fails, try to convert with MarkItDown.
+        
+        # if it's not html, or if html conversion fails, try to convert with MarkItDown
         if md_article is None:
             try:
                 ms_conversion = self.markitdown.convert(content_path)
@@ -169,12 +152,12 @@ class MarkdownConverter:
                     content=ms_conversion.markdown,
                     title=ms_conversion.title,
                     converter="MarkItDown",
-                    source_path=content_path,
+                    source_path=content_path
                 )
             except Exception as e:
                 error(f"Failed to convert input with MarkItDown: {str(e)}")
                 return None
-
+        
         if "https:" in content_path:
             output_dir = Path(content_path.replace("https:", "webpage")).parent
         else:
@@ -197,16 +180,12 @@ class MarkdownConverter:
 
 def main():
     import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Convert markdown to markdown."
-    )
-    parser.add_argument(
-        "content_paths",
-        nargs="+",
-        help="Path(s) to the research paper markdown file(s)",
-    )
-    parser.add_argument("-o", "--output", help="Path to the output directory")
+    parser = argparse.ArgumentParser(description="Convert markdown to markdown.")
+    parser.add_argument("content_paths", 
+                        nargs= '+', 
+                        help= "Path(s) to the research paper markdown file(s)")
+    parser.add_argument("-o", "--output", 
+                        help= "Path to the output directory")
     args = parser.parse_args()
     converter = MarkdownConverter()
     for content_path in args.content_paths:
@@ -217,23 +196,18 @@ def main():
         else:
             print(f"Successfully converted {content_path}")
             if args.output:
-                output_path = (
-                    Path(args.output) / f"{processed_content.title}.md"
-                )
+                output_path = Path(args.output) / f"{processed_content.title}.md"
             else:
-                output_path = (
-                    Path.cwd() / "md" / f"{processed_content.title}.md"
-                )
-
+                output_path = Path.cwd() / "md" / f"{processed_content.title}.md"
+            
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(output_path, "w") as f:
-                f.write(f"url: {processed_content.source_path}\n\n")
-                f.write(f"title: {processed_content.title}\n\n")
-                f.write(f"authors: {processed_content.authors}\n\n")
-                f.write(processed_content.content)
+                    f.write(f"url: {processed_content.source_path}\n\n")
+                    f.write(f"title: {processed_content.title}\n\n")
+                    f.write(f"authors: {processed_content.authors}\n\n")
+                    f.write(processed_content.content)
             print(f"Saved to {output_path}")
-
 
 if __name__ == "__main__":
     main()
