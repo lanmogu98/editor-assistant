@@ -18,7 +18,7 @@ SCHEMA_VERSION = 1
 def get_database_path() -> Path:
     """
     Get the database file path, creating directory if needed.
-    
+
     Environment variables (checked in order):
     1. EDITOR_ASSISTANT_TEST_DB_DIR - For testing (highest priority)
     2. EDITOR_ASSISTANT_DB_DIR - For production override
@@ -30,7 +30,7 @@ def get_database_path() -> Path:
         db_dir = Path(test_db_dir)
         db_dir.mkdir(parents=True, exist_ok=True)
         return db_dir / DEFAULT_DB_NAME
-    
+
     # Production: explicit override or default
     db_dir = Path(os.getenv("EDITOR_ASSISTANT_DB_DIR", DEFAULT_DB_DIR))
     db_dir.mkdir(parents=True, exist_ok=True)
@@ -40,16 +40,16 @@ def get_database_path() -> Path:
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
     """
     Get a database connection.
-    
+
     Args:
         db_path: Optional custom database path. Uses default if not provided.
-    
+
     Returns:
         SQLite connection with row factory enabled
     """
     if db_path is None:
         db_path = get_database_path()
-    
+
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row  # Enable dict-like access
     conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
@@ -59,22 +59,22 @@ def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
 def init_database(db_path: Optional[Path] = None) -> None:
     """
     Initialize the database with schema.
-    
+
     Args:
         db_path: Optional custom database path
     """
     conn = get_connection(db_path)
     cursor = conn.cursor()
-    
+
     # Create tables
     cursor.executescript(SCHEMA)
-    
+
     # Set schema version
     cursor.execute(
         "INSERT OR REPLACE INTO schema_version (id, version) VALUES (1, ?)",
-        (SCHEMA_VERSION,)
+        (SCHEMA_VERSION,),
     )
-    
+
     conn.commit()
     conn.close()
 
@@ -149,9 +149,10 @@ CREATE INDEX IF NOT EXISTS idx_outputs_run ON outputs(run_id);
 def get_schema_version(conn: sqlite3.Connection) -> int:
     """Get current schema version."""
     try:
-        cursor = conn.execute("SELECT version FROM schema_version WHERE id = 1")
+        cursor = conn.execute(
+            "SELECT version FROM schema_version WHERE id = 1"
+        )
         row = cursor.fetchone()
         return row[0] if row else 0
     except sqlite3.OperationalError:
         return 0
-
