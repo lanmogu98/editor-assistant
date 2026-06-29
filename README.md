@@ -6,7 +6,7 @@
 
 Editor Assistant is an AI-powered Python CLI and library for turning research papers, articles, web pages, and converted documents into briefs, outlines, and translations with LLMs. It is built for personal research workflows, but the core client and config modules can also be imported by other Python projects.
 
-**Version: 0.5.1**
+**Version: 0.6.0**
 
 ### Features
 
@@ -317,7 +317,7 @@ This project is licensed under the MIT License.
 
 Editor Assistant 是一个 AI 驱动的 Python CLI 和库，用于把研究论文、文章、网页和转换后的文档处理成简讯、大纲和翻译。它主要服务个人研究工作流，也可以被其他 Python 项目复用其 LLM client 和配置模块。
 
-**版本：0.5.1**
+**版本：0.6.0**
 
 ### 功能特色
 

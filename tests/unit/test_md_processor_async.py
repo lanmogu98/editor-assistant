@@ -132,3 +132,56 @@ class TestAsyncMDProcessor:
             await asyncio.gather(*tasks)
             
             assert mock_llm_client_async.generate_response.call_count == 5
+
+
+@pytest.mark.asyncio
+async def test_streaming_console_output_uses_app_callback(
+    mock_llm_client_async,
+    mock_run_repository,
+    capsys,
+):
+    from editor_assistant.md_processor import MDProcessor
+
+    async def fake_generate_response(*args, stream_callback=None, **kwargs):
+        stream_callback("hello")
+        stream_callback(" world")
+        return "hello world", {
+            "total_input_tokens": 1,
+            "total_output_tokens": 2,
+            "cost": {"input_cost": 0, "output_cost": 0, "total_cost": 0},
+            "process_times": {"total_time": 0.1},
+        }
+
+    mock_llm_client_async.generate_response.side_effect = (
+        fake_generate_response
+    )
+
+    with patch("editor_assistant.md_processor.TaskRegistry") as mock_registry:
+        mock_task_cls = MagicMock()
+        mock_task = MagicMock()
+        mock_task.validate.return_value = (True, "")
+        mock_task.build_prompt.return_value = "Test Prompt " * 100
+        mock_task.post_process.return_value = {"main": "Processed Content"}
+        mock_task.get_output_suffix.return_value = "_test"
+        mock_task.supports_multi_input = False
+
+        mock_task_cls.return_value = mock_task
+        mock_registry.get.return_value = mock_task_cls
+
+        processor = MDProcessor("test-model", stream=True)
+        article = MDArticle(
+            type=InputType.PAPER,
+            content="content " * 500,
+            title="title",
+            source_path="test.pdf",
+        )
+
+        success, _ = await processor.process_mds(
+            [article],
+            "test-task",
+            save_files=False,
+            output_to_console=True,
+        )
+
+    assert success is True
+    assert "hello world" in capsys.readouterr().out

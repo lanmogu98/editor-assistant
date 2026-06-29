@@ -4,9 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "editor_assistant"
-version = "0.5.1"
+version = "0.6.0"
 requires-python = ">=3.10"
 dependencies = [
+    "llm-exec-core",
     "markitdown[all]",
     "requests",  # Deprecated: will be removed after async migration complete
     "httpx>=0.25.0",
@@ -39,4 +40,7 @@ dev = [
 
 # include the config files and prompts in the package
 [tool.setuptools]
-package-data = { "editor_assistant" = ["config/*.yml", "config/prompts/*.txt"] }
+package-data = { "editor_assistant" = ["config/prompts/*.txt"] }
+
+[tool.uv.sources]
+llm-exec-core = { path = "../llm-exec-core", editable = true }

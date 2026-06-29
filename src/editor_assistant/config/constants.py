@@ -7,22 +7,22 @@ Keeping them in one place makes tuning easier and documents assumptions.
 
 import logging
 
+from llm_exec_core.constants import API_REQUEST_TIMEOUT_SECONDS
+from llm_exec_core.constants import CHAR_TOKEN_RATIO
+from llm_exec_core.constants import CHAR_TOKEN_RATIO_EN
+from llm_exec_core.constants import CHAR_TOKEN_RATIO_ZH
+from llm_exec_core.constants import INITIAL_RETRY_DELAY_SECONDS
+from llm_exec_core.constants import MAX_API_RETRIES
+from llm_exec_core.constants import MAX_REQUESTS_PER_MINUTE
+from llm_exec_core.constants import MIN_REQUEST_INTERVAL_SECONDS
+from llm_exec_core.constants import RATE_LIMIT_WARNINGS_ENABLED
+from llm_exec_core.constants import RESPONSE_CACHE_ENABLED
+from llm_exec_core.constants import RESPONSE_CACHE_MAX_SIZE
+from llm_exec_core.constants import RESPONSE_CACHE_TTL_SECONDS
+
 # =============================================================================
 # TOKEN ESTIMATION
 # =============================================================================
-
-# Character-to-token ratios for estimating token counts.
-# Different LLMs have different tokenizers, so these are approximations.
-
-# English/ASCII text: ~3.5-4 characters per token
-CHAR_TOKEN_RATIO_EN = 3.5
-
-# Chinese/CJK text: ~1.5-2 characters per token.
-# Each Chinese char is approximately 2-3 tokens.
-CHAR_TOKEN_RATIO_ZH = 1.5
-
-# Default ratio (backward compatibility)
-CHAR_TOKEN_RATIO = CHAR_TOKEN_RATIO_EN
 
 # Minimum token count for valid input content.
 # Content below this threshold is likely malformed or empty.
@@ -39,54 +39,6 @@ OUTPUT_TOKEN_RESERVE = 2000
 # =============================================================================
 # API RETRY CONFIGURATION
 # =============================================================================
-
-# Maximum number of retry attempts for API calls.
-MAX_API_RETRIES = 3
-
-# Initial delay (in seconds) before first retry.
-# Subsequent retries use exponential backoff (delay * 2^attempt).
-INITIAL_RETRY_DELAY_SECONDS = 1
-
-# Timeout for LLM HTTP requests (seconds).
-# Large documents (40K+ tokens) with complex outline tasks may need
-# 60-120+ seconds.
-# Beginner note:
-# - This timeout is passed to httpx.AsyncClient(timeout=...).
-# - It is intentionally conservative for large-paper workflows; smaller
-#   prompts will usually return faster.
-API_REQUEST_TIMEOUT_SECONDS = 180
-
-
-# =============================================================================
-# RATE LIMITING
-# =============================================================================
-
-# Minimum interval between API requests (in seconds).
-# This prevents hitting per-second rate limits.
-MIN_REQUEST_INTERVAL_SECONDS = 0.5
-
-# Maximum requests per minute (per client instance).
-# Set to 0 to disable per-minute limiting.
-MAX_REQUESTS_PER_MINUTE = 60
-
-# Enable rate limit warning messages.
-RATE_LIMIT_WARNINGS_ENABLED = True
-
-
-# =============================================================================
-# RESPONSE CACHING
-# =============================================================================
-
-# Enable response caching for identical prompts.
-# When enabled, identical prompts return cached responses without API calls.
-RESPONSE_CACHE_ENABLED = False
-
-# Maximum number of cached responses (LRU eviction when exceeded).
-RESPONSE_CACHE_MAX_SIZE = 100
-
-# Cache entry time-to-live in seconds (0 = no expiration).
-RESPONSE_CACHE_TTL_SECONDS = 3600  # 1 hour
-
 
 # =============================================================================
 # CONTENT VALIDATION

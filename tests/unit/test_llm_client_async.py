@@ -56,7 +56,7 @@ class TestAsyncLLMClient:
         mock_httpx_client.post.assert_called_once()
     
     async def test_streaming_response(self, mock_env_vars, mock_httpx_client):
-        """Test streaming response handling."""
+        """Test streaming response handling without default stdout output."""
         from editor_assistant.llm_client import LLMClient
         from contextlib import asynccontextmanager
         
@@ -86,23 +86,19 @@ class TestAsyncLLMClient:
         mock_httpx_client.stream = mock_stream
         
         client = LLMClient("deepseek-v3.2")
-        
-        # Capture stdout to verify streaming print
-        from io import StringIO
-        import sys
-        captured = StringIO()
-        original_stdout = sys.stdout
-        sys.stdout = captured
-        
-        try:
-            response, usage = await client.generate_response("Hello", stream=True)
-        finally:
-            sys.stdout = original_stdout  # Restore stdout
+        streamed_chunks = []
+        callback = streamed_chunks.append
+
+        response, usage = await client.generate_response(
+            "Hello",
+            stream=True,
+            stream_callback=callback,
+        )
         
         # Response is now a tuple (text, usage_dict)
         assert response == "Async World"
         assert isinstance(usage, dict)
-        assert "Async World" in captured.getvalue()
+        assert "".join(streamed_chunks) == "Async World"
 
     async def test_context_manager_support(self, mock_env_vars):
         """Test that client supports async context manager."""
