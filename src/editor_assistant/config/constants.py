@@ -7,18 +7,20 @@ Keeping them in one place makes tuning easier and documents assumptions.
 
 import logging
 
-from llm_exec_core.constants import API_REQUEST_TIMEOUT_SECONDS
-from llm_exec_core.constants import CHAR_TOKEN_RATIO
-from llm_exec_core.constants import CHAR_TOKEN_RATIO_EN
-from llm_exec_core.constants import CHAR_TOKEN_RATIO_ZH
-from llm_exec_core.constants import INITIAL_RETRY_DELAY_SECONDS
-from llm_exec_core.constants import MAX_API_RETRIES
-from llm_exec_core.constants import MAX_REQUESTS_PER_MINUTE
-from llm_exec_core.constants import MIN_REQUEST_INTERVAL_SECONDS
-from llm_exec_core.constants import RATE_LIMIT_WARNINGS_ENABLED
-from llm_exec_core.constants import RESPONSE_CACHE_ENABLED
-from llm_exec_core.constants import RESPONSE_CACHE_MAX_SIZE
-from llm_exec_core.constants import RESPONSE_CACHE_TTL_SECONDS
+from llm_exec_core import constants as _core_constants
+
+API_REQUEST_TIMEOUT_SECONDS = _core_constants.API_REQUEST_TIMEOUT_SECONDS
+CHAR_TOKEN_RATIO = _core_constants.CHAR_TOKEN_RATIO
+CHAR_TOKEN_RATIO_EN = _core_constants.CHAR_TOKEN_RATIO_EN
+CHAR_TOKEN_RATIO_ZH = _core_constants.CHAR_TOKEN_RATIO_ZH
+INITIAL_RETRY_DELAY_SECONDS = _core_constants.INITIAL_RETRY_DELAY_SECONDS
+MAX_API_RETRIES = _core_constants.MAX_API_RETRIES
+MAX_REQUESTS_PER_MINUTE = _core_constants.MAX_REQUESTS_PER_MINUTE
+MIN_REQUEST_INTERVAL_SECONDS = _core_constants.MIN_REQUEST_INTERVAL_SECONDS
+RATE_LIMIT_WARNINGS_ENABLED = _core_constants.RATE_LIMIT_WARNINGS_ENABLED
+RESPONSE_CACHE_ENABLED = _core_constants.RESPONSE_CACHE_ENABLED
+RESPONSE_CACHE_MAX_SIZE = _core_constants.RESPONSE_CACHE_MAX_SIZE
+RESPONSE_CACHE_TTL_SECONDS = _core_constants.RESPONSE_CACHE_TTL_SECONDS
 
 # =============================================================================
 # TOKEN ESTIMATION
@@ -74,3 +76,26 @@ DEFAULT_USER_AGENT = (
 
 # Timeout for HTTP HEAD requests (URL content-type detection).
 URL_HEAD_TIMEOUT_SECONDS = 10
+
+__all__ = [
+    "API_REQUEST_TIMEOUT_SECONDS",
+    "CHAR_TOKEN_RATIO",
+    "CHAR_TOKEN_RATIO_EN",
+    "CHAR_TOKEN_RATIO_ZH",
+    "INITIAL_RETRY_DELAY_SECONDS",
+    "MAX_API_RETRIES",
+    "MAX_REQUESTS_PER_MINUTE",
+    "MIN_REQUEST_INTERVAL_SECONDS",
+    "RATE_LIMIT_WARNINGS_ENABLED",
+    "RESPONSE_CACHE_ENABLED",
+    "RESPONSE_CACHE_MAX_SIZE",
+    "RESPONSE_CACHE_TTL_SECONDS",
+    "MINIMAL_TOKEN_ACCEPTED",
+    "PROMPT_OVERHEAD_TOKENS",
+    "OUTPUT_TOKEN_RESERVE",
+    "MIN_CHARS_WARNING_THRESHOLD",
+    "DEFAULT_LOGGING_LEVEL",
+    "DEBUG_LOGGING_LEVEL",
+    "DEFAULT_USER_AGENT",
+    "URL_HEAD_TIMEOUT_SECONDS",
+]
