@@ -8,6 +8,10 @@ Editor Assistant is an AI-powered Python CLI and library for turning research pa
 
 **Version: 0.6.0**
 
+### Package Boundary
+
+Editor Assistant now consumes `llm-exec-core` for LLM execution. The app layer owns document workflow, tasks, prompts, SQLite storage, CLI commands, output paths, and app logging. During local development, the sibling package is referenced with relative `uv` sources or a uv workspace; release consumers should pin `llm-exec-core==0.1.0`.
+
 ### Features
 
 - **Async processing**: Uses `asyncio` and `httpx` for concurrent conversion and LLM calls.

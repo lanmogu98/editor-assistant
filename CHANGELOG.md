@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Documented downstream package contract for LinkResearcher and other workers.
 - **Resume Command**: `editor-assistant resume` to find and re-execute interrupted/aborted runs
   - Finds runs with status `pending` or `aborted`
   - `--dry-run` flag to preview without executing
@@ -26,6 +27,7 @@ All notable changes to this project will be documented in this file.
   - `advanced`: gemini-2.5-flash-free
 
 ### Changed
+- Extracted LLM execution infrastructure into `llm-exec-core` and updated Editor Assistant to consume it as an external package.
 - **Default Model**: Changed from `deepseek-v3.2` to `glm-4.7-or`
 - **Model Config Refactor**: YAML is now the single source of truth for model/provider configuration.
   - Removed hardcoded `LLMModel` and `ServiceProvider` enums from `set_llm.py`

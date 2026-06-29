@@ -28,6 +28,12 @@ This document provides technical documentation for developers contributing to Ed
 2. **Developer Guide**: This file (`DEVELOPER_GUIDE.md`) must reflect the *current* architecture. If you add a module, update the "Architecture Overview" and "Module Reference" immediately.
 3. **Changelog**: All user-facing changes go to `CHANGELOG.md`.
 
+## Package Split
+
+`llm-exec-core` now owns LLM execution, and Editor Assistant uses it as a dependency. The app layer still owns document workflow, task definitions, prompt templates, SQLite persistence, CLI behavior, output paths, and application logging.
+
+Local checkout development should use relative `[tool.uv.sources]` entries or a uv workspace for the sibling package. Release consumption should pin `llm-exec-core==0.1.0`.
+
 ---
 
 ## Architecture Overview
