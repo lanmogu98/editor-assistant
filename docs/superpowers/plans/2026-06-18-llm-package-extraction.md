@@ -4,7 +4,7 @@
 
 **目标:** 将 Editor Assistant 当前的 LLM 基础设施抽离成一个外部 Python package，供 `editor-assistant` 和 LinkResearcher worker 共同调用。
 
-**架构:** 新建一个 provider-agnostic 的 LLM execution package，负责 provider 配置、模型目录、重试、限速、响应缓存、token 估算、usage/result metadata、structured output hook 和取消边界。`editor-assistant` 回到应用层，只保留文档转换、任务规则、prompt、SQLite 持久化、CLI、输出文件路径和用户可见日志。LinkResearcher 只消费同一个 LLM execution package；durable task lifecycle、attempt/artifact/result schema 和 apply semantics 仍由 LinkResearcher 自己的 worker 负责。
+**架构:** 新建一个 OpenAI-compatible LLM execution package，负责 provider 配置、模型目录、重试、限速、响应缓存、token 估算、usage/result metadata、structured output hook 和取消边界。`editor-assistant` 回到应用层，只保留文档转换、任务规则、prompt、SQLite 持久化、CLI、输出文件路径和用户可见日志。LinkResearcher 只消费同一个 LLM execution package；durable task lifecycle、attempt/artifact/result schema 和 apply semantics 仍由 LinkResearcher 自己的 worker 负责。
 
 **技术栈:** Python 3.10+、`uv`、`httpx`、`pydantic`、`pyyaml`、stdlib `logging`、`pytest`、`pytest-asyncio`、`black`、`flake8`、`mypy`。
 
@@ -19,6 +19,11 @@
 - 不把 task 定义、prompt 模板、文档转换、SQLite storage、CLI 命令或 app logging 放入 `llm_exec_core`。
 - core package 只使用 stdlib `logging`，不得 import `editor_assistant.config.logging_config`。
 - core package 不负责把 token usage report 写到磁盘；格式化函数只返回字符串，持久化由调用方处理。
+- model catalog 的新 SSOT 是 `llm_exec_core/llm_config.yml`；`editor-assistant` 删除自己的 `config/llm_config.yml`，旧 `config.llm_models` shim 默认委托 core catalog。
+- 如需 app-specific model catalog，调用方必须显式传 `config_source`，不得维护隐式双副本。
+- 本地协同开发不得 commit 绝对 `file://` dependency；使用相对 `[tool.uv.sources]` 或 uv workspace。发布前切换到 registry/Git pin。
+- core streaming 在 `stream_callback is None` 时不得写 stdout；CLI/app 如需展示流式输出，必须显式传 callback。
+- core cache 默认关闭；rate limiter/cache 均为 in-process/per-client 能力，不声明为 distributed worker 级限流或持久缓存。
 - unit tests 必须 mock API 调用，不允许真实 API 请求。
 - LinkResearcher 的 durable task lifecycle、task/attempt/artifact/result schema 和 apply semantics 不进入这个 package。
 - 本文档是讨论用计划；未经 owner 批准前，不开始实施代码。
@@ -55,9 +60,9 @@ GitHub issue #24 原文更偏向 in-repo lift-ready refactor，但 owner 已澄�
 
 在 `editor-assistant` 内部创建 `packages/llm_exec_core/`，通过 path dependency 消费，测试通过后再拆成独立 repo。
 
-取舍：本地编辑更容易，但这个包不是真正外部依赖。它可能让 monorepo 布局误导 API 边界，也会拖延 downstream packaging 决策。
+取舍：本地编辑更容易，但如果不严格禁止 `llm_exec_core` import `editor_assistant`，容易让 repo 布局掩盖真实包边界。
 
-**推荐:** 采用方案 B。owner 的意图是一个被两个应用共享的外部 package，所以包边界、版本和 downstream contract 应该从一开始就真实存在。
+**推荐:** 终态采用方案 B，但实施期显式安排一个可移植 workspace/path-dep 协同开发阶段。这个阶段仍使用真实 `llm_exec_core` import 边界，并禁止 core import `editor_assistant`；等 `editor-assistant` 和 LinkResearcher 都跑过 API 后，再发布 `llm-exec-core` 并切换到 pinned dependency。
 
 ## 目标文件结构
 
@@ -88,7 +93,7 @@ GitHub issue #24 原文更偏向 in-repo lift-ready refactor，但 owner 已澄�
 - `tokens.py`: `estimate_tokens`。
 - `usage.py`: 纯 usage report formatting。
 - `types.py`: result、usage、execution metadata、structured output hook 类型。
-- `llm_config.yml`: 从当前 `editor_assistant` 复制的默认 model catalog。
+- `llm_config.yml`: 新的默认 model catalog SSOT。
 
 ### Editor Assistant 仓库
 
@@ -100,6 +105,7 @@ GitHub issue #24 原文更偏向 in-repo lift-ready refactor，但 owner 已澄�
 - Modify: `src/editor_assistant/config/__init__.py`
 - Modify: `src/editor_assistant/config/constants.py`
 - Modify: `src/editor_assistant/config/llm_models.py`
+- Delete: `src/editor_assistant/config/llm_config.yml`
 - Modify: `src/editor_assistant/llm_client.py`
 - Modify: `src/editor_assistant/md_processor.py`
 - Modify: `src/editor_assistant/cli.py`
@@ -189,7 +195,7 @@ class TokenUsage:
     total_cost: float
     currency: str
 
-    def to_legacy_dict(self) -> dict[str, Any]:
+    def to_legacy_dict(self, duration_seconds: float) -> dict[str, Any]:
         return {
             "total_input_tokens": self.input_tokens,
             "total_output_tokens": self.output_tokens,
@@ -198,7 +204,7 @@ class TokenUsage:
                 "output_cost": self.output_cost,
                 "total_cost": self.total_cost,
             },
-            "process_times": {"total_time": 0},
+            "process_times": {"total_time": duration_seconds},
         }
 
 
@@ -224,7 +230,7 @@ class LLMResult:
     structured: Any | None = None
 
     def to_legacy_tuple(self) -> tuple[str, dict[str, Any]]:
-        usage = self.usage.to_legacy_dict()
+        usage = self.usage.to_legacy_dict(self.metadata.duration_seconds)
         usage["metadata"] = asdict(self.metadata)
         return self.text, usage
 ```
@@ -250,6 +256,8 @@ def get_model_details(
 ```
 
 新 package 的 `get_model_details()` 返回三项：provider name、provider settings、model details。旧路径 `editor_assistant.config.llm_models.get_model_details()` 在一个兼容周期内保留当前两项返回形状，除非 owner 明确批准 breaking change。
+
+默认 `config_source=None` 使用 module-level cache，避免每次查询重读 YAML。显式传入 `Path` 或 `dict` 时按该 source 构建 catalog，不得被默认 cache 污染。
 
 ### Structured Output Hook Contract
 
@@ -512,6 +520,31 @@ def test_get_model_details_returns_provider_name_settings_and_model():
     assert provider_name == "test-provider"
     assert provider_settings.api_key_env_var == "TEST_API_KEY"
     assert model_details.id == "provider-model-id"
+
+
+def test_explicit_config_source_is_not_polluted_by_default_cache():
+    first = get_supported_models(CUSTOM_CONFIG)
+    second = get_supported_models(
+        {
+            "other-provider": {
+                "api_key_env_var": "OTHER_API_KEY",
+                "api_base_url": "https://example.invalid/chat/completions",
+                "temperature": 0.1,
+                "max_tokens": 128,
+                "context_window": 4096,
+                "pricing_currency": "$",
+                "models": {
+                    "other-model": {
+                        "id": "other-model-id",
+                        "pricing": {"input": 1.0, "output": 2.0},
+                    }
+                },
+            }
+        }
+    )
+
+    assert first == ["test-model"]
+    assert second == ["other-model"]
 ```
 
 - [ ] **Step 2: 运行测试，确认按预期失败**
@@ -522,11 +555,13 @@ Expected: FAIL with `ModuleNotFoundError` for `llm_exec_core.config`.
 
 - [ ] **Step 3: 实现 config loader**
 
-实现时保留 `src/editor_assistant/config/llm_models.py` 当前的 Pydantic schemas，并新增 dict/path injection。`config_source=None` 时默认加载 `Path(__file__).parent / "llm_config.yml"`。
+实现时保留 `src/editor_assistant/config/llm_models.py` 当前的 Pydantic schemas，并新增 dict/path injection。`config_source=None` 时默认加载并缓存 `Path(__file__).parent / "llm_config.yml"`；显式传 `Path` 或 `dict` 时用传入 source 构建 catalog，不复用默认 cache。
 
-- [ ] **Step 4: 复制默认 model catalog**
+- [ ] **Step 4: 复制默认 model catalog，确立 core SSOT**
 
 Copy `src/editor_assistant/config/llm_config.yml` to `../llm-exec-core/src/llm_exec_core/llm_config.yml`.
+
+抽离完成后，`../llm-exec-core/src/llm_exec_core/llm_config.yml` 是默认 catalog 的唯一 SSOT。后续 Task 6 删除 `src/editor_assistant/config/llm_config.yml`，避免两份 YAML 副本漂移。
 
 - [ ] **Step 5: 运行测试，确认通过**
 
@@ -554,7 +589,7 @@ git -C ../llm-exec-core commit -m "feat: add injectable llm model catalog"
 - Produces: `TokenUsage`
 - Produces: `ExecutionMetadata`
 - Produces: `LLMResult`
-- Produces: `format_usage_report(project_name: str, model: str, model_name: str, pricing_currency: str, token_usage: dict[str, Any]) -> str`
+- Produces: `format_usage_report(project_name: str, model: str, model_name: str, pricing_currency: str, token_usage: dict[str, Any], timestamp: str | None = None) -> str`
 
 - [ ] **Step 1: 写失败的 usage/report 测试**
 
@@ -638,6 +673,7 @@ def test_llm_result_to_legacy_tuple_preserves_existing_usage_shape():
     assert usage["total_input_tokens"] == 1
     assert usage["total_output_tokens"] == 2
     assert usage["cost"]["total_cost"] == 0.3
+    assert usage["process_times"]["total_time"] == 1.0
     assert usage["metadata"]["request_id"] == "req-1"
 ```
 
@@ -664,17 +700,16 @@ git -C ../llm-exec-core add src/llm_exec_core/types.py src/llm_exec_core/usage.p
 git -C ../llm-exec-core commit -m "feat: add llm result metadata and usage formatting"
 ```
 
-### Task 5: 抽离 Async LLM Client 到 Core Package
+### Task 5A: 行为保持地抽离 Async LLM Client
 
 **Files:**
 - Create: `../llm-exec-core/src/llm_exec_core/client.py`
 - Modify: `../llm-exec-core/src/llm_exec_core/__init__.py`
-- Create: `../llm-exec-core/tests/unit/test_client.py`
+- Create: `../llm-exec-core/tests/unit/test_client_legacy.py`
 
 **Interfaces:**
-- Produces: `LLMClient.generate(...) -> LLMResult`
 - Produces: `LLMClient.generate_response(...) -> tuple[str, dict[str, Any]]`
-- Consumes: config loader、constants、token estimator、result dataclasses、usage formatting
+- Consumes: config loader、constants、token estimator、usage formatting
 
 - [ ] **Step 1: 写失败的 non-streaming compatibility 测试**
 
@@ -724,9 +759,54 @@ async def test_generate_response_returns_legacy_tuple(monkeypatch):
     assert response == "Test response"
     assert usage["total_input_tokens"] == 10
     assert usage["total_output_tokens"] == 20
+    assert usage["process_times"]["total_time"] > 0
 ```
 
-- [ ] **Step 2: 写失败的 structured result 测试**
+- [ ] **Step 2: 运行测试，确认按预期失败**
+
+Run: `uv run pytest ../llm-exec-core/tests/unit/test_client_legacy.py -v`
+
+Expected: FAIL with missing `llm_exec_core.client`.
+
+- [ ] **Step 3: 行为保持地移动 client 实现**
+
+把 `src/editor_assistant/llm_client.py` 的现有行为迁到 `../llm-exec-core/src/llm_exec_core/client.py`，本任务只允许这些变化：
+
+- 将 `.config.logging_config.warning` 和 `.config.logging_config.progress` 替换为 `logging.getLogger(__name__)` 的 `logger.warning()` 和 `logger.info()`。
+- 将 `.config.constants` imports 替换为 `.constants`。
+- 将 `.utils.estimate_tokens` 替换为 `.tokens.estimate_tokens`。
+- 将 `.config.llm_models` imports 替换为 `.config`。
+- 从 `LLMClient` 移除 `save_token_usage_report()`。
+- 保留 `generate_response()` 的 legacy tuple shape。
+- 保留 async context manager、`close()`、rate limiting、retry、cache 和 streaming 的当前行为。
+- 本任务不新增 `generate()`、structured output hook 或 metadata API。
+
+- [ ] **Step 4: 运行测试，确认通过**
+
+Run: `uv run pytest ../llm-exec-core/tests/unit/test_client_legacy.py -v`
+
+Expected: PASS.
+
+- [ ] **Step 5: 提交**
+
+```bash
+git -C ../llm-exec-core add src/llm_exec_core/client.py src/llm_exec_core/__init__.py tests/unit/test_client_legacy.py
+git -C ../llm-exec-core commit -m "feat: extract legacy llm client behavior"
+```
+
+### Task 5B: 添加 Structured Result API 和 Metadata
+
+**Files:**
+- Modify: `../llm-exec-core/src/llm_exec_core/client.py`
+- Modify: `../llm-exec-core/src/llm_exec_core/types.py`
+- Create: `../llm-exec-core/tests/unit/test_client_result.py`
+
+**Interfaces:**
+- Produces: `LLMClient.generate(...) -> LLMResult`
+- Produces: `LLMClient.generate_response(...) -> tuple[str, dict[str, Any]]` via `LLMResult.to_legacy_tuple()`
+- Consumes: `TokenUsage`, `ExecutionMetadata`, `LLMResult`
+
+- [ ] **Step 1: 写失败的 structured result 测试**
 
 ```python
 import json
@@ -782,10 +862,156 @@ async def test_generate_applies_structured_output_hook(monkeypatch):
     assert result.structured == {"title": "A"}
     assert result.metadata.provider_name == "test-provider"
     assert result.metadata.request_id == "req-1"
+    assert result.metadata.model_name == "test-model"
+    assert result.metadata.model_id == "provider-model-id"
+    assert result.metadata.duration_seconds > 0
     assert result.metadata.trace_context == {"source": "unit"}
 ```
 
-- [ ] **Step 3: 写失败的 cancellation 测试**
+- [ ] **Step 2: 写失败的 legacy timing bridge 测试**
+
+```python
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from llm_exec_core.client import LLMClient
+
+
+@pytest.mark.asyncio
+async def test_generate_response_legacy_tuple_preserves_duration(monkeypatch):
+    monkeypatch.setenv("TEST_API_KEY", "test-key")
+    config = {
+        "test-provider": {
+            "api_key_env_var": "TEST_API_KEY",
+            "api_base_url": "https://example.invalid/chat/completions",
+            "temperature": 0.1,
+            "max_tokens": 128,
+            "context_window": 4096,
+            "pricing_currency": "$",
+            "models": {
+                "test-model": {
+                    "id": "provider-model-id",
+                    "pricing": {"input": 1.0, "output": 2.0},
+                }
+            },
+        }
+    }
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}],
+        "usage": {"prompt_tokens": 5, "completion_tokens": 6},
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("llm_exec_core.client.httpx.AsyncClient") as mock_cls:
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.post.return_value = mock_response
+        mock_cls.return_value = mock_httpx_client
+
+        client = LLMClient("test-model", config_source=config)
+        _, usage = await client.generate_response("Hello")
+
+    assert usage["process_times"]["total_time"] > 0
+    assert usage["metadata"]["provider_name"] == "test-provider"
+```
+
+- [ ] **Step 3: 运行测试，确认按预期失败**
+
+Run: `uv run pytest ../llm-exec-core/tests/unit/test_client_result.py -v`
+
+Expected: FAIL because `LLMClient.generate()` is not implemented.
+
+- [ ] **Step 4: 实现 `generate()` 和 metadata bridge**
+
+实现要求：
+
+- `get_model_details()` 必须使用新 3-tuple，显式保存 `provider_name`。
+- `generate()` 返回 `LLMResult`，包含 `text`、`TokenUsage`、`ExecutionMetadata` 和 `structured`。
+- `structured_output_hook` 只接收最终 text，返回 caller-owned structured data。
+- `generate_response()` 改为调用 `generate()`，再返回 `LLMResult.to_legacy_tuple()`。
+- legacy tuple 的 `process_times.total_time` 必须来自 `ExecutionMetadata.duration_seconds`，不能写 0。
+
+- [ ] **Step 5: 运行测试，确认通过**
+
+Run: `uv run pytest ../llm-exec-core/tests/unit/test_client_result.py ../llm-exec-core/tests/unit/test_client_legacy.py -v`
+
+Expected: PASS.
+
+- [ ] **Step 6: 提交**
+
+```bash
+git -C ../llm-exec-core add src/llm_exec_core/client.py src/llm_exec_core/types.py tests/unit/test_client_result.py
+git -C ../llm-exec-core commit -m "feat: add llm result metadata api"
+```
+
+### Task 5C: 修正 Core Streaming UX 和 Cancellation Boundary
+
+**Files:**
+- Modify: `../llm-exec-core/src/llm_exec_core/client.py`
+- Create: `../llm-exec-core/tests/unit/test_client_streaming.py`
+
+**Interfaces:**
+- Produces: no stdout output from core streaming unless caller provides a callback that writes.
+- Produces: `asyncio.CancelledError` re-raised by `generate()` and `generate_response()`.
+
+- [ ] **Step 1: 写失败的 no-stdout streaming 测试**
+
+```python
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from llm_exec_core.client import LLMClient
+
+
+@pytest.mark.asyncio
+async def test_streaming_without_callback_does_not_print(monkeypatch, capsys):
+    monkeypatch.setenv("TEST_API_KEY", "test-key")
+    config = {
+        "test-provider": {
+            "api_key_env_var": "TEST_API_KEY",
+            "api_base_url": "https://example.invalid/chat/completions",
+            "temperature": 0.1,
+            "max_tokens": 128,
+            "context_window": 4096,
+            "pricing_currency": "$",
+            "models": {
+                "test-model": {
+                    "id": "provider-model-id",
+                    "pricing": {"input": 1.0, "output": 2.0},
+                }
+            },
+        }
+    }
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+
+    async def mock_lines():
+        yield 'data: {"choices": [{"delta": {"content": "A"}}]}'
+        yield 'data: {"choices": [{"delta": {"content": "B"}}]}'
+        yield "data: [DONE]"
+
+    mock_response.aiter_lines = mock_lines
+
+    @asynccontextmanager
+    async def mock_stream(*args, **kwargs):
+        yield mock_response
+
+    with patch("llm_exec_core.client.httpx.AsyncClient") as mock_cls:
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.stream = mock_stream
+        mock_cls.return_value = mock_httpx_client
+
+        client = LLMClient("test-model", config_source=config)
+        response, _ = await client.generate_response("Hello", stream=True)
+
+    assert response == "AB"
+    assert capsys.readouterr().out == ""
+```
+
+- [ ] **Step 2: 写失败的 cancellation 测试**
 
 ```python
 import asyncio
@@ -827,43 +1053,38 @@ async def test_generate_response_reraises_cancelled_error(monkeypatch):
             await client.generate_response("Hello")
 ```
 
-- [ ] **Step 4: 运行测试，确认按预期失败**
+- [ ] **Step 3: 运行测试，确认按预期失败**
 
-Run: `uv run pytest ../llm-exec-core/tests/unit/test_client.py -v`
+Run: `uv run pytest ../llm-exec-core/tests/unit/test_client_streaming.py -v`
 
-Expected: FAIL with missing `llm_exec_core.client`.
+Expected: FAIL because streaming still prints to stdout or cancellation is swallowed.
 
-- [ ] **Step 5: 移动并改造 client 实现**
+- [ ] **Step 4: 实现 streaming/cancellation 边界**
 
-把 `src/editor_assistant/llm_client.py` 的行为迁到 `../llm-exec-core/src/llm_exec_core/client.py`，并做这些改动：
+实现要求：
 
-- 将 `.config.logging_config.warning` 和 `.config.logging_config.progress` 替换为 `logging.getLogger(__name__)` 的 `logger.warning()` 和 `logger.info()`。
-- 将 `.config.constants` imports 替换为 `.constants`。
-- 将 `.utils.estimate_tokens` 替换为 `.tokens.estimate_tokens`。
-- 将 `.config.llm_models` imports 替换为 `.config`。
-- 新增返回 `LLMResult` 的 `generate()`。
-- 保留通过 `LLMResult.to_legacy_tuple()` 返回旧 tuple shape 的 `generate_response()`。
-- 从 `LLMClient` 移除 `save_token_usage_report()`。
-- 保留 async context manager 和 `close()` 行为。
-- 重新抛出 `asyncio.CancelledError`。
+- `stream_callback is None` 时只累积 response text，不 `print()`。
+- `editor-assistant` CLI/app 如需用户可见流式输出，必须在 Task 6 明确传 callback。
+- `asyncio.CancelledError` 不进入 retry wrapper，不转成 `RuntimeError`，直接重新抛出。
 
-- [ ] **Step 6: 运行测试，确认通过**
+- [ ] **Step 5: 运行测试，确认通过**
 
-Run: `uv run pytest ../llm-exec-core/tests/unit/test_client.py -v`
+Run: `uv run pytest ../llm-exec-core/tests/unit/test_client_streaming.py ../llm-exec-core/tests/unit/test_client_result.py ../llm-exec-core/tests/unit/test_client_legacy.py -v`
 
 Expected: PASS.
 
-- [ ] **Step 7: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git -C ../llm-exec-core add src/llm_exec_core/client.py src/llm_exec_core/__init__.py tests/unit/test_client.py
-git -C ../llm-exec-core commit -m "feat: extract async llm client"
+git -C ../llm-exec-core add src/llm_exec_core/client.py tests/unit/test_client_streaming.py
+git -C ../llm-exec-core commit -m "fix: keep core streaming output caller-controlled"
 ```
 
 ### Task 6: 将 Editor Assistant 接到外部 Package
 
 **Files:**
 - Modify: `pyproject.toml`
+- Delete: `src/editor_assistant/config/llm_config.yml`
 - Modify: `src/editor_assistant/llm_client.py`
 - Modify: `src/editor_assistant/config/llm_models.py`
 - Modify: `src/editor_assistant/config/constants.py`
@@ -876,6 +1097,7 @@ git -C ../llm-exec-core commit -m "feat: extract async llm client"
 - Consumes: `llm_exec_core.usage.format_usage_report`
 - Produces: 继续可用的旧 import paths
 - Produces: CLI version `0.6.0`
+- Produces: no app-owned duplicate `llm_config.yml`
 
 - [ ] **Step 1: 写失败的 editor-assistant dependency 测试**
 
@@ -912,13 +1134,13 @@ Run: `uv run pytest tests/unit/test_regression_refactor.py -v`
 
 Expected: FAIL because `llm_exec_core` is not installed in `editor-assistant`.
 
-- [ ] **Step 3: 添加 dependency pin**
+- [ ] **Step 3: 添加可移植 dependency 配置**
 
-本地迁移阶段使用 path dependency：
+本地迁移阶段使用普通 dependency 名称加相对 `[tool.uv.sources]`，不得 commit 机器特定的绝对 `file://` 路径：
 
 ```toml
 dependencies = [
-    "llm-exec-core @ file:///Users/mogu/Projects/tools/llm-exec-core",
+    "llm-exec-core",
     "markitdown[all]",
     "requests",
     "httpx>=0.25.0",
@@ -930,9 +1152,12 @@ dependencies = [
     "jinja2",
     "rich>=13.0.0",
 ]
+
+[tool.uv.sources]
+llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-发布消费阶段改为 pinned version：
+发布消费阶段必须先删除 `[tool.uv.sources]`，再改为 pinned version：
 
 ```toml
 dependencies = [
@@ -950,7 +1175,25 @@ dependencies = [
 ]
 ```
 
-- [ ] **Step 4: 添加 compatibility shims**
+如果 CI 在本地协同阶段运行，CI job 必须 checkout `editor-assistant` 和 sibling `llm-exec-core` workspace；否则该阶段不能作为可合并到 `main` 的最终形态。
+
+- [ ] **Step 4: 删除 app catalog 副本并更新 package data**
+
+删除 `src/editor_assistant/config/llm_config.yml`。同时把 `pyproject.toml` 的 package-data 从：
+
+```toml
+package-data = { "editor_assistant" = ["config/*.yml", "config/prompts/*.txt"] }
+```
+
+改为：
+
+```toml
+package-data = { "editor_assistant" = ["config/prompts/*.txt"] }
+```
+
+默认 model catalog 只从 `llm_exec_core/llm_config.yml` 加载。若 `editor-assistant` 后续需要 app-specific catalog，必须显式传 `config_source`，不得恢复隐式副本。
+
+- [ ] **Step 5: 添加 compatibility shims**
 
 `src/editor_assistant/llm_client.py` alias core module，让旧路径 monkeypatch 仍能作用到真实实现：
 
@@ -1023,7 +1266,7 @@ from llm_exec_core.tokens import estimate_tokens
 __all__ = ["estimate_tokens"]
 ```
 
-- [ ] **Step 5: 将 app token report 持久化移到 MDProcessor**
+- [ ] **Step 6: 将 app token report 持久化移到 MDProcessor**
 
 把 `self.llm_client.save_token_usage_report(title, output_dir)` 替换为 app-owned file writing：
 
@@ -1044,7 +1287,7 @@ def _save_token_usage_report(self, project_name: str, output_dir: Path) -> None:
     report_path.write_text(report, encoding="utf-8")
 ```
 
-- [ ] **Step 6: bump editor-assistant version**
+- [ ] **Step 7: bump editor-assistant version**
 
 把这些值设为 `0.6.0`：
 
@@ -1053,13 +1296,13 @@ def _save_token_usage_report(self, project_name: str, output_dir: Path) -> None:
 - `src/editor_assistant/cli.py` `--version` string。
 - README 的 English 和 Chinese version badges。
 
-- [ ] **Step 7: 运行测试，确认通过**
+- [ ] **Step 8: 运行测试，确认通过**
 
 Run: `uv run pytest tests/unit/ -v`
 
 Expected: PASS.
 
-- [ ] **Step 8: 提交**
+- [ ] **Step 9: 提交**
 
 ```bash
 git add pyproject.toml src/editor_assistant tests/unit tests/stress README.md CHANGELOG.md DEVELOPER_GUIDE.md
@@ -1099,9 +1342,11 @@ git commit -m "refactor: consume extracted llm execution package"
 
 ## Reference Strategy
 
-During local migration, `editor-assistant` references the sibling package with a `file://` dependency.
+During local migration, `editor-assistant` references the sibling package with relative `[tool.uv.sources]` or a uv workspace.
 
 For release consumption, applications pin `llm-exec-core==0.1.0`.
+
+Final committed `editor-assistant` config must not contain absolute `file://` paths. Local development uses relative `[tool.uv.sources]` or a uv workspace; release consumption uses the pinned package.
 
 ## Minimal Worker Import
 
@@ -1128,6 +1373,14 @@ async def run_llm_step(prompt: str) -> str:
 - `usage`: token counts, costs, and currency.
 - `metadata`: request id, run id, model, provider, timing, and trace context.
 - `structured`: parsed caller-owned structured output, or `None`.
+
+## Protocol Boundary
+
+`llm-exec-core` initially supports OpenAI-compatible `/chat/completions` APIs. Native Anthropic, Bedrock, Vertex, or provider-specific protocols are out of scope until explicitly designed.
+
+## Rate Limit and Cache Boundary
+
+Built-in rate limiting and response cache are in-process/per-client conveniences. They are not distributed worker coordination. LinkResearcher must use its own shared limiter or durable coordination if attempts run across multiple processes or hosts. Response cache is disabled by default and should stay disabled for idempotent worker accounting unless a caller explicitly opts in.
 
 ## Structured Output Hook
 
@@ -1211,12 +1464,19 @@ Run:
 cd /Users/mogu/Projects/tools/editor-assistant
 uv sync
 uv run pytest tests/unit/
+uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py
 uv run flake8 src/
 uv run mypy src/
 uv run black src/ tests/ --check
 ```
 
 Expected: all commands pass.
+
+`tests/stress/test_real_load.py` uses real API calls when API keys are present. Run it only as an explicit expensive verification:
+
+```bash
+uv run pytest tests/stress/test_real_load.py -v
+```
 
 - [ ] **Step 3: 验证旧 import paths**
 
@@ -1265,14 +1525,17 @@ Expected: both outputs are empty.
 
 1. 确认 package name：推荐 distribution `llm-exec-core`、import package `llm_exec_core`。
 2. 确认 repo 位置：推荐 sibling repo `/Users/mogu/Projects/tools/llm-exec-core`。
-3. 确认 Editor Assistant 第一轮迁移是否先使用本地 `file://` dependency，再发布正式版本。
-4. 确认 legacy `editor_assistant.config.llm_models.get_model_details()` 是否保留 two-item tuple 一个 release cycle。
-5. 确认是否采用 `generate()` 加兼容 `generate_response()` 的 public API shape。
-6. 确认本 issue 中 LinkResearcher 只需要 documented examples，worker lifecycle implementation 留在其 own issue。
+3. 确认 model catalog 新 SSOT 为 `llm_exec_core/llm_config.yml`，并删除 `editor-assistant` 的 YAML 副本。
+4. 确认协同开发期使用相对 `[tool.uv.sources]` 或 uv workspace，发布前切 `llm-exec-core==0.1.0` pin。
+5. 确认 legacy `editor_assistant.config.llm_models.get_model_details()` 是否保留 two-item tuple 一个 release cycle。
+6. 确认是否采用 `generate()` 加兼容 `generate_response()` 的 public API shape。
+7. 确认 v0.1 scope 只支持 OpenAI-compatible `/chat/completions`，native Anthropic/Bedrock/Vertex 留到后续设计。
+8. 确认 rate limiter/cache 只是 in-process/per-client 能力，LinkResearcher distributed limiting 不进入本 package。
+9. 确认本 issue 中 LinkResearcher 只需要 documented examples，worker lifecycle implementation 留在其 own issue。
 
 ## 自审
 
-- Spec coverage: 本计划覆盖 external package creation、LLM constants、stdlib logging、injectable config、token estimation、pure usage formatting、editor-assistant migration、backward compatibility、version bump、changelog 和 LinkResearcher downstream readiness。
+- Spec coverage: 本计划覆盖 external package creation、LLM constants、stdlib logging、injectable config、config SSOT、token estimation、pure usage formatting、editor-assistant migration、backward compatibility、version bump、changelog 和 LinkResearcher downstream readiness。
 - Scope check: 本计划明确排除 task schemas、prompt semantics、SQLite schema changes、document conversion 和 LinkResearcher durable workflow state。
 - Placeholder scan: 本计划包含具体 recommended decisions、file paths、signatures、commands 和 expected results。
-- Type consistency: `LLMClient.generate()` 返回 `LLMResult`；`generate_response()` 返回 legacy tuple；`TokenUsage.to_legacy_dict()` 和 `LLMResult.to_legacy_tuple()` 负责桥接旧 usage shape。
+- Type consistency: `LLMClient.generate()` 返回 `LLMResult`；`generate_response()` 返回 legacy tuple；`TokenUsage.to_legacy_dict(duration_seconds)` 和 `LLMResult.to_legacy_tuple()` 负责桥接旧 usage shape，并保留 legacy `process_times.total_time`。
