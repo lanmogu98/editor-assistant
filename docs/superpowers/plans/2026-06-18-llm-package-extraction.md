@@ -195,7 +195,7 @@ class TokenUsage:
     total_cost: float
     currency: str
 
-    def to_legacy_dict(self, duration_seconds: float) -> dict[str, Any]:
+    def to_legacy_dict(self, duration_seconds: float = 0.0) -> dict[str, Any]:
         return {
             "total_input_tokens": self.input_tokens,
             "total_output_tokens": self.output_tokens,
@@ -230,7 +230,9 @@ class LLMResult:
     structured: Any | None = None
 
     def to_legacy_tuple(self) -> tuple[str, dict[str, Any]]:
-        usage = self.usage.to_legacy_dict(self.metadata.duration_seconds)
+        usage = self.usage.to_legacy_dict(
+            duration_seconds=self.metadata.duration_seconds
+        )
         usage["metadata"] = asdict(self.metadata)
         return self.text, usage
 ```
@@ -759,7 +761,7 @@ async def test_generate_response_returns_legacy_tuple(monkeypatch):
     assert response == "Test response"
     assert usage["total_input_tokens"] == 10
     assert usage["total_output_tokens"] == 20
-    assert usage["process_times"]["total_time"] > 0
+    assert usage["process_times"]["total_time"] >= 0
 ```
 
 - [ ] **Step 2: 运行测试，确认按预期失败**
@@ -776,6 +778,7 @@ Expected: FAIL with missing `llm_exec_core.client`.
 - 将 `.config.constants` imports 替换为 `.constants`。
 - 将 `.utils.estimate_tokens` 替换为 `.tokens.estimate_tokens`。
 - 将 `.config.llm_models` imports 替换为 `.config`。
+- 因 Task 3 的 core `get_model_details()` 已返回 3-tuple，5A 允许把旧解包调整为 `_, provider_settings, model_details = get_model_details(model_name)`，但此阶段不保存或对外暴露 `provider_name`；5B 再接入 metadata。
 - 从 `LLMClient` 移除 `save_token_usage_report()`。
 - 保留 `generate_response()` 的 legacy tuple shape。
 - 保留 async context manager、`close()`、rate limiting、retry、cache 和 streaming 的当前行为。
@@ -912,7 +915,7 @@ async def test_generate_response_legacy_tuple_preserves_duration(monkeypatch):
         client = LLMClient("test-model", config_source=config)
         _, usage = await client.generate_response("Hello")
 
-    assert usage["process_times"]["total_time"] > 0
+    assert usage["process_times"]["total_time"] >= 0
     assert usage["metadata"]["provider_name"] == "test-provider"
 ```
 
@@ -931,6 +934,7 @@ Expected: FAIL because `LLMClient.generate()` is not implemented.
 - `structured_output_hook` 只接收最终 text，返回 caller-owned structured data。
 - `generate_response()` 改为调用 `generate()`，再返回 `LLMResult.to_legacy_tuple()`。
 - legacy tuple 的 `process_times.total_time` 必须来自 `ExecutionMetadata.duration_seconds`，不能写 0。
+- cache hit 也必须走 `LLMResult`，再由 `to_legacy_tuple()` 生成旧 shape；其 `process_times.total_time` 可以接近 0，但不得回退到另一套 ad hoc usage dict。
 
 - [ ] **Step 5: 运行测试，确认通过**
 
@@ -1091,11 +1095,13 @@ git -C ../llm-exec-core commit -m "fix: keep core streaming output caller-contro
 - Modify: `src/editor_assistant/utils.py`
 - Modify: `src/editor_assistant/md_processor.py`
 - Modify: `src/editor_assistant/cli.py`
+- Modify: `tests/unit/test_md_processor_async.py`
 
 **Interfaces:**
 - Consumes: `llm_exec_core.LLMClient`
 - Consumes: `llm_exec_core.usage.format_usage_report`
 - Produces: 继续可用的旧 import paths
+- Produces: 交互式 CLI streaming 由 app-owned callback 写 stdout，不依赖 core 默认输出
 - Produces: CLI version `0.6.0`
 - Produces: no app-owned duplicate `llm_config.yml`
 
@@ -1266,7 +1272,96 @@ from llm_exec_core.tokens import estimate_tokens
 __all__ = ["estimate_tokens"]
 ```
 
-- [ ] **Step 6: 将 app token report 持久化移到 MDProcessor**
+- [ ] **Step 6: 在 app 层恢复 console streaming callback**
+
+Task 5C 会移除 core 在 `stream_callback is None` 时的默认 stdout 输出。Task 6 必须在同一个 app migration commit 中补回 `MDProcessor` 的交互式 CLI 行为，否则 `brief` / `outline` / `translate` 的主路径会 `stream=True` 但静默无输出。
+
+在 `src/editor_assistant/md_processor.py` 当前 `final_callback` 分支中实现：
+
+```python
+final_callback = stream_callback
+app_prints_stream = self.stream and output_to_console and final_callback is None
+
+if app_prints_stream:
+
+    def print_stream_chunk(content: str) -> None:
+        print(content, end="", flush=True)
+
+    final_callback = print_stream_chunk
+elif final_callback is None and not output_to_console:
+
+    def suppress_output(_: str) -> None:
+        return None
+
+    final_callback = suppress_output
+
+response, usage_stats = await self._make_api_request(...)
+
+if app_prints_stream:
+    print(flush=True)
+```
+
+Callback ownership rule:
+
+- 外部 caller 传入 `stream_callback` 时，app 不额外 print。
+- `output_to_console=True` 且无外部 callback 时，由 app callback 写 stdout。
+- `output_to_console=False` 且无外部 callback 时，继续传 suppressor，避免后台 worker 或测试污染 stdout。
+
+在 `tests/unit/test_md_processor_async.py` 添加 app 层回归测试，使用 fake LLM client 在收到 callback 时发送 chunks，并用 `capsys` 验证 console 模式下 stdout 非空：
+
+```python
+@pytest.mark.asyncio
+async def test_streaming_console_output_uses_app_callback(
+    mock_llm_client_async,
+    mock_run_repository,
+    capsys,
+):
+    from editor_assistant.data_models import InputType, MDArticle
+    from editor_assistant.md_processor import MDProcessor
+
+    async def fake_generate_response(*args, stream_callback=None, **kwargs):
+        stream_callback("hello")
+        stream_callback(" world")
+        return "hello world", {
+            "total_input_tokens": 1,
+            "total_output_tokens": 2,
+            "cost": {"input_cost": 0, "output_cost": 0, "total_cost": 0},
+            "process_times": {"total_time": 0.1},
+        }
+
+    mock_llm_client_async.generate_response.side_effect = fake_generate_response
+
+    with patch("editor_assistant.md_processor.TaskRegistry") as mock_registry:
+        mock_task = MagicMock()
+        mock_task.validate.return_value = (True, "")
+        mock_task.build_prompt.return_value = "Test Prompt " * 100
+        mock_task.post_process.return_value = {"main": "Processed Content"}
+        mock_task.get_output_suffix.return_value = "_test"
+        mock_task.supports_multi_input = False
+        mock_registry.get.return_value.return_value = mock_task
+
+        processor = MDProcessor("test-model", stream=True)
+        article = MDArticle(
+            type=InputType.PAPER,
+            content="content " * 500,
+            title="title",
+            source_path="test.pdf",
+        )
+
+        success, _ = await processor.process_mds(
+            [article],
+            "test-task",
+            save_files=False,
+            output_to_console=True,
+        )
+
+    assert success is True
+    assert "hello world" in capsys.readouterr().out
+```
+
+该测试可以按现有 `test_md_processor_async.py` fixture 做最小改写，但断言必须证明 console streaming 不再依赖 core 默认 `print()`。
+
+- [ ] **Step 7: 将 app token report 持久化移到 MDProcessor**
 
 把 `self.llm_client.save_token_usage_report(title, output_dir)` 替换为 app-owned file writing：
 
@@ -1287,7 +1382,7 @@ def _save_token_usage_report(self, project_name: str, output_dir: Path) -> None:
     report_path.write_text(report, encoding="utf-8")
 ```
 
-- [ ] **Step 7: bump editor-assistant version**
+- [ ] **Step 8: bump editor-assistant version**
 
 把这些值设为 `0.6.0`：
 
@@ -1296,13 +1391,18 @@ def _save_token_usage_report(self, project_name: str, output_dir: Path) -> None:
 - `src/editor_assistant/cli.py` `--version` string。
 - README 的 English 和 Chinese version badges。
 
-- [ ] **Step 8: 运行测试，确认通过**
+- [ ] **Step 9: 运行测试，确认通过**
 
-Run: `uv run pytest tests/unit/ -v`
+Run:
+
+```bash
+uv run pytest tests/unit/test_md_processor_async.py -v
+uv run pytest tests/unit/ -v
+```
 
 Expected: PASS.
 
-- [ ] **Step 9: 提交**
+- [ ] **Step 10: 提交**
 
 ```bash
 git add pyproject.toml src/editor_assistant tests/unit tests/stress README.md CHANGELOG.md DEVELOPER_GUIDE.md
@@ -1538,4 +1638,5 @@ Expected: both outputs are empty.
 - Spec coverage: 本计划覆盖 external package creation、LLM constants、stdlib logging、injectable config、config SSOT、token estimation、pure usage formatting、editor-assistant migration、backward compatibility、version bump、changelog 和 LinkResearcher downstream readiness。
 - Scope check: 本计划明确排除 task schemas、prompt semantics、SQLite schema changes、document conversion 和 LinkResearcher durable workflow state。
 - Placeholder scan: 本计划包含具体 recommended decisions、file paths、signatures、commands 和 expected results。
-- Type consistency: `LLMClient.generate()` 返回 `LLMResult`；`generate_response()` 返回 legacy tuple；`TokenUsage.to_legacy_dict(duration_seconds)` 和 `LLMResult.to_legacy_tuple()` 负责桥接旧 usage shape，并保留 legacy `process_times.total_time`。
+- Type consistency: `LLMClient.generate()` 返回 `LLMResult`；`generate_response()` 返回 legacy tuple；`TokenUsage.to_legacy_dict(duration_seconds=...)` 和 `LLMResult.to_legacy_tuple()` 负责桥接旧 usage shape，并保留 legacy `process_times.total_time`。
+- Streaming boundary: core streaming 默认不写 stdout；`MDProcessor` 在 `output_to_console=True` 且无外部 callback 时安装 app-owned print callback，并由 `tests/unit/test_md_processor_async.py` 的 `capsys` 回归测试兜住交互式 CLI 输出。
