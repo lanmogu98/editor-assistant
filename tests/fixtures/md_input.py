@@ -14,13 +14,15 @@ SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 
 # File paths
 SHANNON_PAPER_PATH = SAMPLE_DATA_DIR / "A Mathematical Theory of Communication.md"
-WEAVER_REPORT_PATH = SAMPLE_DATA_DIR / "Weaver_Warren_1949_The_Mathematics_of_Communication.md"
+WEAVER_REPORT_PATH = (
+    SAMPLE_DATA_DIR / "Weaver_Warren_1949_The_Mathematics_of_Communication.md"
+)
 
 
 def load_sample_content(path: Path, fallback: str = "") -> str:
     """Load content from file with fallback."""
     if path.exists():
-        return path.read_text(encoding='utf-8')
+        return path.read_text(encoding="utf-8")
     return fallback
 
 
@@ -28,20 +30,17 @@ def load_sample_content(path: Path, fallback: str = "") -> str:
 def shannon_paper() -> MDArticle:
     """
     Load Claude Shannon's "Mathematical Theory of Communication" paper.
-    
+
     Returns:
         MDArticle with paper content
     """
-    content = load_sample_content(
-        SHANNON_PAPER_PATH,
-        fallback=_SHANNON_FALLBACK
-    )
+    content = load_sample_content(SHANNON_PAPER_PATH, fallback=_SHANNON_FALLBACK)
     return MDArticle(
         type=InputType.PAPER,
         content=content,
         title="A Mathematical Theory of Communication",
         authors="Claude E. Shannon",
-        source_path=str(SHANNON_PAPER_PATH)
+        source_path=str(SHANNON_PAPER_PATH),
     )
 
 
@@ -49,20 +48,17 @@ def shannon_paper() -> MDArticle:
 def weaver_report() -> MDArticle:
     """
     Load Warren Weaver's communication theory essay.
-    
+
     Returns:
         MDArticle with report content
     """
-    content = load_sample_content(
-        WEAVER_REPORT_PATH,
-        fallback=_WEAVER_FALLBACK
-    )
+    content = load_sample_content(WEAVER_REPORT_PATH, fallback=_WEAVER_FALLBACK)
     return MDArticle(
         type=InputType.NEWS,  # Treat as news/essay for testing
         content=content,
         title="The Mathematics of Communication",
         authors="Warren Weaver",
-        source_path=str(WEAVER_REPORT_PATH)
+        source_path=str(WEAVER_REPORT_PATH),
     )
 
 
@@ -70,7 +66,7 @@ def weaver_report() -> MDArticle:
 def multi_source_articles(shannon_paper, weaver_report) -> List[MDArticle]:
     """
     Provide multiple articles for multi-source testing.
-    
+
     Returns:
         List of MDArticle objects
     """

@@ -149,9 +149,7 @@ CREATE INDEX IF NOT EXISTS idx_outputs_run ON outputs(run_id);
 def get_schema_version(conn: sqlite3.Connection) -> int:
     """Get current schema version."""
     try:
-        cursor = conn.execute(
-            "SELECT version FROM schema_version WHERE id = 1"
-        )
+        cursor = conn.execute("SELECT version FROM schema_version WHERE id = 1")
         row = cursor.fetchone()
         return row[0] if row else 0
     except sqlite3.OperationalError:

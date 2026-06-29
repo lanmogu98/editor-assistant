@@ -91,9 +91,7 @@ def parse_source_spec(spec: str) -> Input:
         )
 
     if not path.strip():
-        raise argparse.ArgumentTypeError(
-            "Path cannot be empty in 'type=path' format"
-        )
+        raise argparse.ArgumentTypeError("Path cannot be empty in 'type=path' format")
 
     src_type = InputType.PAPER if type_str == "paper" else InputType.NEWS
     return Input(type=src_type, path=path.strip())
@@ -169,9 +167,7 @@ async def cmd_process_multi_task(args):
     # But for each task type, process_multiple handles concurrent inputs!
     for task_name in task_names:
         progress(f"Executing task: {task_name}")
-        await assistant.process_multiple(
-            inputs, task_name, save_files=args.save_files
-        )
+        await assistant.process_multiple(inputs, task_name, save_files=args.save_files)
 
 
 async def cmd_batch_process(args):
@@ -284,9 +280,7 @@ async def cmd_batch_process(args):
                             f"[green]✔ {filename} processed[/green]"
                         )
                     else:
-                        progress_ctx.console.print(
-                            f"[red]✗ {filename} failed[/red]"
-                        )
+                        progress_ctx.console.print(f"[red]✗ {filename} failed[/red]")
 
                     # Update overall progress
                     progress_ctx.update(overall_task, advance=1)
@@ -431,9 +425,7 @@ def cmd_clean_html(args):
                     output_path = "clean_output.md"
                 else:
                     input_file = Path(args.url_or_file)
-                    output_path = str(
-                        input_file.parent / f"{input_file.stem}_clean.md"
-                    )
+                    output_path = str(input_file.parent / f"{input_file.stem}_clean.md")
 
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(f"# {result.title}\n\n")
@@ -479,9 +471,7 @@ def cmd_history(args):
 
     for run in runs:
         run_id = run.get("id", 0)
-        timestamp = (
-            run.get("timestamp", "")[:19] if run.get("timestamp") else ""
-        )
+        timestamp = run.get("timestamp", "")[:19] if run.get("timestamp") else ""
         task = run.get("task", "")[:10]
         model = run.get("model", "")[:18]
         status = run.get("status", "")[:8]
@@ -490,9 +480,7 @@ def cmd_history(args):
         titles = run.get("input_titles", "") or "Unknown"
         titles = titles[:30] + "..." if len(titles) > 30 else titles
 
-        status_icon = (
-            "✓" if status == "success" else "✗" if status == "failed" else "○"
-        )
+        status_icon = "✓" if status == "success" else "✗" if status == "failed" else "○"
         row = (
             f"{run_id:>5} │ {timestamp} │ {task:<10} │ "
             f"{model:<18} │ {status_icon} {status:<6} │ "
@@ -515,9 +503,7 @@ def cmd_stats(args):
     # By status
     print("\n📈 By Status:")
     for status, count in stats.get("by_status", {}).items():
-        icon = (
-            "✓" if status == "success" else "✗" if status == "failed" else "○"
-        )
+        icon = "✓" if status == "success" else "✗" if status == "failed" else "○"
         print(f"  {icon} {status}: {count}")
 
     # By model
@@ -626,9 +612,7 @@ async def cmd_resume(args):
         model = run.get("model")
         status = run.get("status")
         inputs = run.get("inputs", [])
-        input_titles = ", ".join(
-            inp.get("title", "Untitled")[:30] for inp in inputs
-        )
+        input_titles = ", ".join(inp.get("title", "Untitled")[:30] for inp in inputs)
 
         print(f"  #{run_id}: {task} with {model} ({status})")
         print(f"       Inputs: {input_titles}")
@@ -649,9 +633,7 @@ async def cmd_resume(args):
 
         if not inputs:
             print(f"  ✗ Run #{run_id}: No inputs found, skipping")
-            repo.update_run_status(
-                run_id, "failed", "No inputs found for resume"
-            )
+            repo.update_run_status(run_id, "failed", "No inputs found for resume")
             continue
 
         try:
@@ -662,18 +644,14 @@ async def cmd_resume(args):
             input_objs = []
             for inp in inputs:
                 input_type = (
-                    InputType.PAPER
-                    if inp.get("type") == "paper"
-                    else InputType.NEWS
+                    InputType.PAPER if inp.get("type") == "paper" else InputType.NEWS
                 )
                 input_objs.append(
                     Input(type=input_type, path=inp.get("source_path", ""))
                 )
 
             # Process
-            progress(
-                f"Resuming run #{run_id}: {task} on {len(input_objs)} input(s)"
-            )
+            progress(f"Resuming run #{run_id}: {task} on {len(input_objs)} input(s)")
             assistant = EditorAssistant(
                 model,
                 debug_mode=args.debug,
@@ -760,9 +738,7 @@ Examples:
     )
 
     # Global options
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s 0.6.0"
-    )
+    parser.add_argument("--version", action="version", version="%(prog)s 0.6.0")
 
     # Create subcommands
     subparsers = parser.add_subparsers(
@@ -778,10 +754,7 @@ Examples:
     brief_parser.add_argument(
         "sources",
         nargs="+",
-        help=(
-            "Sources in format 'type=path' "
-            "(e.g., paper=file.pdf news=url.com)"
-        ),
+        help=("Sources in format 'type=path' " "(e.g., paper=file.pdf news=url.com)"),
     )
     add_common_arguments(brief_parser)
     brief_parser.set_defaults(func=cmd_generate_brief)
@@ -821,10 +794,7 @@ Examples:
     process_parser.add_argument(
         "sources",
         nargs="+",
-        help=(
-            "Sources in format 'type=path' "
-            "(e.g., paper=file.pdf news=url.com)"
-        ),
+        help=("Sources in format 'type=path' " "(e.g., paper=file.pdf news=url.com)"),
     )
     process_parser.add_argument(
         "--tasks",
@@ -947,9 +917,7 @@ Examples:
         action="store_true",
         help="Show resumable runs without executing them",
     )
-    resume_parser.add_argument(
-        "--debug", action="store_true", help="Enable debug mode"
-    )
+    resume_parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     resume_parser.add_argument(
         "--save-files", action="store_true", help="Save output files to disk"
     )

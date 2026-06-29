@@ -52,4 +52,3 @@ def test_add_and_remove_blocked_publisher_round_trip():
         removed = remove_blocked_publisher(domain)
         assert removed is True
         assert domain not in get_blocked_publishers()
-

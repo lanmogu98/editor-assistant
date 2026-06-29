@@ -16,8 +16,12 @@ from typing import Union, Optional, Tuple, Dict, Callable
 
 class EditorAssistant:
     def __init__(
-        self, model_name, debug_mode=False, thinking_level=None, stream=True
-    ):
+        self,
+        model_name: str,
+        debug_mode: bool = False,
+        thinking_level: Optional[str] = None,
+        stream: bool = True,
+    ) -> None:
         setup_logging(debug_mode)
         self.logger = logging.getLogger(__name__)
         self.md_processor = MDProcessor(
@@ -43,7 +47,7 @@ class EditorAssistant:
                         content=content,
                         title=Path(input.path).stem,
                         source_path=input.path,
-                        output_path=input.path,
+                        output_path=Path(input.path),
                     ),
                     None,
                 )
@@ -66,11 +70,11 @@ class EditorAssistant:
         self,
         inputs: list[Input],
         process_type: Union[ProcessType, str],
-        output_to_console=True,
-        save_files=False,
-        progress_callbacks: Dict[str, Callable[[str], None]] = None,
+        output_to_console: bool = True,
+        save_files: bool = False,
+        progress_callbacks: Optional[Dict[str, Callable[[str], None]]] = None,
         done_callback: Optional[Callable[[str, bool], None]] = None,
-    ):
+    ) -> None:
         # early return if no paths are provided
         if len(inputs) == 0:
             error("No input provided")
@@ -90,9 +94,7 @@ class EditorAssistant:
         # Step 1: Pre-process inputs (Convert/Read) - Parallel
         progress(f"Converting/Reading {len(inputs)} inputs in parallel...")
 
-        conversion_tasks = [
-            self._process_input_to_article(inp) for inp in inputs
-        ]
+        conversion_tasks = [self._process_input_to_article(inp) for inp in inputs]
         conversion_results = await asyncio.gather(*conversion_tasks)
 
         md_articles = []
@@ -161,10 +163,8 @@ class EditorAssistant:
             for i, result in enumerate(results):
                 article_title = md_articles[i].title
                 if isinstance(result, Exception):
-                    self.logger.warning(
-                        f"Failed to process {article_title}: {result}"
-                    )
-                else:
+                    self.logger.warning(f"Failed to process {article_title}: {result}")
+                elif isinstance(result, tuple):
                     success, _ = result
                     if not success:
                         self.logger.warning(

@@ -7,7 +7,7 @@ These are real-world test cases for validating the full pipeline.
 # Long paper - HTML version (arxiv)
 PAPER_HTML_LONG = "https://arxiv.org/html/2502.10517v1"
 
-# Long paper - PDF version (arxiv)  
+# Long paper - PDF version (arxiv)
 PAPER_PDF_LONG = "https://arxiv.org/pdf/2502.10517v1"
 
 # News article - blog post
@@ -43,4 +43,3 @@ def get_test_url(name: str) -> str:
 def list_test_urls() -> dict:
     """List all available test URLs."""
     return ALL_TEST_URLS.copy()
-

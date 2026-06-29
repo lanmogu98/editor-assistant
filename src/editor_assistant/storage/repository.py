@@ -4,7 +4,7 @@ Repository for database CRUD operations.
 
 import sqlite3
 import hashlib
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
@@ -85,9 +85,7 @@ class RunRepository:
         cursor = conn.cursor()
 
         # Try to find existing
-        cursor.execute(
-            "SELECT id FROM inputs WHERE content_hash = ?", (content_hash,)
-        )
+        cursor.execute("SELECT id FROM inputs WHERE content_hash = ?", (content_hash,))
         row = cursor.fetchone()
 
         if row:
@@ -100,10 +98,11 @@ class RunRepository:
                VALUES (?, ?, ?, ?)""",
             (input_type, source_path, title, content_hash),
         )
-        input_id = cursor.lastrowid
+        input_id = cast(Optional[int], cursor.lastrowid)
         conn.commit()
         conn.close()
-
+        if input_id is None:
+            raise RuntimeError("Failed to create input record")
         return input_id
 
     def _hash_content(self, content: str) -> str:
@@ -150,7 +149,7 @@ class RunRepository:
             """,
             (task, model, thinking_level, 1 if stream else 0, currency),
         )
-        run_id = cursor.lastrowid
+        run_id = cast(Optional[int], cursor.lastrowid)
 
         # Link inputs
         for input_id in input_ids:
@@ -161,7 +160,8 @@ class RunRepository:
 
         conn.commit()
         conn.close()
-
+        if run_id is None:
+            raise RuntimeError("Failed to create run record")
         return run_id
 
     def update_run_status(
@@ -217,11 +217,12 @@ class RunRepository:
                VALUES (?, ?, ?, ?)""",
             (run_id, output_type, content_type, content),
         )
-        output_id = cursor.lastrowid
+        output_id = cast(Optional[int], cursor.lastrowid)
 
         conn.commit()
         conn.close()
-
+        if output_id is None:
+            raise RuntimeError("Failed to create output record")
         return output_id
 
     # =========================================================================
@@ -449,9 +450,7 @@ class RunRepository:
             "by_task": by_task,
             "by_status": by_status,
             "success_rate": (
-                by_status.get("success", 0) / total_runs
-                if total_runs > 0
-                else 0
+                by_status.get("success", 0) / total_runs if total_runs > 0 else 0
             ),
         }
 
@@ -643,9 +642,7 @@ class RunRepository:
         else:
             raise ValueError(f"Unsupported export format: {format}")
 
-    def _export_json(
-        self, output_path: Path, runs: List[Dict[str, Any]]
-    ) -> None:
+    def _export_json(self, output_path: Path, runs: List[Dict[str, Any]]) -> None:
         """Export runs to JSON file."""
         import json
 
@@ -658,9 +655,7 @@ class RunRepository:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
-    def _export_csv(
-        self, output_path: Path, runs: List[Dict[str, Any]]
-    ) -> None:
+    def _export_csv(self, output_path: Path, runs: List[Dict[str, Any]]) -> None:
         """Export runs to CSV file."""
         import csv
 

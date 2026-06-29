@@ -25,16 +25,14 @@ class TranslateTask(Task):
     def build_prompt(self, articles: List[MDArticle]) -> str:
         return load_translation_prompt(content=articles[0].content)
 
-    def post_process(
-        self, response: str, articles: List[MDArticle]
-    ) -> Dict[str, str]:
+    def post_process(self, response: str, articles: List[MDArticle]) -> Dict[str, str]:
         """Generate both Chinese-only and bilingual versions."""
         outputs = {"main": response}
 
         # Create bilingual content
         try:
             bilingual = self._create_bilingual_content(
-                articles[0].content, response
+                articles[0].content or "", response
             )
             outputs["bilingual"] = bilingual
         except Exception as e:

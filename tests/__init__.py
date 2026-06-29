@@ -21,16 +21,16 @@ Structure:
 Usage:
     # Run all unit tests (fast, no API calls)
     pytest tests/unit/ -v
-    
+
     # Run integration tests (costs money!)
     pytest tests/integration/ -v
-    
+
     # Run specific test file
     pytest tests/unit/test_tasks.py -v
-    
+
     # Run with coverage
     pytest tests/unit/ --cov=src/editor_assistant
-    
+
     # Use the test runner script
     python scripts/run_tests.py unit
     python scripts/run_tests.py integration
