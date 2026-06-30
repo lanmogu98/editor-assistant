@@ -30,9 +30,16 @@ This document provides technical documentation for developers contributing to Ed
 
 ## Package Split
 
-`llm-exec-core` now owns LLM execution, and Editor Assistant uses it as a dependency. The app layer still owns document workflow, task definitions, prompt templates, SQLite persistence, CLI behavior, output paths, and application logging.
+`llm-exec-core` now owns the model catalog (`llm_exec_core/llm_config.yml`), provider config loading, HTTP transport, streaming assembly, and token accounting. Editor Assistant uses that package as a dependency and keeps ownership of document workflow, task definitions, prompt templates, SQLite persistence, CLI behavior, output paths, and application logging.
 
-Local checkout development should use relative `[tool.uv.sources]` entries or a uv workspace for the sibling package. Release consumption should pin `llm-exec-core==0.1.0`.
+For this migration branch, the committed dependency mode is intentionally local and coordinated across two repos:
+
+```toml
+[tool.uv.sources]
+llm-exec-core = { path = "../llm-exec-core", editable = true }
+```
+
+Keep that relative source for sibling checkout and CI workspace runs on this branch. The publish/release step happens later: after `llm-exec-core` is published, remove `[tool.uv.sources]` and pin `llm-exec-core==0.1.0`.
 
 ---
 
@@ -67,21 +74,21 @@ Local checkout development should use relative `[tool.uv.sources]` entries or a 
                 │                                  │
                 ▼                                  ▼
 ┌────────────────────────────┐   ┌──────────────────────────────────┐
-│   HTML Cleaning            │   │         LLM Client               │
-│   (clean_html_to_md.py)    │   │       (llm_client.py)            │
-│   - Readabilipy            │   │       [Async] httpx.AsyncClient  │
-│   - Trafilatura            │   │       - Rate limiting (async)    │
-│                            │   │       - Streaming (SSE)          │
-│                            │   │       - Token tracking           │
+│   HTML Cleaning            │   │   LLM Execution Dependency       │
+│   (clean_html_to_md.py)    │   │   (llm-exec-core package)        │
+│   - Readabilipy            │   │   - llm_exec_core.client         │
+│   - Trafilatura            │   │   - llm_exec_core/llm_config.yml │
+│                            │   │   - Rate limiting / streaming    │
+│                            │   │   - Token tracking               │
 └────────────────────────────┘   └───────────────┬──────────────────┘
                                                  │
                                                  ▼
                                  ┌─────────────────────────────────┐
-                                 │        Config Layer             │
-                                 │        (config/)                │
-                                 │  - llm_config.yml (models)      │
+                                 │      App Config + Prompts       │
+                                 │          (config/)              │
                                  │  - constants.py (settings)      │
                                  │  - prompts/ (templates)         │
+                                 │  - llm_models.py (legacy shim)  │
                                  └─────────────────────────────────┘
 ```
 
@@ -93,7 +100,7 @@ Input (URL/PDF/MD)
     → MDArticle (normalized content)
     → EditorAssistant.process_multiple() [Async Fan-out]
     → MDProcessor.process_mds() [Async] (Semaphore-limited)
-    → LLMClient.generate_response() [Async]
+    → editor_assistant.llm_client.LLMClient.generate_response() [Async shim to llm_exec_core]
     → Output (SQLite run history + optional files under `llm_summaries/`)
 ```
 
@@ -109,7 +116,7 @@ Input (URL/PDF/MD)
 | `main.py` | Async Orchestration | `EditorAssistant` |
 | `md_converter.py` | Format conversion (Sync) | `MarkdownConverter` |
 | `md_processor.py` | Async LLM processing | `MDProcessor` (uses `asyncio.Semaphore`) |
-| `llm_client.py` | Async API interaction | `LLMClient` (uses `httpx`) |
+| `llm_client.py` | Legacy import shim for extracted client | `LLMClient` re-export from `llm_exec_core.client` |
 | `clean_html_to_md.py` | HTML extraction | `CleanHTML2Markdown` |
 | `content_validation.py` | Input validation | `validate_content()`, `BlockedPublisherError` |
 | `data_models.py` | Data structures | `MDArticle`, `Input`, `ProcessType`, `InputType` |
@@ -118,8 +125,7 @@ Input (URL/PDF/MD)
 
 | Module | Purpose |
 | ------ | ------- |
-| `config/llm_config.yml` | LLM provider settings (API URLs, models, pricing) |
-| `config/llm_models.py` | YAML loader + model/provider lookup |
+| `config/llm_models.py` | Legacy shim over `llm_exec_core.config` for model/provider lookup |
 | `config/constants.py` | All configurable constants |
 | `config/load_prompt.py` | Prompt template loader |
 | `config/logging_config.py` | Logging utilities |
@@ -129,11 +135,11 @@ Input (URL/PDF/MD)
 
 ## Adding a New LLM Model
 
-**Single Source of Truth:** `config/llm_config.yml` is the only file you need to edit.
+**Single Source of Truth:** `llm_exec_core/llm_config.yml` in the `llm-exec-core` repo/package is the catalog file to edit.
 
 ### Step 1: Add to YAML Config
 
-Edit `config/llm_config.yml`:
+Edit `src/llm_exec_core/llm_config.yml` in the sibling `llm-exec-core` checkout:
 
 ```yaml
 # Add new model to existing provider
@@ -169,7 +175,7 @@ export YOUR_API_KEY="your-api-key-here"
 editor-assistant brief paper=test.pdf --model your-model-name
 ```
 
-That's it! No Python code changes needed. The model list is dynamically loaded from YAML.
+That's it! No Editor Assistant Python code changes are needed. The model list is dynamically loaded from the core package catalog, and Editor Assistant's legacy config shim forwards to it.
 
 ---
 
@@ -269,7 +275,7 @@ RESPONSE_CACHE_MAX_SIZE = 100
 RESPONSE_CACHE_TTL_SECONDS = 3600
 ```
 
-### Model Configuration (`config/llm_config.yml`)
+### Model Configuration (`llm_exec_core/llm_config.yml`)
 
 Structure:
 
@@ -311,7 +317,7 @@ Top-level keys starting with `_` (e.g. `_shared_endpoints`) are skipped by the l
 | `openai-openrouter` | OpenRouter | $ | GPT-4o / 4.1 / 5.x via OpenRouter |
 | `anthropic-openrouter` | OpenRouter | $ | Claude Sonnet 4.x / Opus 4.6+ / Haiku 4.5 |
 
-Adding a new provider is a config-only change (see [§3](#adding-a-new-llm-model)). The Pydantic schema in `config/llm_models.py` is the source of truth — modify it only when adding a new structural field, and update this section accordingly.
+Adding a new provider is a config-only change (see [§3](#adding-a-new-llm-model)). The Pydantic schema now lives in `llm_exec_core.config`; Editor Assistant's `config/llm_models.py` preserves the older import surface as a compatibility shim. Modify the core schema only when adding a new structural field, and update this section accordingly.
 
 ---
 
@@ -442,9 +448,9 @@ except BlockedPublisherError as e:
 
 ### Rate Limiting (Async)
 
-The `LLMClient` handles rate limiting automatically using `asyncio.sleep`. 
+The `LLMClient` implementation in `llm-exec-core` handles rate limiting automatically using `asyncio.sleep`.
 
-**Per-provider configuration** (in `llm_config.yml`):
+**Per-provider configuration** (in `llm_exec_core/llm_config.yml`):
 
 ```yaml
 your-provider:
