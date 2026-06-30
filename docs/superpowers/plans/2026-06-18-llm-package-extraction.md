@@ -21,7 +21,7 @@
 - core package 不负责把 token usage report 写到磁盘；格式化函数只返回字符串，持久化由调用方处理。
 - model catalog 的新 SSOT 是 `llm_exec_core/llm_config.yml`；`editor-assistant` 删除自己的 `config/llm_config.yml`，旧 `config.llm_models` shim 默认委托 core catalog。
 - 如需 app-specific model catalog，调用方必须显式传 `config_source`，不得维护隐式双副本。
-- 本地协同开发不得 commit 绝对 `file://` dependency；使用相对 `[tool.uv.sources]` 或 uv workspace。发布前切换到 registry/Git pin。
+- 本地协同开发不得 commit 绝对 local file URL dependency；使用相对 `[tool.uv.sources]` 或 uv workspace。发布前切换到 registry/Git pin。
 - core streaming 在 `stream_callback is None` 时不得写 stdout；CLI/app 如需展示流式输出，必须显式传 callback。
 - core cache 默认关闭；rate limiter/cache 均为 in-process/per-client 能力，不声明为 distributed worker 级限流或持久缓存。
 - unit tests 必须 mock API 调用，不允许真实 API 请求。
@@ -1142,7 +1142,7 @@ Expected: FAIL because `llm_exec_core` is not installed in `editor-assistant`.
 
 - [ ] **Step 3: 添加可移植 dependency 配置**
 
-本地迁移阶段使用普通 dependency 名称加相对 `[tool.uv.sources]`，不得 commit 机器特定的绝对 `file://` 路径：
+本地迁移阶段使用普通 dependency 名称加相对 `[tool.uv.sources]`，不得 commit 机器特定的绝对 local file URL 路径：
 
 ```toml
 dependencies = [
@@ -1446,7 +1446,7 @@ During local migration, `editor-assistant` references the sibling package with r
 
 For release consumption, applications pin `llm-exec-core==0.1.0`.
 
-Final committed `editor-assistant` config must not contain absolute `file://` paths. Local development uses relative `[tool.uv.sources]` or a uv workspace; release consumption uses the pinned package.
+Final committed `editor-assistant` config must not contain absolute local file URL paths. Local development uses relative `[tool.uv.sources]` or a uv workspace; release consumption uses the pinned package.
 
 ## Minimal Worker Import
 
@@ -1561,7 +1561,7 @@ Expected: all commands pass.
 Run:
 
 ```bash
-cd /Users/mogu/Projects/tools/editor-assistant
+cd <editor-assistant-repo>
 uv sync
 uv run pytest tests/unit/
 uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py
@@ -1624,7 +1624,7 @@ Expected: both outputs are empty.
 ## 执行前讨论决策
 
 1. 确认 package name：推荐 distribution `llm-exec-core`、import package `llm_exec_core`。
-2. 确认 repo 位置：推荐 sibling repo `/Users/mogu/Projects/tools/llm-exec-core`。
+2. 确认 repo 位置：推荐 sibling repo `<llm-exec-core-repo>`。
 3. 确认 model catalog 新 SSOT 为 `llm_exec_core/llm_config.yml`，并删除 `editor-assistant` 的 YAML 副本。
 4. 确认协同开发期使用相对 `[tool.uv.sources]` 或 uv workspace，发布前切 `llm-exec-core==0.1.0` pin。
 5. 确认 legacy `editor_assistant.config.llm_models.get_model_details()` 是否保留 two-item tuple 一个 release cycle。

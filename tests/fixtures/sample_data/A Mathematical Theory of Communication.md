@@ -1,4 +1,4 @@
-url: /Users/mogu/Library/CloudStorage/OneDrive-Personal/MY_PROJECT/editor_assistant/tests/A Mathematical Theory of Communication.pdf
+url: tests/fixtures/sample_data/A Mathematical Theory of Communication.pdf
 
 title: A Mathematical Theory of Communication
 
