@@ -8,7 +8,7 @@
   - `editor-assistant` at `0.6.0`
   - `llm-exec-core`
   - relative editable source entries using `../llm-exec-core`
-  - no absolute `file://` source URL
+  - no absolute local file source URL
 
 ### Important: core `run_id` / `request_id` contract mismatch
 - Aligned `llm_exec_core.LLMClient.generate()` with the approved contract:
@@ -41,49 +41,49 @@
 ## Tests / verification command results
 
 ### llm-exec-core
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/unit/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/unit/`
   - Passed: `22 passed`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run flake8 src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run flake8 src/`
   - Passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run mypy src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run mypy src/`
   - Passed: `Success: no issues found in 7 source files`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run black src/ tests/ --check`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run black src/ tests/ --check`
   - Passed (`14 files would be left unchanged`)
 
 ### editor-assistant
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv sync`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv sync`
   - Passed: resolved and audited dependencies, refreshed lock
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/unit/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/unit/`
   - Passed: `155 passed`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py`
   - Passed: `5 passed`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run flake8 src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run flake8 src/`
   - Passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run mypy src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run mypy src/`
   - Passed: `Success: no issues found in 24 source files`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run black src/ tests/ --check`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run black src/ tests/ --check`
   - Passed (`51 files would be left unchanged`)
 
 ## Smoke checks
 
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run python -c "from editor_assistant.llm_client import LLMClient; print(LLMClient.__name__)"`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run python -c "from editor_assistant.llm_client import LLMClient; print(LLMClient.__name__)"`
   - Output: `LLMClient`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run python -c "from editor_assistant.config.llm_models import get_supported_models; print(len(get_supported_models()))"`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run python -c "from editor_assistant.config.llm_models import get_supported_models; print(len(get_supported_models()))"`
   - Output: `39`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run python -c "from editor_assistant.config.constants import MAX_API_RETRIES; print(MAX_API_RETRIES)"`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run python -c "from editor_assistant.config.constants import MAX_API_RETRIES; print(MAX_API_RETRIES)"`
   - Output: `3`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run python -c "from llm_exec_core import LLMClient; print(LLMClient.__name__)"`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run python -c "from llm_exec_core import LLMClient; print(LLMClient.__name__)"`
   - Output: `LLMClient`
 
 ## Lockfile checks
 
-- `rg -n 'name = "editor-assistant"|version = "0\\.6\\.0"|name = "llm-exec-core"|source = \\{ editable = "\\.\\./llm-exec-core"|file://' uv.lock`
+- Lockfile search for package names, version, relative editable source, and absolute local file source URLs.
   - Confirmed:
     - `name = "editor-assistant"`
     - `version = "0.6.0"`
     - dependency entry for `llm-exec-core`
     - `source = { editable = "../llm-exec-core" }`
-  - No `file://` match present
+  - No absolute local file source URL match present
 
 ## Commits created
 
@@ -95,9 +95,9 @@
 
 ## Final git status outputs
 
-- `git -C /Users/mogu/Projects/tools/llm-exec-core status --short`
+- `git -C <llm-exec-core-repo> status --short`
   - Clean after commit
-- `git -C /Users/mogu/Projects/tools/editor-assistant status --short`
+- `git -C <editor-assistant-repo> status --short`
   - Clean after commit
 
 ## Deviations / remaining Minor items

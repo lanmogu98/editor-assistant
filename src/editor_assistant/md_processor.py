@@ -497,6 +497,7 @@ class MDProcessor:
             model_name=self.llm_client.model_name,
             pricing_currency=self.llm_client.pricing_currency,
             token_usage=self.llm_client.get_token_usage(),
+            timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
         output_dir.mkdir(parents=True, exist_ok=True)
         report_path = output_dir / f"token_usage_{project_name}.txt"

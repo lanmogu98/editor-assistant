@@ -35,22 +35,22 @@ Date: 2026-06-30
 ## Verification Outputs
 
 ### llm-exec-core
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/unit/` -> `25 passed in 0.14s`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run flake8 src/` -> passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run mypy src/` -> `Success: no issues found in 7 source files`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run black src/ tests/ --check` -> passed (`14 files would be left unchanged`; Black emitted its known Python-version safety warning only)
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/unit/` -> `25 passed in 0.14s`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run flake8 src/` -> passed
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run mypy src/` -> `Success: no issues found in 7 source files`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run black src/ tests/ --check` -> passed (`14 files would be left unchanged`; Black emitted its known Python-version safety warning only)
 
 ### editor-assistant
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv sync` -> passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/unit/` -> `155 passed in 0.85s`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py` -> `5 passed in 0.89s`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run flake8 src/` -> passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run mypy src/` -> `Success: no issues found in 24 source files`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run black src/ tests/ --check` -> passed (`51 files would be left unchanged`; Black emitted its known Python-version safety warning only)
+- `UV_CACHE_DIR=<tmp-uv-cache> uv sync` -> passed
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/unit/` -> `155 passed in 0.85s`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py` -> `5 passed in 0.89s`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run flake8 src/` -> passed
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run mypy src/` -> `Success: no issues found in 24 source files`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run black src/ tests/ --check` -> passed (`51 files would be left unchanged`; Black emitted its known Python-version safety warning only)
 
 ## Artifact Verification Details
 
-- Rebuilt `llm-exec-core` with `UV_CACHE_DIR=/private/tmp/uv-cache uv build`.
+- Rebuilt `llm-exec-core` with `UV_CACHE_DIR=<tmp-uv-cache> uv build`.
 - Inspected wheel `METADATA` and sdist `PKG-INFO`; both contained:
   - `Name: llm-exec-core`
   - `Version: 0.1.0`
@@ -58,7 +58,7 @@ Date: 2026-06-30
   - `Author: mogu`
   - `License-Expression: LicenseRef-Proprietary`
 - Verified built-wheel import with:
-  - `UV_CACHE_DIR=/private/tmp/uv-cache uv run --no-project --with /Users/mogu/Projects/tools/llm-exec-core/dist/llm_exec_core-0.1.0-py3-none-any.whl python -c "import llm_exec_core; print(llm_exec_core.__version__); print(hasattr(llm_exec_core, 'LLMClient'))"`
+  - `UV_CACHE_DIR=<tmp-uv-cache> uv run --no-project --with <llm-exec-core-wheel> python -c "import llm_exec_core; print(llm_exec_core.__version__); print(hasattr(llm_exec_core, 'LLMClient'))"`
   - Output:
     - `0.1.0`
     - `True`
@@ -69,7 +69,7 @@ Date: 2026-06-30
 - `d6c4f34` `fix: isolate catalog cache and enrich package metadata`
 
 ### editor-assistant
-- `current HEAD` `docs: clean remaining llm catalog references`
+- editor-assistant follow-up commit `docs: clean remaining llm catalog references`
 
 ## Final Statuses
 

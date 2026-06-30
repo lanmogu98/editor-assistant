@@ -41,47 +41,47 @@
 ## Verification outputs
 
 ### llm-exec-core
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/unit/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/unit/`
   - Passed: `23 passed in 0.15s`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run flake8 src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run flake8 src/`
   - Passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run mypy src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run mypy src/`
   - Passed: `Success: no issues found in 7 source files`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run black src/ tests/ --check`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run black src/ tests/ --check`
   - Passed: `14 files would be left unchanged`
   - Note: Black emitted a Python 3.13 safety-check warning because the code targets newer grammar, but the command exited successfully.
 
 ### editor-assistant
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv sync`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv sync`
   - Passed: `Resolved 122 packages in 3ms`
-  - Installed sibling source: `~ llm-exec-core==0.1.0 (from file:///Users/mogu/Projects/tools/llm-exec-core)`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/unit/`
+  - Installed sibling source from the configured relative editable source.
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/unit/`
   - Passed: `155 passed in 0.70s`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run pytest tests/stress/test_sqlite_concurrency.py tests/stress/test_error_boundaries.py`
   - Passed: `5 passed in 0.65s`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run flake8 src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run flake8 src/`
   - Passed
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run mypy src/`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run mypy src/`
   - Passed: `Success: no issues found in 24 source files`
-- `UV_CACHE_DIR=/private/tmp/uv-cache uv run black src/ tests/ --check`
+- `UV_CACHE_DIR=<tmp-uv-cache> uv run black src/ tests/ --check`
   - Passed: `51 files would be left unchanged`
   - Note: Black emitted the same Python-version safety warning here, but exited successfully.
 
 ## Artifact verification details
 
 ### Build commands
-- `rm -rf /private/tmp/llm-exec-core-dist && mkdir -p /private/tmp/llm-exec-core-dist && UV_CACHE_DIR=/private/tmp/uv-cache uv build --sdist --wheel --out-dir /private/tmp/llm-exec-core-dist`
+- `rm -rf <tmp-dist> && mkdir -p <tmp-dist> && UV_CACHE_DIR=<tmp-uv-cache> uv build --sdist --wheel --out-dir <tmp-dist>`
   - Passed
   - Produced:
-    - `/private/tmp/llm-exec-core-dist/llm_exec_core-0.1.0-py3-none-any.whl`
-    - `/private/tmp/llm-exec-core-dist/llm_exec_core-0.1.0.tar.gz`
+    - `<tmp-dist>/llm_exec_core-0.1.0-py3-none-any.whl`
+    - `<tmp-dist>/llm_exec_core-0.1.0.tar.gz`
 
 ### Artifact content inspection
-- `python3 -m zipfile -l /private/tmp/llm-exec-core-dist/llm_exec_core-0.1.0-py3-none-any.whl`
+- `python3 -m zipfile -l <tmp-dist>/llm_exec_core-0.1.0-py3-none-any.whl`
   - Confirmed wheel contains:
     - `llm_exec_core/llm_config.yml`
     - `llm_exec_core/py.typed`
-- `tar -tzf /private/tmp/llm-exec-core-dist/llm_exec_core-0.1.0.tar.gz`
+- `tar -tzf <tmp-dist>/llm_exec_core-0.1.0.tar.gz`
   - Confirmed sdist contains:
     - `llm_exec_core-0.1.0/src/llm_exec_core/llm_config.yml`
     - `llm_exec_core-0.1.0/src/llm_exec_core/py.typed`
@@ -90,7 +90,7 @@
 ### Artifact import proof
 - Initial no-deps wheel install succeeded but top-level import failed on missing runtime dependency `httpx`, which is expected for a bare `--no-deps` install.
 - Final proof command:
-  - `rm -rf /private/tmp/llm-exec-core-wheel-venv && python3 -m venv /private/tmp/llm-exec-core-wheel-venv && /private/tmp/llm-exec-core-wheel-venv/bin/pip install /private/tmp/llm-exec-core-dist/llm_exec_core-0.1.0-py3-none-any.whl && /private/tmp/llm-exec-core-wheel-venv/bin/python -c 'import llm_exec_core; from llm_exec_core.config import _get_default_config_path; p=_get_default_config_path(); print(llm_exec_core.__version__); print(p.name); print(p.exists())'`
+  - `python3 -m venv <tmp-wheel-venv> && <tmp-wheel-venv>/bin/pip install <tmp-dist>/llm_exec_core-0.1.0-py3-none-any.whl && <tmp-wheel-venv>/bin/python -c 'import llm_exec_core; from llm_exec_core.config import _get_default_config_path; p=_get_default_config_path(); print(llm_exec_core.__version__); print(p.name); print(p.exists())'`
   - Passed with output:
     - `0.1.0`
     - `llm_config.yml`
@@ -106,9 +106,9 @@
 
 ## Final status outputs
 
-- `git -C /Users/mogu/Projects/tools/llm-exec-core status --short`
+- `git -C <llm-exec-core-repo> status --short`
   - Clean after commit
-- `git -C /Users/mogu/Projects/tools/editor-assistant status --short`
+- `git -C <editor-assistant-repo> status --short`
   - Clean after commit
 
 ## Deviations
