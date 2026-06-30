@@ -1048,7 +1048,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.25.0" },
-    { name = "pydantic" },
+    { name = "pydantic", specifier = ">=2" },
     { name = "pyyaml" },
 ]
 
