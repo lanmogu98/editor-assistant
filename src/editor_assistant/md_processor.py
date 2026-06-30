@@ -65,7 +65,8 @@ def check_context_budget(content: str, llm_client: LLMClient) -> None:
     """
     if llm_client.context_window is None:
         raise ContentTooLargeError(
-            f"Model context window is not configured for {llm_client.model_name}."
+            "Model context window is not configured for "
+            f"{llm_client.model_name}."
         )
 
     estimated_tokens = estimate_tokens(content)
@@ -80,7 +81,8 @@ def check_context_budget(content: str, llm_client: LLMClient) -> None:
 
     if available_tokens <= 0:
         raise ContentTooLargeError(
-            "Model capacity too small after reserves for " f"{llm_client.model_name}."
+            "Model capacity too small after reserves for "
+            f"{llm_client.model_name}."
         )
 
     if estimated_tokens > available_tokens:
@@ -146,13 +148,19 @@ class MDProcessor:
         run_id = -1
 
         # Resolve task type to string
-        task_name = task_type.value if isinstance(task_type, ProcessType) else task_type
+        task_name = (
+            task_type.value
+            if isinstance(task_type, ProcessType)
+            else task_type
+        )
 
         # Get the task class from registry
         task_cls = TaskRegistry.get(task_name)
         if task_cls is None:
             available_tasks = TaskRegistry.list_tasks()
-            error(f"Unknown task type: {task_name}. Available: {available_tasks}")
+            error(
+                f"Unknown task type: {task_name}. Available: {available_tasks}"
+            )
             return False, run_id
 
         # Instantiate task
@@ -208,13 +216,16 @@ class MDProcessor:
 
         # Create base title
         title_base = (
-            md_articles[0].title if md_articles and md_articles[0].title else "untitled"
+            md_articles[0].title
+            if md_articles and md_articles[0].title
+            else "untitled"
         )
         if task.supports_multi_input and len(md_articles) > 1:
             title_base = f"{title_base}-multi"
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         title = (
-            f"{title_base}{task.get_output_suffix()}_" f"{self.model_name}_{timestamp}"
+            f"{title_base}{task.get_output_suffix()}_"
+            f"{self.model_name}_{timestamp}"
         )
 
         output_dir = None
@@ -251,7 +262,9 @@ class MDProcessor:
             async with self._semaphore:
                 final_callback = stream_callback
                 app_prints_stream = (
-                    self.stream and output_to_console and final_callback is None
+                    self.stream
+                    and output_to_console
+                    and final_callback is None
                 )
 
                 if app_prints_stream:
@@ -277,7 +290,9 @@ class MDProcessor:
                     print(flush=True)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
-            await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
+            await asyncio.to_thread(
+                self._update_run_status, run_id, "failed", str(e)
+            )
             return False, run_id
         except asyncio.CancelledError:
             warning(f"Run {run_id} cancelled during API request")
@@ -290,15 +305,21 @@ class MDProcessor:
         metadata_lines = []
         for article in md_articles:
             metadata_lines.append(f"Title: {article.title or 'Untitled'}")
-            metadata_lines.append(f"Source: {article.source_path or 'Unknown Source'}")
-        metadata_prefix = "\n".join(metadata_lines) + "\n\n" if metadata_lines else ""
+            metadata_lines.append(
+                f"Source: {article.source_path or 'Unknown Source'}"
+            )
+        metadata_prefix = (
+            "\n".join(metadata_lines) + "\n\n" if metadata_lines else ""
+        )
 
         # Post-process response using task
         try:
             outputs = task.post_process(response, md_articles)
         except Exception as e:
             error(f"Post-processing failed: {e}")
-            await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
+            await asyncio.to_thread(
+                self._update_run_status, run_id, "failed", str(e)
+            )
             return False, run_id
 
         # Save all outputs
@@ -326,7 +347,9 @@ class MDProcessor:
                             False,
                         )
                         output_path = output_dir / f"{output_name}_{title}.md"
-                        progress(f"{output_name} output saved to {output_path}")
+                        progress(
+                            f"{output_name} output saved to {output_path}"
+                        )
 
                 # Save to database (Async via thread pool)
                 await asyncio.to_thread(
@@ -335,7 +358,9 @@ class MDProcessor:
 
         except Exception as e:
             error(f"Error saving response: {str(e)}")
-            await asyncio.to_thread(self._update_run_status, run_id, "failed", str(e))
+            await asyncio.to_thread(
+                self._update_run_status, run_id, "failed", str(e)
+            )
             return False, run_id
         except asyncio.CancelledError:
             warning(f"Run {run_id} cancelled during saving")
@@ -350,7 +375,9 @@ class MDProcessor:
                 await asyncio.to_thread(
                     self._save_token_usage_report, title, output_dir
                 )
-            await asyncio.to_thread(self._save_token_usage_to_db, run_id, usage_stats)
+            await asyncio.to_thread(
+                self._save_token_usage_to_db, run_id, usage_stats
+            )
         except Exception as e:
             warning(f"Unable to save token usage report: {str(e)}")
 
@@ -412,10 +439,14 @@ class MDProcessor:
             )
         except ConnectionError as e:
             error(f"Connection failed during {request_name}: {str(e)}")
-            raise ConnectionError(f"Failed to connect to LLM service: {str(e)}") from e
+            raise ConnectionError(
+                f"Failed to connect to LLM service: {str(e)}"
+            ) from e
         except ValueError as e:
             error(f"Invalid input for {request_name}: {str(e)}")
-            raise ValueError(f"Invalid input for {request_name}: {str(e)}") from e
+            raise ValueError(
+                f"Invalid input for {request_name}: {str(e)}"
+            ) from e
         except Exception as e:
             error(f"Unexpected error in {request_name}: {str(e)}")
             raise RuntimeError(
@@ -426,7 +457,9 @@ class MDProcessor:
     # Database Helper Methods (Synchronous - Called in Thread Pool)
     # =========================================================================
 
-    def _create_run_record(self, md_articles: List[MDArticle], task_name: str) -> int:
+    def _create_run_record(
+        self, md_articles: List[MDArticle], task_name: str
+    ) -> int:
         try:
             input_ids = []
             for article in md_articles:
@@ -461,12 +494,18 @@ class MDProcessor:
         except Exception as e:
             self.logger.warning(f"Failed to update run status: {e}")
 
-    def _save_output_to_db(self, run_id: int, output_type: str, content: str) -> None:
+    def _save_output_to_db(
+        self, run_id: int, output_type: str, content: str
+    ) -> None:
         if run_id < 0:
             return
         try:
-            content_type = "json" if content.strip().startswith(("{", "[")) else "text"
-            self.repository.add_output(run_id, output_type, content, content_type)
+            content_type = (
+                "json" if content.strip().startswith(("{", "[")) else "text"
+            )
+            self.repository.add_output(
+                run_id, output_type, content, content_type
+            )
         except Exception as e:
             self.logger.warning(f"Failed to save output to database: {e}")
 
@@ -485,12 +524,16 @@ class MDProcessor:
                 output_tokens=usage.get("total_output_tokens", 0),
                 cost_input=usage.get("cost", {}).get("input_cost", 0),
                 cost_output=usage.get("cost", {}).get("output_cost", 0),
-                process_time=usage.get("process_times", {}).get("total_time", 0),
+                process_time=usage.get("process_times", {}).get(
+                    "total_time", 0
+                ),
             )
         except Exception as e:
             self.logger.warning(f"Failed to save token usage to database: {e}")
 
-    def _save_token_usage_report(self, project_name: str, output_dir: Path) -> None:
+    def _save_token_usage_report(
+        self, project_name: str, output_dir: Path
+    ) -> None:
         report = format_usage_report(
             project_name=project_name,
             model=self.llm_client.model,

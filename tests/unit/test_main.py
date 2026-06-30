@@ -46,7 +46,9 @@ async def test_process_multiple_all_inputs_fail():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_process_multiple_partial_fail_warns_but_processes(tmp_path, capsys):
+async def test_process_multiple_partial_fail_warns_but_processes(
+    tmp_path, capsys
+):
     """
     When some inputs fail conversion, processing continues with the successful inputs.
 

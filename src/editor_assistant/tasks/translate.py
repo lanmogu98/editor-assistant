@@ -2,7 +2,7 @@
 Translate Task - Generate Chinese translation with bilingual output.
 """
 
-from typing import List, Dict
+from typing import List, Dict, cast
 from .base import Task, TaskRegistry
 from ..data_models import MDArticle
 from ..config.load_prompt import load_translation_prompt
@@ -25,14 +25,17 @@ class TranslateTask(Task):
     def build_prompt(self, articles: List[MDArticle]) -> str:
         return load_translation_prompt(content=articles[0].content)
 
-    def post_process(self, response: str, articles: List[MDArticle]) -> Dict[str, str]:
+    def post_process(
+        self, response: str, articles: List[MDArticle]
+    ) -> Dict[str, str]:
         """Generate both Chinese-only and bilingual versions."""
         outputs = {"main": response}
 
         # Create bilingual content
         try:
+            source_content = cast(str, articles[0].content)
             bilingual = self._create_bilingual_content(
-                articles[0].content or "", response
+                source_content, response
             )
             outputs["bilingual"] = bilingual
         except Exception as e:

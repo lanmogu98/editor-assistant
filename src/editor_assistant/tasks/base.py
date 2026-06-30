@@ -91,7 +91,9 @@ class Task(ABC):
         """
         pass
 
-    def post_process(self, response: str, articles: List[MDArticle]) -> Dict[str, str]:
+    def post_process(
+        self, response: str, articles: List[MDArticle]
+    ) -> Dict[str, str]:
         """
         Post-process the LLM response.
 

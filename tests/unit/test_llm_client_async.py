@@ -31,7 +31,9 @@ def mock_env_vars(monkeypatch):
 @pytest.mark.asyncio
 class TestAsyncLLMClient:
 
-    async def test_generate_response_is_async(self, mock_env_vars, mock_httpx_client):
+    async def test_generate_response_is_async(
+        self, mock_env_vars, mock_httpx_client
+    ):
         """Test that generate_response is an async method returning tuple."""
         from editor_assistant.llm_client import LLMClient
 
@@ -135,7 +137,9 @@ class TestAsyncLLMClient:
         with pytest.raises(Exception) as exc_info:
             await client.generate_response("Hello")
 
-        assert 'Response body: {"error":"model not found"}' in str(exc_info.value)
+        assert 'Response body: {"error":"model not found"}' in str(
+            exc_info.value
+        )
 
     async def test_openrouter_pinned_404_downshifts_max_tokens_and_retries(
         self, monkeypatch, mock_httpx_client
@@ -146,7 +150,9 @@ class TestAsyncLLMClient:
 
         monkeypatch.setenv("ZHIPU_API_KEY_OPENROUTER", "test-openrouter-key")
         monkeypatch.setattr(llm_client_module, "MAX_API_RETRIES", 2)
-        monkeypatch.setattr(llm_client_module, "INITIAL_RETRY_DELAY_SECONDS", 0)
+        monkeypatch.setattr(
+            llm_client_module, "INITIAL_RETRY_DELAY_SECONDS", 0
+        )
 
         client = LLMClient("glm-4.7-or")
         request = httpx.Request("POST", client.api_url)
@@ -154,7 +160,9 @@ class TestAsyncLLMClient:
             httpx.Response(
                 404,
                 request=request,
-                content=(b'{"error":"No allowed providers found for the request"}'),
+                content=(
+                    b'{"error":"No allowed providers found for the request"}'
+                ),
             ),
             httpx.Response(
                 200,

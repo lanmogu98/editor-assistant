@@ -63,7 +63,9 @@ class TestBriefTask:
     @pytest.fixture
     def multiple_articles(self):
         return [
-            MDArticle(type=InputType.PAPER, content="# Paper 1", title="Paper 1"),
+            MDArticle(
+                type=InputType.PAPER, content="# Paper 1", title="Paper 1"
+            ),
             MDArticle(type=InputType.NEWS, content="# News 1", title="News 1"),
         ]
 
@@ -134,7 +136,11 @@ class TestOutlineTask:
 
     @pytest.fixture
     def news_article(self):
-        return [MDArticle(type=InputType.NEWS, content="# News Article", title="News")]
+        return [
+            MDArticle(
+                type=InputType.NEWS, content="# News Article", title="News"
+            )
+        ]
 
     @pytest.mark.unit
     def test_outline_task_name(self, task):
@@ -186,7 +192,9 @@ class TestTranslateTask:
     def article(self):
         return [
             MDArticle(
-                type=InputType.PAPER, content="Line 1\nLine 2\nLine 3", title="Test"
+                type=InputType.PAPER,
+                content="Line 1\nLine 2\nLine 3",
+                title="Test",
             )
         ]
 
@@ -217,7 +225,9 @@ class TestTranslateTask:
     def test_translate_post_process_bilingual(self, task, article):
         """Test bilingual output generation."""
         llm_response = "第一行\n第二行\n第三行"
-        outputs = task.post_process(llm_response, article)  # Note: response first
+        outputs = task.post_process(
+            llm_response, article
+        )  # Note: response first
         assert "main" in outputs
         assert "bilingual" in outputs
         # Bilingual should interleave original and translated

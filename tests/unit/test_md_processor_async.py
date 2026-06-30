@@ -30,7 +30,11 @@ def mock_llm_client_async():
                 {
                     "total_input_tokens": 10,
                     "total_output_tokens": 20,
-                    "cost": {"input_cost": 0, "output_cost": 0, "total_cost": 0},
+                    "cost": {
+                        "input_cost": 0,
+                        "output_cost": 0,
+                        "total_cost": 0,
+                    },
                     "process_times": {"total_time": 0.1},
                 },
             )
@@ -70,7 +74,9 @@ class TestAsyncMDProcessor:
         from editor_assistant.md_processor import MDProcessor
 
         # Mock TaskRegistry
-        with patch("editor_assistant.md_processor.TaskRegistry") as mock_registry:
+        with patch(
+            "editor_assistant.md_processor.TaskRegistry"
+        ) as mock_registry:
             mock_task_cls = MagicMock()
             mock_task = MagicMock()
             mock_task.validate.return_value = (True, "")
@@ -95,7 +101,9 @@ class TestAsyncMDProcessor:
             )
 
             # Execute (should be awaitable)
-            success, run_id = await processor.process_mds([article], "test-task")
+            success, run_id = await processor.process_mds(
+                [article], "test-task"
+            )
 
             assert success is True
             assert run_id == 123
@@ -115,7 +123,11 @@ class TestAsyncMDProcessor:
                 {
                     "total_input_tokens": 10,
                     "total_output_tokens": 20,
-                    "cost": {"input_cost": 0, "output_cost": 0, "total_cost": 0},
+                    "cost": {
+                        "input_cost": 0,
+                        "output_cost": 0,
+                        "total_cost": 0,
+                    },
                     "process_times": {"total_time": 0.01},
                 },
             )
@@ -126,7 +138,9 @@ class TestAsyncMDProcessor:
         processor = MDProcessor("test-model", max_concurrent=2)
 
         # Mock TaskRegistry
-        with patch("editor_assistant.md_processor.TaskRegistry") as mock_registry:
+        with patch(
+            "editor_assistant.md_processor.TaskRegistry"
+        ) as mock_registry:
             mock_task_cls = MagicMock()
             mock_task = MagicMock()
             mock_task.validate.return_value = (True, "")
@@ -146,7 +160,9 @@ class TestAsyncMDProcessor:
             )
 
             # Launch 5 concurrent tasks
-            tasks = [processor.process_mds([article], "test-task") for _ in range(5)]
+            tasks = [
+                processor.process_mds([article], "test-task") for _ in range(5)
+            ]
             await asyncio.gather(*tasks)
 
             assert mock_llm_client_async.generate_response.call_count == 5
@@ -170,7 +186,9 @@ async def test_streaming_console_output_uses_app_callback(
             "process_times": {"total_time": 0.1},
         }
 
-    mock_llm_client_async.generate_response.side_effect = fake_generate_response
+    mock_llm_client_async.generate_response.side_effect = (
+        fake_generate_response
+    )
 
     with patch("editor_assistant.md_processor.TaskRegistry") as mock_registry:
         mock_task_cls = MagicMock()

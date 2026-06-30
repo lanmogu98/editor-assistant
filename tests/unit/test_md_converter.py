@@ -62,10 +62,14 @@ def test_html_file_uses_clean_html_converter(
     # NOTE: MarkdownConverter imports CleanHTML2Markdown *inside* convert_content():
     #   from .clean_html_to_md import CleanHTML2Markdown
     # So we patch it at its defining module path.
-    with patch("editor_assistant.clean_html_to_md.CleanHTML2Markdown") as MockClean:
+    with patch(
+        "editor_assistant.clean_html_to_md.CleanHTML2Markdown"
+    ) as MockClean:
         MockClean.return_value.convert.return_value = md_from_html
 
-        result = converter.convert_content(str(html_path), type=InputType.PAPER)
+        result = converter.convert_content(
+            str(html_path), type=InputType.PAPER
+        )
 
     assert result is not None
     assert result.title == "A-B"  # '/' replaced
@@ -94,7 +98,9 @@ def test_html_file_falls_back_to_markitdown_when_html_conversion_returns_none(
         title="From MarkItDown",
     )
 
-    with patch("editor_assistant.clean_html_to_md.CleanHTML2Markdown") as MockClean:
+    with patch(
+        "editor_assistant.clean_html_to_md.CleanHTML2Markdown"
+    ) as MockClean:
         MockClean.return_value.convert.return_value = None
 
         result = converter.convert_content(str(html_path), type=InputType.NEWS)
@@ -147,7 +153,9 @@ def test_url_html_writes_output_under_webpage_dir(
         converter="CleanHTML2Markdown",
     )
 
-    with patch("editor_assistant.clean_html_to_md.CleanHTML2Markdown") as MockClean:
+    with patch(
+        "editor_assistant.clean_html_to_md.CleanHTML2Markdown"
+    ) as MockClean:
         MockClean.return_value.convert.return_value = md_from_html
         result = converter.convert_content(url, type=InputType.PAPER)
 

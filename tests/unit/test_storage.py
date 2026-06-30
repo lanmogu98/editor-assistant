@@ -127,8 +127,12 @@ class TestRunRepository:
         """Should return existing input if content hash matches."""
         content = "Same content for both calls"
 
-        id1 = repo.get_or_create_input("paper", "/path1.pdf", "Title 1", content)
-        id2 = repo.get_or_create_input("paper", "/path2.pdf", "Title 2", content)
+        id1 = repo.get_or_create_input(
+            "paper", "/path1.pdf", "Title 1", content
+        )
+        id2 = repo.get_or_create_input(
+            "paper", "/path2.pdf", "Title 2", content
+        )
 
         assert id1 == id2  # Same content = same ID
 
@@ -154,7 +158,8 @@ class TestRunRepository:
         conn = repo._get_conn()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT type, source_path, title FROM inputs WHERE id = ?", (input_id,)
+            "SELECT type, source_path, title FROM inputs WHERE id = ?",
+            (input_id,),
         )
         row = cursor.fetchone()
         conn.close()
@@ -169,7 +174,9 @@ class TestRunRepository:
 
     def test_create_run_basic(self, repo):
         """Should create a run with basic fields."""
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Title", "Content"
+        )
 
         run_id = repo.create_run(
             task="brief", model="deepseek-v3.2", input_ids=[input_id]
@@ -179,7 +186,9 @@ class TestRunRepository:
 
     def test_create_run_with_all_options(self, repo):
         """Should create run with all optional fields."""
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Title", "Content"
+        )
 
         run_id = repo.create_run(
             task="outline",
@@ -212,15 +221,23 @@ class TestRunRepository:
 
     def test_create_run_links_multiple_inputs(self, repo):
         """Should link multiple inputs to one run."""
-        id1 = repo.get_or_create_input("paper", "/p1.pdf", "Paper", "Paper content")
-        id2 = repo.get_or_create_input("news", "/n1.md", "News", "News content")
+        id1 = repo.get_or_create_input(
+            "paper", "/p1.pdf", "Paper", "Paper content"
+        )
+        id2 = repo.get_or_create_input(
+            "news", "/n1.md", "News", "News content"
+        )
 
-        run_id = repo.create_run(task="brief", model="test-model", input_ids=[id1, id2])
+        run_id = repo.create_run(
+            task="brief", model="test-model", input_ids=[id1, id2]
+        )
 
         # Verify both inputs linked
         conn = repo._get_conn()
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM run_inputs WHERE run_id = ?", (run_id,))
+        cursor.execute(
+            "SELECT COUNT(*) FROM run_inputs WHERE run_id = ?", (run_id,)
+        )
         count = cursor.fetchone()[0]
         conn.close()
 
@@ -269,8 +286,12 @@ class TestRunRepository:
         input_id = repo.get_or_create_input("paper", "/p.pdf", "T", "C")
         run_id = repo.create_run("classify", "model", [input_id])
 
-        json_content = '{"keywords": ["ai", "ml"], "discipline": "computer science"}'
-        output_id = repo.add_output(run_id, "classification", json_content, "json")
+        json_content = (
+            '{"keywords": ["ai", "ml"], "discipline": "computer science"}'
+        )
+        output_id = repo.add_output(
+            run_id, "classification", json_content, "json"
+        )
 
         details = repo.get_run_details(run_id)
         assert details["outputs"][0]["content_type"] == "json"
@@ -412,7 +433,9 @@ class TestManyToManyRelationship:
         """Same input should be usable in multiple runs."""
         # Same content = same input ID
         content = "This is the paper content"
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "My Paper", content)
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "My Paper", content
+        )
 
         # Three different runs with same input
         run1 = repo.create_run("brief", "model-a", [input_id])
@@ -434,9 +457,15 @@ class TestManyToManyRelationship:
 
     def test_one_run_multiple_inputs(self, repo):
         """One run should be able to have multiple inputs."""
-        id1 = repo.get_or_create_input("paper", "/paper.pdf", "Paper", "Paper content")
-        id2 = repo.get_or_create_input("news", "/news.md", "News 1", "News content 1")
-        id3 = repo.get_or_create_input("news", "/news2.md", "News 2", "News content 2")
+        id1 = repo.get_or_create_input(
+            "paper", "/paper.pdf", "Paper", "Paper content"
+        )
+        id2 = repo.get_or_create_input(
+            "news", "/news.md", "News 1", "News content 1"
+        )
+        id3 = repo.get_or_create_input(
+            "news", "/news2.md", "News 2", "News content 2"
+        )
 
         run_id = repo.create_run("brief", "model", [id1, id2, id3])
 
@@ -446,7 +475,9 @@ class TestManyToManyRelationship:
     def test_query_runs_by_input(self, repo):
         """Should be able to find all runs for a specific input."""
         content = "Unique paper content for tracking"
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Tracked Paper", content)
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Tracked Paper", content
+        )
 
         # Multiple runs
         repo.create_run("brief", "model1", [input_id])
@@ -470,13 +501,19 @@ class TestManyToManyRelationship:
         conn.commit()
 
         # Verify cascaded deletes
-        cursor.execute("SELECT COUNT(*) FROM run_inputs WHERE run_id = ?", (run_id,))
+        cursor.execute(
+            "SELECT COUNT(*) FROM run_inputs WHERE run_id = ?", (run_id,)
+        )
         assert cursor.fetchone()[0] == 0
 
-        cursor.execute("SELECT COUNT(*) FROM outputs WHERE run_id = ?", (run_id,))
+        cursor.execute(
+            "SELECT COUNT(*) FROM outputs WHERE run_id = ?", (run_id,)
+        )
         assert cursor.fetchone()[0] == 0
 
-        cursor.execute("SELECT COUNT(*) FROM token_usage WHERE run_id = ?", (run_id,))
+        cursor.execute(
+            "SELECT COUNT(*) FROM token_usage WHERE run_id = ?", (run_id,)
+        )
         assert cursor.fetchone()[0] == 0
 
         # But input should still exist
@@ -497,7 +534,9 @@ class TestEdgeCases:
     def test_unicode_content(self, repo):
         """Should handle unicode content correctly."""
         content = "这是中文内容 🎉 with émojis and spëcial çharacters"
-        input_id = repo.get_or_create_input("paper", "/中文.pdf", "中文标题", content)
+        input_id = repo.get_or_create_input(
+            "paper", "/中文.pdf", "中文标题", content
+        )
 
         run_id = repo.create_run("brief", "model", [input_id])
         repo.add_output(run_id, "main", "生成的中文摘要 📝")
@@ -528,13 +567,17 @@ class TestEdgeCases:
         path = "/path/with spaces/and (parens)/file [1].pdf"
         input_id = repo.get_or_create_input("paper", path, "Title", "Content")
 
-        details = repo.get_run_details(repo.create_run("brief", "model", [input_id]))
+        details = repo.get_run_details(
+            repo.create_run("brief", "model", [input_id])
+        )
         assert details["inputs"][0]["source_path"] == path
 
     def test_null_thinking_level(self, repo):
         """Should handle null thinking_level."""
         input_id = repo.get_or_create_input("paper", "/p.pdf", "T", "C")
-        run_id = repo.create_run("brief", "model", [input_id], thinking_level=None)
+        run_id = repo.create_run(
+            "brief", "model", [input_id], thinking_level=None
+        )
 
         details = repo.get_run_details(run_id)
         assert details["thinking_level"] is None
@@ -572,7 +615,9 @@ class TestEdgeCases:
 
         def create_input():
             try:
-                input_id = repo.get_or_create_input("paper", "/p.pdf", "T", content)
+                input_id = repo.get_or_create_input(
+                    "paper", "/p.pdf", "T", content
+                )
                 results.append(input_id)
             except Exception as e:
                 errors.append(str(e))
@@ -611,7 +656,9 @@ class TestCurrencyHandling:
     def test_custom_currency_cny(self, repo):
         """Should support CNY currency."""
         input_id = repo.get_or_create_input("paper", "/p.pdf", "T", "C")
-        run_id = repo.create_run("brief", "deepseek-v3.2", [input_id], currency="¥")
+        run_id = repo.create_run(
+            "brief", "deepseek-v3.2", [input_id], currency="¥"
+        )
 
         runs = repo.get_recent_runs()
         assert runs[0]["currency"] == "¥"
@@ -643,7 +690,9 @@ class TestDatabasePathEnvironmentVariables:
             "EDITOR_ASSISTANT_TEST_DB_DIR": os.environ.get(
                 "EDITOR_ASSISTANT_TEST_DB_DIR"
             ),
-            "EDITOR_ASSISTANT_DB_DIR": os.environ.get("EDITOR_ASSISTANT_DB_DIR"),
+            "EDITOR_ASSISTANT_DB_DIR": os.environ.get(
+                "EDITOR_ASSISTANT_DB_DIR"
+            ),
         }
 
     def _restore_env_vars(self, saved):
@@ -779,7 +828,9 @@ class TestResumableRuns:
 
     def test_get_resumable_runs_finds_pending(self, repo):
         """Should find runs with status='pending'."""
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Title", "Content"
+        )
         run_id = repo.create_run("brief", "model", [input_id])
         # Status is 'pending' by default
 
@@ -791,7 +842,9 @@ class TestResumableRuns:
 
     def test_get_resumable_runs_finds_aborted(self, repo):
         """Should find runs with status='aborted'."""
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Title", "Content"
+        )
         run_id = repo.create_run("brief", "model", [input_id])
         repo.update_run_status(run_id, "aborted")
 
@@ -802,7 +855,9 @@ class TestResumableRuns:
 
     def test_get_resumable_runs_excludes_success(self, repo):
         """Should NOT include runs with status='success'."""
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Title", "Content"
+        )
         run_id = repo.create_run("brief", "model", [input_id])
         repo.update_run_status(run_id, "success")
 
@@ -812,7 +867,9 @@ class TestResumableRuns:
 
     def test_get_resumable_runs_excludes_failed(self, repo):
         """Should NOT include runs with status='failed'."""
-        input_id = repo.get_or_create_input("paper", "/p.pdf", "Title", "Content")
+        input_id = repo.get_or_create_input(
+            "paper", "/p.pdf", "Title", "Content"
+        )
         run_id = repo.create_run("brief", "model", [input_id])
         repo.update_run_status(run_id, "failed", "Some error")
 
@@ -881,7 +938,9 @@ class TestExportRuns:
         id1 = repo.get_or_create_input(
             "paper", "/paper1.pdf", "First Paper", "Content1"
         )
-        id2 = repo.get_or_create_input("news", "/news.md", "News Article", "Content2")
+        id2 = repo.get_or_create_input(
+            "news", "/news.md", "News Article", "Content2"
+        )
 
         # Create runs
         run1 = repo.create_run("brief", "deepseek-v3.2", [id1], currency="¥")
@@ -1057,7 +1116,9 @@ class TestProductionDatabaseIsolation:
             "EDITOR_ASSISTANT_TEST_DB_DIR": os.environ.get(
                 "EDITOR_ASSISTANT_TEST_DB_DIR"
             ),
-            "EDITOR_ASSISTANT_DB_DIR": os.environ.get("EDITOR_ASSISTANT_DB_DIR"),
+            "EDITOR_ASSISTANT_DB_DIR": os.environ.get(
+                "EDITOR_ASSISTANT_DB_DIR"
+            ),
         }
         for key in saved:
             if key in os.environ:
@@ -1163,7 +1224,9 @@ class TestProductionDatabaseIsolation:
         finally:
             self._restore_env_vars(saved)
 
-    def test_conftest_isolation_fixture_works(self, isolate_database_from_production):
+    def test_conftest_isolation_fixture_works(
+        self, isolate_database_from_production
+    ):
         """The conftest fixture should properly isolate the database."""
         # isolate_database_from_production is the session fixture from conftest.py
         # It should have set EDITOR_ASSISTANT_TEST_DB_DIR
@@ -1195,7 +1258,9 @@ class TestProductionDatabaseIsolation:
 
         # The data should be there
         runs = repo.get_recent_runs()
-        assert any("ISOLATION TEST" in (r.get("input_titles") or "") for r in runs)
+        assert any(
+            "ISOLATION TEST" in (r.get("input_titles") or "") for r in runs
+        )
 
     def test_concurrent_test_and_production_processes(self, temp_dir):
         """
@@ -1211,7 +1276,9 @@ class TestProductionDatabaseIsolation:
             "EDITOR_ASSISTANT_TEST_DB_DIR": os.environ.get(
                 "EDITOR_ASSISTANT_TEST_DB_DIR"
             ),
-            "EDITOR_ASSISTANT_DB_DIR": os.environ.get("EDITOR_ASSISTANT_DB_DIR"),
+            "EDITOR_ASSISTANT_DB_DIR": os.environ.get(
+                "EDITOR_ASSISTANT_DB_DIR"
+            ),
         }
         try:
             test_dir = temp_dir / "concurrent_test"
@@ -1255,7 +1322,9 @@ class TestProductionDatabaseIsolation:
             test_runs = test_repo2.get_recent_runs()
             assert len(test_runs) == 1
             assert "FROM_TEST_PROCESS" in test_runs[0].get("input_titles", "")
-            assert "FROM_PROD_PROCESS" not in test_runs[0].get("input_titles", "")
+            assert "FROM_PROD_PROCESS" not in test_runs[0].get(
+                "input_titles", ""
+            )
 
             # Prod data only in prod db
             del os.environ["EDITOR_ASSISTANT_TEST_DB_DIR"]
@@ -1264,7 +1333,9 @@ class TestProductionDatabaseIsolation:
             prod_runs = prod_repo2.get_recent_runs()
             assert len(prod_runs) == 1
             assert "FROM_PROD_PROCESS" in prod_runs[0].get("input_titles", "")
-            assert "FROM_TEST_PROCESS" not in prod_runs[0].get("input_titles", "")
+            assert "FROM_TEST_PROCESS" not in prod_runs[0].get(
+                "input_titles", ""
+            )
 
         finally:
             # Restore
@@ -1274,7 +1345,9 @@ class TestProductionDatabaseIsolation:
                 elif key in os.environ:
                     del os.environ[key]
 
-    def test_production_unaffected_by_test_env_var_in_different_process(self, temp_dir):
+    def test_production_unaffected_by_test_env_var_in_different_process(
+        self, temp_dir
+    ):
         """
         Real scenario: pytest sets TEST_DB_DIR, but production CLI in another
         terminal does NOT see this env var (different process).
@@ -1286,12 +1359,17 @@ class TestProductionDatabaseIsolation:
             "EDITOR_ASSISTANT_TEST_DB_DIR": os.environ.get(
                 "EDITOR_ASSISTANT_TEST_DB_DIR"
             ),
-            "EDITOR_ASSISTANT_DB_DIR": os.environ.get("EDITOR_ASSISTANT_DB_DIR"),
+            "EDITOR_ASSISTANT_DB_DIR": os.environ.get(
+                "EDITOR_ASSISTANT_DB_DIR"
+            ),
         }
         try:
             # === Scenario: Production process (no TEST_DB_DIR) ===
             # Clear both env vars to simulate fresh production process
-            for key in ["EDITOR_ASSISTANT_TEST_DB_DIR", "EDITOR_ASSISTANT_DB_DIR"]:
+            for key in [
+                "EDITOR_ASSISTANT_TEST_DB_DIR",
+                "EDITOR_ASSISTANT_DB_DIR",
+            ]:
                 if key in os.environ:
                     del os.environ[key]
 

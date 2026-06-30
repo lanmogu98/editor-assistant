@@ -13,7 +13,9 @@ class OutlineTask(Task):
     """Generate detailed research outline from a single paper."""
 
     name = "outline"
-    description = "Generate structured research outline with Chinese translation"
+    description = (
+        "Generate structured research outline with Chinese translation"
+    )
     supports_multi_input = False
 
     def validate(self, articles: List[MDArticle]) -> tuple[bool, str]:
@@ -24,5 +26,7 @@ class OutlineTask(Task):
     def build_prompt(self, articles: List[MDArticle]) -> str:
         return load_research_outliner_prompt(content=articles[0].content)
 
-    def post_process(self, response: str, articles: List[MDArticle]) -> Dict[str, str]:
+    def post_process(
+        self, response: str, articles: List[MDArticle]
+    ) -> Dict[str, str]:
         return {"main": response}

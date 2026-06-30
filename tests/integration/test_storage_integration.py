@@ -96,7 +96,9 @@ class TestStorageIntegration:
     )
     @pytest.mark.integration
     @pytest.mark.slow
-    async def test_run_details_complete(self, sample_article, budget_model_name):
+    async def test_run_details_complete(
+        self, sample_article, budget_model_name
+    ):
         """Run details should include all expected fields."""
         # Database is automatically isolated by conftest.py
         processor = MDProcessor(budget_model_name, stream=False)
@@ -142,7 +144,9 @@ class TestCLIHistoryCommands:
         input_id = repo.get_or_create_input(
             "paper", "/test.pdf", "Test Paper", "Content"
         )
-        run_id = repo.create_run("brief", "test-model", [input_id], currency="$")
+        run_id = repo.create_run(
+            "brief", "test-model", [input_id], currency="$"
+        )
         repo.update_run_status(run_id, "success")
 
         # Run history command with the isolated env

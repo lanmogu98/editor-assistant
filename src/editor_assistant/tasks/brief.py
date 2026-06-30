@@ -24,6 +24,8 @@ class BriefTask(Task):
     def build_prompt(self, articles: List[MDArticle]) -> str:
         return load_news_generator_prompt(articles=articles)
 
-    def post_process(self, response: str, articles: List[MDArticle]) -> Dict[str, str]:
+    def post_process(
+        self, response: str, articles: List[MDArticle]
+    ) -> Dict[str, str]:
         # Brief task only produces the main output
         return {"main": response}

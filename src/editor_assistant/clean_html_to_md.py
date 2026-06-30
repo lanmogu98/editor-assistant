@@ -5,14 +5,12 @@ extracting only the main content from a webpage
 and removing all the noise like ads, headers, footers, etc.
 """
 
-import logging
-from enum import Enum
-from typing import Any, Optional, cast
-
 import requests  # type: ignore[import-untyped]
-
-from .config.constants import DEFAULT_USER_AGENT, DEBUG_LOGGING_LEVEL
 from .data_models import MDArticle, InputType
+from .config.constants import DEFAULT_USER_AGENT, DEBUG_LOGGING_LEVEL
+import logging
+from typing import Any, Optional, cast
+from enum import Enum
 
 HEADERS = {"User-Agent": DEFAULT_USER_AGENT}
 
@@ -105,7 +103,9 @@ class CleanHTML2Markdown:
     def _convert_by_trafilatura(self, path: str) -> Optional[MDArticle]:
         """Convert HTML to markdown using trafilatura."""
         try:
-            from trafilatura import bare_extraction
+            from trafilatura import (  # type: ignore[import-untyped]
+                bare_extraction,
+            )
         except ImportError:
             raise ImportError(
                 "trafilatura is not installed. "
@@ -115,7 +115,9 @@ class CleanHTML2Markdown:
         # fetch html content
         html_content = self._fetch_html_content(path)
         if not html_content:
-            self.logger.error(f"trafilatura failed to fetch content from {path}")
+            self.logger.error(
+                f"trafilatura failed to fetch content from {path}"
+            )
             return None
 
         # Single extraction call for both content and metadata
@@ -130,9 +132,10 @@ class CleanHTML2Markdown:
         )
 
         result_dict = cast(Optional[dict[str, Any]], result)
-
         if not result_dict or not result_dict.get("text"):
-            self.logger.error(f"trafilatura failed to extract content from {path}")
+            self.logger.error(
+                f"trafilatura failed to extract content from {path}"
+            )
             return None
 
         return MDArticle(
@@ -162,8 +165,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Convert an HTML page to clean markdown."
     )
-    parser.add_argument("path", help="URL or local file path of the HTML to convert.")
-    parser.add_argument("-o", "--output", help="Path to save the output markdown file.")
+    parser.add_argument(
+        "path", help="URL or local file path of the HTML to convert."
+    )
+    parser.add_argument(
+        "-o", "--output", help="Path to save the output markdown file."
+    )
     parser.add_argument(
         "--converter",
         choices=[Converter.TRAFILATURA, Converter.READABILIPY],
@@ -182,7 +189,7 @@ def main():
         if args.output:
             try:
                 with open(args.output, "w", encoding="utf-8") as f:
-                    f.write(result.content)
+                    f.write(cast(str, result.content))
                 print(f"Saved markdown to {args.output}")
             except Exception as e:
                 print(f"Error saving to file: {e}")

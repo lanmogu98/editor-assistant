@@ -38,6 +38,9 @@ dev = [
     "pre-commit>=3.0.0",
 ]
 
+[tool.black]
+line-length = 79
+
 # include prompt templates in the package
 [tool.setuptools]
 package-data = { "editor_assistant" = ["config/prompts/*.txt"] }

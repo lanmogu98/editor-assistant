@@ -17,7 +17,8 @@ from editor_assistant.llm_client import LLMClient
 
 # Skip all tests in this module if no API key
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY_VOLC"), reason="DEEPSEEK_API_KEY_VOLC not set"
+    not os.getenv("DEEPSEEK_API_KEY_VOLC"),
+    reason="DEEPSEEK_API_KEY_VOLC not set",
 )
 
 

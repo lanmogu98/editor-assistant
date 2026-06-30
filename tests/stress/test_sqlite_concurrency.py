@@ -27,7 +27,11 @@ async def test_sqlite_concurrent_writes_stress(monkeypatch):
     mock_usage = {
         "total_input_tokens": 100,
         "total_output_tokens": 50,
-        "cost": {"input_cost": 0.001, "output_cost": 0.001, "total_cost": 0.002},
+        "cost": {
+            "input_cost": 0.001,
+            "output_cost": 0.001,
+            "total_cost": 0.002,
+        },
         "process_times": {"total_time": 0.1},
     }
 
@@ -73,7 +77,9 @@ async def test_sqlite_concurrent_writes_stress(monkeypatch):
         )
 
         # Verify results
-        success_count = sum(1 for r in results if isinstance(r, tuple) and r[0])
+        success_count = sum(
+            1 for r in results if isinstance(r, tuple) and r[0]
+        )
         fail_count = 50 - success_count
 
         print(f"Success: {success_count}, Failed: {fail_count}")
@@ -83,10 +89,15 @@ async def test_sqlite_concurrent_writes_stress(monkeypatch):
         stress_runs = [
             r
             for r in runs
-            if r["model"] == "deepseek-v3.2" and "Stress Test" in str(r["input_titles"])
+            if r["model"] == "deepseek-v3.2"
+            and "Stress Test" in str(r["input_titles"])
         ]
 
         # Assertions
         # If we didn't optimize DB writes, this might fail with fewer records or errors
-        assert success_count == 50, f"Expected 50 successes, got {success_count}"
-        assert len(stress_runs) == 50, f"Expected 50 DB records, got {len(stress_runs)}"
+        assert (
+            success_count == 50
+        ), f"Expected 50 successes, got {success_count}"
+        assert (
+            len(stress_runs) == 50
+        ), f"Expected 50 DB records, got {len(stress_runs)}"

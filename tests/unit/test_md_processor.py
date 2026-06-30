@@ -10,7 +10,12 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from pathlib import Path
 
 from editor_assistant.md_processor import MDProcessor
-from editor_assistant.data_models import MDArticle, InputType, ProcessType, SaveType
+from editor_assistant.data_models import (
+    MDArticle,
+    InputType,
+    ProcessType,
+    SaveType,
+)
 
 
 class TestMDProcessorImport:
@@ -39,7 +44,9 @@ class TestMDProcessorInit:
 
             processor = MDProcessor("test-model")
 
-            MockClient.assert_called_once_with("test-model", thinking_level=None)
+            MockClient.assert_called_once_with(
+                "test-model", thinking_level=None
+            )
             assert processor.llm_client is mock_llm_client
             assert processor.model_name == "test-model"
 
@@ -98,7 +105,11 @@ class TestMDProcessorProcessMds:
                     {
                         "total_input_tokens": 10,
                         "total_output_tokens": 20,
-                        "cost": {"input_cost": 0, "output_cost": 0, "total_cost": 0},
+                        "cost": {
+                            "input_cost": 0,
+                            "output_cost": 0,
+                            "total_cost": 0,
+                        },
                         "process_times": {"total_time": 0.1},
                     },
                 )
@@ -115,7 +126,8 @@ class TestMDProcessorProcessMds:
         """Create a valid article for testing."""
         return MDArticle(
             type=InputType.PAPER,
-            content="# Test Paper\n\n" + "Content. " * 500,  # Sufficient content
+            content="# Test Paper\n\n"
+            + "Content. " * 500,  # Sufficient content
             title="Test Paper",
             source_path="/tmp/test.pdf",
             output_path=temp_dir,
@@ -123,7 +135,9 @@ class TestMDProcessorProcessMds:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_process_mds_with_valid_article(self, processor, valid_article):
+    async def test_process_mds_with_valid_article(
+        self, processor, valid_article
+    ):
         """Test processing with valid article."""
         success, run_id = await processor.process_mds(
             [valid_article], ProcessType.BRIEF
@@ -134,7 +148,9 @@ class TestMDProcessorProcessMds:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_process_mds_with_string_task_type(self, processor, valid_article):
+    async def test_process_mds_with_string_task_type(
+        self, processor, valid_article
+    ):
         """Test processing with string task type."""
         success, run_id = await processor.process_mds(
             [valid_article], "brief"  # String instead of enum
@@ -145,9 +161,13 @@ class TestMDProcessorProcessMds:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_process_mds_with_unknown_task(self, processor, valid_article):
+    async def test_process_mds_with_unknown_task(
+        self, processor, valid_article
+    ):
         """Test that unknown task returns False."""
-        success, run_id = await processor.process_mds([valid_article], "unknown_task")
+        success, run_id = await processor.process_mds(
+            [valid_article], "unknown_task"
+        )
 
         assert success is False
         assert run_id == -1

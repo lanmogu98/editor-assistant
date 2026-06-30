@@ -13,7 +13,9 @@ from editor_assistant.data_models import InputType, MDArticle
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 
 # File paths
-SHANNON_PAPER_PATH = SAMPLE_DATA_DIR / "A Mathematical Theory of Communication.md"
+SHANNON_PAPER_PATH = (
+    SAMPLE_DATA_DIR / "A Mathematical Theory of Communication.md"
+)
 WEAVER_REPORT_PATH = (
     SAMPLE_DATA_DIR / "Weaver_Warren_1949_The_Mathematics_of_Communication.md"
 )
@@ -34,7 +36,9 @@ def shannon_paper() -> MDArticle:
     Returns:
         MDArticle with paper content
     """
-    content = load_sample_content(SHANNON_PAPER_PATH, fallback=_SHANNON_FALLBACK)
+    content = load_sample_content(
+        SHANNON_PAPER_PATH, fallback=_SHANNON_FALLBACK
+    )
     return MDArticle(
         type=InputType.PAPER,
         content=content,
@@ -52,7 +56,9 @@ def weaver_report() -> MDArticle:
     Returns:
         MDArticle with report content
     """
-    content = load_sample_content(WEAVER_REPORT_PATH, fallback=_WEAVER_FALLBACK)
+    content = load_sample_content(
+        WEAVER_REPORT_PATH, fallback=_WEAVER_FALLBACK
+    )
     return MDArticle(
         type=InputType.NEWS,  # Treat as news/essay for testing
         content=content,

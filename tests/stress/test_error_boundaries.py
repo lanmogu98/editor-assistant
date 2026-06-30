@@ -147,8 +147,12 @@ class TestErrorBoundaries:
             tasks = [processor.process_mds([inp], "brief") for inp in inputs]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            success_count = sum(1 for r in results if isinstance(r, tuple) and r[0])
-            fail_count = sum(1 for r in results if isinstance(r, tuple) and not r[0])
+            success_count = sum(
+                1 for r in results if isinstance(r, tuple) and r[0]
+            )
+            fail_count = sum(
+                1 for r in results if isinstance(r, tuple) and not r[0]
+            )
 
             assert success_count == 2
             assert fail_count == 1
@@ -175,7 +179,9 @@ class TestErrorBoundaries:
                 "editor_assistant.llm_client.LLMClient.generate_response",
                 side_effect=mock_slow_llm,
             ),
-            patch("editor_assistant.md_processor.TaskRegistry") as mock_registry,
+            patch(
+                "editor_assistant.md_processor.TaskRegistry"
+            ) as mock_registry,
         ):
 
             # Setup mock task correctly to return a valid tuple from validate()
@@ -206,4 +212,6 @@ class TestErrorBoundaries:
             await asyncio.gather(*tasks)
 
             # Verify we never exceeded limit significantly (allow +1 for race conditions in test measurement)
-            assert max_active <= 3, f"Expected max ~2 concurrent, got {max_active}"
+            assert (
+                max_active <= 3
+            ), f"Expected max ~2 concurrent, got {max_active}"

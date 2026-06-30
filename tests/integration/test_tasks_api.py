@@ -19,7 +19,8 @@ from editor_assistant.data_models import MDArticle, InputType, ProcessType
 
 # Skip all tests if no API key
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY_VOLC"), reason="DEEPSEEK_API_KEY_VOLC not set"
+    not os.getenv("DEEPSEEK_API_KEY_VOLC"),
+    reason="DEEPSEEK_API_KEY_VOLC not set",
 )
 
 
@@ -52,10 +53,15 @@ class TestBriefTaskIntegration:
 
     @pytest.mark.integration
     @pytest.mark.slow
-    async def test_brief_generates_output(self, processor, paper_article, temp_dir):
+    async def test_brief_generates_output(
+        self, processor, paper_article, temp_dir
+    ):
         """Test that brief task generates output."""
         success, _ = await processor.process_mds(
-            [paper_article], ProcessType.BRIEF, output_to_console=False, save_files=True
+            [paper_article],
+            ProcessType.BRIEF,
+            output_to_console=False,
+            save_files=True,
         )
 
         assert success is True
@@ -70,7 +76,9 @@ class TestBriefTaskIntegration:
 
     @pytest.mark.integration
     @pytest.mark.slow
-    async def test_brief_output_is_chinese(self, processor, paper_article, temp_dir):
+    async def test_brief_output_is_chinese(
+        self, processor, paper_article, temp_dir
+    ):
         """
         Test that brief output is in Chinese.
 
@@ -81,7 +89,10 @@ class TestBriefTaskIntegration:
         paper_article.output_path = temp_dir
 
         await processor.process_mds(
-            [paper_article], ProcessType.BRIEF, output_to_console=False, save_files=True
+            [paper_article],
+            ProcessType.BRIEF,
+            output_to_console=False,
+            save_files=True,
         )
 
         # Read the output
@@ -214,7 +225,10 @@ class TestStreamingIntegration:
         runs without crashing and returns success.
         """
         success, _ = await streaming_processor.process_mds(
-            [test_article], ProcessType.BRIEF, output_to_console=True, save_files=True
+            [test_article],
+            ProcessType.BRIEF,
+            output_to_console=True,
+            save_files=True,
         )
 
         assert success is True
@@ -235,7 +249,10 @@ class TestStreamingIntegration:
         In non-streaming mode, output is typically written at the end rather than chunk-by-chunk.
         """
         success, _ = await non_streaming_processor.process_mds(
-            [test_article], ProcessType.BRIEF, output_to_console=False, save_files=True
+            [test_article],
+            ProcessType.BRIEF,
+            output_to_console=False,
+            save_files=True,
         )
 
         assert success is True

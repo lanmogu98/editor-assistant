@@ -20,7 +20,7 @@ An MDArticle consists of the markdown content as well as necessary metadata.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
@@ -97,7 +97,8 @@ class MarkdownConverter:
                         return False
                 else:
                     raise ConnectionError(
-                        f"Error accessing URL '{url}': " f"HTTP {response.getcode()}"
+                        f"Error accessing URL '{url}': "
+                        f"HTTP {response.getcode()}"
                     )
 
         except urllib.error.URLError as e:
@@ -116,7 +117,9 @@ class MarkdownConverter:
         Returns:
             True if the string is a url or path to a file, False otherwise
         """
-        is_supported_file = Path(path).suffix.lower() in markitdown_supported_formats
+        is_supported_file = (
+            Path(path).suffix.lower() in markitdown_supported_formats
+        )
         return is_supported_file
 
     def convert_content(
@@ -137,7 +140,9 @@ class MarkdownConverter:
 
         # try to convert htmls with html_converter
         if self._is_url_html(content_path) or self._is_html_file(content_path):
-            self.logger.debug(f"Converting html with html_converter: {content_path}")
+            self.logger.debug(
+                f"Converting html with html_converter: {content_path}"
+            )
             try:
                 # clean_html.convert returns a dictionary.
                 from .clean_html_to_md import CleanHTML2Markdown
@@ -145,7 +150,8 @@ class MarkdownConverter:
                 md_article = CleanHTML2Markdown().convert(content_path)
                 if md_article is None:
                     self.logger.debug(
-                        "Failed to convert with CleanHTML2Markdown:" f"{content_path}"
+                        "Failed to convert with CleanHTML2Markdown:"
+                        f"{content_path}"
                     )
 
             except Exception as e:
@@ -184,7 +190,7 @@ class MarkdownConverter:
         with open(md_article.output_path, "w") as f:
             f.write(md_article.title) if md_article.title else None
             f.write(f"\nsource: {md_article.source_path}\n\n")
-            f.write(md_article.content or "")
+            f.write(cast(str, md_article.content))
 
         return md_article
 
@@ -192,7 +198,9 @@ class MarkdownConverter:
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Convert markdown to markdown.")
+    parser = argparse.ArgumentParser(
+        description="Convert markdown to markdown."
+    )
     parser.add_argument(
         "content_paths",
         nargs="+",
@@ -209,9 +217,13 @@ def main():
         else:
             print(f"Successfully converted {content_path}")
             if args.output:
-                output_path = Path(args.output) / f"{processed_content.title}.md"
+                output_path = (
+                    Path(args.output) / f"{processed_content.title}.md"
+                )
             else:
-                output_path = Path.cwd() / "md" / f"{processed_content.title}.md"
+                output_path = (
+                    Path.cwd() / "md" / f"{processed_content.title}.md"
+                )
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -219,7 +231,7 @@ def main():
                 f.write(f"url: {processed_content.source_path}\n\n")
                 f.write(f"title: {processed_content.title}\n\n")
                 f.write(f"authors: {processed_content.authors}\n\n")
-                f.write(processed_content.content)
+                f.write(cast(str, processed_content.content))
             print(f"Saved to {output_path}")
 
 

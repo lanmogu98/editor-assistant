@@ -44,7 +44,9 @@ class TestCLIBrief:
     def test_brief_command_runs(self, temp_dir, sample_data_dir):
         """Test that brief command runs successfully."""
         # Use a local file if available
-        sample_file = sample_data_dir / "A Mathematical Theory of Communication.md"
+        sample_file = (
+            sample_data_dir / "A Mathematical Theory of Communication.md"
+        )
         if not sample_file.exists():
             pytest.skip("Sample file not found")
 
@@ -96,7 +98,9 @@ class TestCLIProcess:
     )
     def test_process_multiple_tasks(self, temp_dir, sample_data_dir):
         """Test process command with multiple tasks."""
-        sample_file = sample_data_dir / "A Mathematical Theory of Communication.md"
+        sample_file = (
+            sample_data_dir / "A Mathematical Theory of Communication.md"
+        )
         if not sample_file.exists():
             pytest.skip("Sample file not found")
 

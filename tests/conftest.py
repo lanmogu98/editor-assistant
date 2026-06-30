@@ -37,7 +37,9 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "unit: Fast unit tests (mocked)")
-    config.addinivalue_line("markers", "integration: Integration tests (real API)")
+    config.addinivalue_line(
+        "markers", "integration: Integration tests (real API)"
+    )
     config.addinivalue_line("markers", "slow: Slow running tests")
     config.addinivalue_line("markers", "expensive: Tests that cost money")
     config.addinivalue_line(

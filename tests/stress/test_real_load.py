@@ -8,7 +8,8 @@ from editor_assistant.config.constants import MIN_REQUEST_INTERVAL_SECONDS
 
 # Skip if API key not set
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY_VOLC") and not os.getenv("DEEPSEEK_API_KEY"),
+    not os.getenv("DEEPSEEK_API_KEY_VOLC")
+    and not os.getenv("DEEPSEEK_API_KEY"),
     reason="DEEPSEEK_API_KEY_VOLC or DEEPSEEK_API_KEY not set",
 )
 
@@ -42,7 +43,9 @@ async def test_high_concurrency_load(tmp_path):
     # Process all 10 concurrently
     # This will trigger 10 API calls almost simultaneously
     # The client-side rate limiter and semaphore should spread them out
-    await assistant.process_multiple(inputs, ProcessType.BRIEF, save_files=False)
+    await assistant.process_multiple(
+        inputs, ProcessType.BRIEF, save_files=False
+    )
 
     duration = time.time() - start_time
 

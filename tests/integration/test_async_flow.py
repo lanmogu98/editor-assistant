@@ -9,7 +9,8 @@ from editor_assistant.data_models import Input, InputType, ProcessType
 
 # Skip if API keys are not set
 pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY_VOLC"), reason="DEEPSEEK_API_KEY_VOLC not set"
+    not os.getenv("DEEPSEEK_API_KEY_VOLC"),
+    reason="DEEPSEEK_API_KEY_VOLC not set",
 )
 
 # Use cheap model for testing
@@ -41,7 +42,9 @@ async def test_async_process_multiple_real_api(tmp_path):
 
     # Run async processing
     # Using 'brief' task which is usually faster/cheaper
-    await assistant.process_multiple(inputs, ProcessType.BRIEF, save_files=False)
+    await assistant.process_multiple(
+        inputs, ProcessType.BRIEF, save_files=False
+    )
 
     # Verification
     # Since process_multiple returns None, we verify side effects:
