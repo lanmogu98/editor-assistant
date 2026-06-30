@@ -135,7 +135,7 @@ Input (URL/PDF/MD)
 
 ## Adding a New LLM Model
 
-**Single Source of Truth:** `llm_exec_core/llm_config.yml` in the `llm-exec-core` repo/package is the catalog file to edit.
+**Single Source of Truth:** `llm_exec_core/llm_config.yml` in the `llm-exec-core` repo/package is the catalog file to edit. Schema enforcement and provider/model loading now live in `llm_exec_core.config`; `editor_assistant.config.llm_models` remains only as a legacy compatibility shim.
 
 ### Step 1: Add to YAML Config
 
@@ -300,7 +300,7 @@ provider-name:
       pricing: {input: X, output: Y}    # USD or CNY per 1M tokens
 ```
 
-Top-level keys starting with `_` (e.g. `_shared_endpoints`) are skipped by the loader and used for YAML anchor / alias deduplication. Schema is enforced by Pydantic in `config/llm_models.py` (`ProviderSettings`, `ModelDetails`).
+Top-level keys starting with `_` (e.g. `_shared_endpoints`) are skipped by the loader and used for YAML anchor / alias deduplication. Schema is enforced by Pydantic in `llm_exec_core.config` (`ProviderSettings`, `ModelDetails`), while `config/llm_models.py` keeps the legacy import surface as a shim.
 
 #### Supported Providers (current)
 

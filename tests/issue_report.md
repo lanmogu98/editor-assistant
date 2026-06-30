@@ -27,7 +27,7 @@ It also records the concrete fixes applied during this review so the test suite 
 
 ### B. Wrong env var used in skip conditions
 
-- **Observation**: Several tests used `DEEPSEEK_API_KEY` but the active config for `deepseek-v3.2` is `DEEPSEEK_API_KEY_VOLC` (`src/editor_assistant/config/llm_config.yml`).
+- **Observation**: Several tests used `DEEPSEEK_API_KEY` but the active config for `deepseek-v3.2` is `DEEPSEEK_API_KEY_VOLC` in the shared `llm-exec-core` catalog. At the time this review was written, Editor Assistant still reached that mapping through its app-local config layer; it now reaches the same catalog via the compatibility shim in `src/editor_assistant/config/llm_models.py`.
 - **Impact**:
   - Tests could be skipped incorrectly even when the correct key exists, or
   - Tests could run and then fail (because the constructor checks a different env var).
@@ -138,5 +138,4 @@ It also records the concrete fixes applied during this review so the test suite 
 
 - **Added**:
   - `tests/unit/test_md_converter.py` (MarkdownConverter unit tests)
-
 

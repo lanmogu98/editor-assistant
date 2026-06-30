@@ -38,7 +38,7 @@ dev = [
     "pre-commit>=3.0.0",
 ]
 
-# include the config files and prompts in the package
+# include prompt templates in the package
 [tool.setuptools]
 package-data = { "editor_assistant" = ["config/prompts/*.txt"] }
 
