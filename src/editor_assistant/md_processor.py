@@ -18,6 +18,9 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Callable, Tuple
 import os
+
+from llm_exec_core.usage import format_usage_report
+
 from .config.logging_config import error, progress, warning, user_message
 from .config.constants import (
     PROMPT_OVERHEAD_TOKENS,
@@ -60,16 +63,21 @@ def check_context_budget(content: str, llm_client: LLMClient) -> None:
     """
     Context-budget guardrail.
     """
+    if llm_client.context_window is None:
+        raise ContentTooLargeError(
+            "Model context window is not configured for "
+            f"{llm_client.model_name}."
+        )
+
     estimated_tokens = estimate_tokens(content)
+    context_window = llm_client.context_window
 
     # Reserve space for prompt overhead and model output
     output_reserve = llm_client.max_tokens or OUTPUT_TOKEN_RESERVE
     # Avoid over-reserving relative to context
-    output_reserve = min(output_reserve, llm_client.context_window // 2)
+    output_reserve = min(output_reserve, context_window // 2)
 
-    available_tokens = (
-        llm_client.context_window - PROMPT_OVERHEAD_TOKENS - output_reserve
-    )
+    available_tokens = context_window - PROMPT_OVERHEAD_TOKENS - output_reserve
 
     if available_tokens <= 0:
         raise ContentTooLargeError(
@@ -96,10 +104,10 @@ class MDProcessor:
     def __init__(
         self,
         model_name: str,
-        thinking_level: str = None,
+        thinking_level: Optional[str] = None,
         stream: bool = True,
         max_concurrent: int = 5,
-    ):
+    ) -> None:
         """
         Initialize the processor.
 
@@ -252,9 +260,20 @@ class MDProcessor:
         try:
             progress(f"Processing document with {len(prompt)} characters...")
             async with self._semaphore:
-                # If console output is disabled, suppress streamed output.
                 final_callback = stream_callback
-                if final_callback is None and not output_to_console:
+                app_prints_stream = (
+                    self.stream
+                    and output_to_console
+                    and final_callback is None
+                )
+
+                if app_prints_stream:
+
+                    def print_stream_chunk(content: str) -> None:
+                        print(content, end="", flush=True)
+
+                    final_callback = print_stream_chunk
+                elif final_callback is None and not output_to_console:
 
                     def suppress_output(_: str) -> None:
                         return None
@@ -267,6 +286,8 @@ class MDProcessor:
                     stream=self.stream,
                     stream_callback=final_callback,
                 )
+                if app_prints_stream:
+                    print(flush=True)
         except Exception as e:
             error(f"Error making API request: {str(e)}")
             await asyncio.to_thread(
@@ -351,7 +372,9 @@ class MDProcessor:
         # Save token usage (Async via thread pool)
         try:
             if save_files and output_dir:
-                self.llm_client.save_token_usage_report(title, output_dir)
+                await asyncio.to_thread(
+                    self._save_token_usage_report, title, output_dir
+                )
             await asyncio.to_thread(
                 self._save_token_usage_to_db, run_id, usage_stats
             )
@@ -462,7 +485,7 @@ class MDProcessor:
             return -1
 
     def _update_run_status(
-        self, run_id: int, status: str, error_message: str = None
+        self, run_id: int, status: str, error_message: Optional[str] = None
     ) -> None:
         if run_id < 0:
             return
@@ -487,7 +510,7 @@ class MDProcessor:
             self.logger.warning(f"Failed to save output to database: {e}")
 
     def _save_token_usage_to_db(
-        self, run_id: int, usage: Dict[str, Any] = None
+        self, run_id: int, usage: Optional[Dict[str, Any]] = None
     ) -> None:
         if run_id < 0:
             return
@@ -507,3 +530,18 @@ class MDProcessor:
             )
         except Exception as e:
             self.logger.warning(f"Failed to save token usage to database: {e}")
+
+    def _save_token_usage_report(
+        self, project_name: str, output_dir: Path
+    ) -> None:
+        report = format_usage_report(
+            project_name=project_name,
+            model=self.llm_client.model,
+            model_name=self.llm_client.model_name,
+            pricing_currency=self.llm_client.pricing_currency,
+            token_usage=self.llm_client.get_token_usage(),
+            timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report_path = output_dir / f"token_usage_{project_name}.txt"
+        report_path.write_text(report, encoding="utf-8")

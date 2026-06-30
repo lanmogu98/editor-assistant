@@ -7,22 +7,24 @@ Keeping them in one place makes tuning easier and documents assumptions.
 
 import logging
 
+from llm_exec_core import constants as _core_constants
+
+API_REQUEST_TIMEOUT_SECONDS = _core_constants.API_REQUEST_TIMEOUT_SECONDS
+CHAR_TOKEN_RATIO = _core_constants.CHAR_TOKEN_RATIO
+CHAR_TOKEN_RATIO_EN = _core_constants.CHAR_TOKEN_RATIO_EN
+CHAR_TOKEN_RATIO_ZH = _core_constants.CHAR_TOKEN_RATIO_ZH
+INITIAL_RETRY_DELAY_SECONDS = _core_constants.INITIAL_RETRY_DELAY_SECONDS
+MAX_API_RETRIES = _core_constants.MAX_API_RETRIES
+MAX_REQUESTS_PER_MINUTE = _core_constants.MAX_REQUESTS_PER_MINUTE
+MIN_REQUEST_INTERVAL_SECONDS = _core_constants.MIN_REQUEST_INTERVAL_SECONDS
+RATE_LIMIT_WARNINGS_ENABLED = _core_constants.RATE_LIMIT_WARNINGS_ENABLED
+RESPONSE_CACHE_ENABLED = _core_constants.RESPONSE_CACHE_ENABLED
+RESPONSE_CACHE_MAX_SIZE = _core_constants.RESPONSE_CACHE_MAX_SIZE
+RESPONSE_CACHE_TTL_SECONDS = _core_constants.RESPONSE_CACHE_TTL_SECONDS
+
 # =============================================================================
 # TOKEN ESTIMATION
 # =============================================================================
-
-# Character-to-token ratios for estimating token counts.
-# Different LLMs have different tokenizers, so these are approximations.
-
-# English/ASCII text: ~3.5-4 characters per token
-CHAR_TOKEN_RATIO_EN = 3.5
-
-# Chinese/CJK text: ~1.5-2 characters per token.
-# Each Chinese char is approximately 2-3 tokens.
-CHAR_TOKEN_RATIO_ZH = 1.5
-
-# Default ratio (backward compatibility)
-CHAR_TOKEN_RATIO = CHAR_TOKEN_RATIO_EN
 
 # Minimum token count for valid input content.
 # Content below this threshold is likely malformed or empty.
@@ -39,54 +41,6 @@ OUTPUT_TOKEN_RESERVE = 2000
 # =============================================================================
 # API RETRY CONFIGURATION
 # =============================================================================
-
-# Maximum number of retry attempts for API calls.
-MAX_API_RETRIES = 3
-
-# Initial delay (in seconds) before first retry.
-# Subsequent retries use exponential backoff (delay * 2^attempt).
-INITIAL_RETRY_DELAY_SECONDS = 1
-
-# Timeout for LLM HTTP requests (seconds).
-# Large documents (40K+ tokens) with complex outline tasks may need
-# 60-120+ seconds.
-# Beginner note:
-# - This timeout is passed to httpx.AsyncClient(timeout=...).
-# - It is intentionally conservative for large-paper workflows; smaller
-#   prompts will usually return faster.
-API_REQUEST_TIMEOUT_SECONDS = 180
-
-
-# =============================================================================
-# RATE LIMITING
-# =============================================================================
-
-# Minimum interval between API requests (in seconds).
-# This prevents hitting per-second rate limits.
-MIN_REQUEST_INTERVAL_SECONDS = 0.5
-
-# Maximum requests per minute (per client instance).
-# Set to 0 to disable per-minute limiting.
-MAX_REQUESTS_PER_MINUTE = 60
-
-# Enable rate limit warning messages.
-RATE_LIMIT_WARNINGS_ENABLED = True
-
-
-# =============================================================================
-# RESPONSE CACHING
-# =============================================================================
-
-# Enable response caching for identical prompts.
-# When enabled, identical prompts return cached responses without API calls.
-RESPONSE_CACHE_ENABLED = False
-
-# Maximum number of cached responses (LRU eviction when exceeded).
-RESPONSE_CACHE_MAX_SIZE = 100
-
-# Cache entry time-to-live in seconds (0 = no expiration).
-RESPONSE_CACHE_TTL_SECONDS = 3600  # 1 hour
-
 
 # =============================================================================
 # CONTENT VALIDATION
@@ -122,3 +76,26 @@ DEFAULT_USER_AGENT = (
 
 # Timeout for HTTP HEAD requests (URL content-type detection).
 URL_HEAD_TIMEOUT_SECONDS = 10
+
+__all__ = [
+    "API_REQUEST_TIMEOUT_SECONDS",
+    "CHAR_TOKEN_RATIO",
+    "CHAR_TOKEN_RATIO_EN",
+    "CHAR_TOKEN_RATIO_ZH",
+    "INITIAL_RETRY_DELAY_SECONDS",
+    "MAX_API_RETRIES",
+    "MAX_REQUESTS_PER_MINUTE",
+    "MIN_REQUEST_INTERVAL_SECONDS",
+    "RATE_LIMIT_WARNINGS_ENABLED",
+    "RESPONSE_CACHE_ENABLED",
+    "RESPONSE_CACHE_MAX_SIZE",
+    "RESPONSE_CACHE_TTL_SECONDS",
+    "MINIMAL_TOKEN_ACCEPTED",
+    "PROMPT_OVERHEAD_TOKENS",
+    "OUTPUT_TOKEN_RESERVE",
+    "MIN_CHARS_WARNING_THRESHOLD",
+    "DEFAULT_LOGGING_LEVEL",
+    "DEBUG_LOGGING_LEVEL",
+    "DEFAULT_USER_AGENT",
+    "URL_HEAD_TIMEOUT_SECONDS",
+]

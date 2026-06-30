@@ -16,5 +16,5 @@ from .test_urls import (
     TEST_NEWS,
     ALL_TEST_URLS,
     get_test_url,
-    list_test_urls
+    list_test_urls,
 )

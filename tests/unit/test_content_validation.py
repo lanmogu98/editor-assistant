@@ -24,7 +24,9 @@ def test_is_blocked_publisher_detects_known_domain():
 @pytest.mark.unit
 def test_validate_content_blocks_known_publisher():
     with pytest.raises(BlockedPublisherError):
-        validate_content("content", source_url="https://www.nytimes.com/article")
+        validate_content(
+            "content", source_url="https://www.nytimes.com/article"
+        )
 
 
 @pytest.mark.unit
@@ -37,7 +39,9 @@ def test_validate_content_length_warning_for_short_text():
 
 @pytest.mark.unit
 def test_validate_content_length_handles_empty():
-    is_valid, warning_msg = validate_content_length("", source="https://example.com")
+    is_valid, warning_msg = validate_content_length(
+        "", source="https://example.com"
+    )
     assert is_valid is False
     assert "empty" in warning_msg.lower()
 
@@ -52,4 +56,3 @@ def test_add_and_remove_blocked_publisher_round_trip():
         removed = remove_blocked_publisher(domain)
         assert removed is True
         assert domain not in get_blocked_publishers()
-

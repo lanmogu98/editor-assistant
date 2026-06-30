@@ -132,6 +132,30 @@ class TestLibraryAPIContract:
     """Public API that external projects depend on."""
 
     @pytest.mark.unit
+    def test_new_llm_core_import_path_available(self):
+        from llm_exec_core import LLMClient
+
+        assert hasattr(LLMClient, "generate_response")
+
+    @pytest.mark.unit
+    def test_legacy_llm_client_import_path_still_available(self):
+        from editor_assistant.llm_client import LLMClient
+
+        assert hasattr(LLMClient, "generate_response")
+
+    @pytest.mark.unit
+    def test_legacy_llm_models_import_path_still_available(self):
+        from editor_assistant.config.llm_models import get_supported_models
+
+        assert isinstance(get_supported_models(), list)
+
+    @pytest.mark.unit
+    def test_legacy_llm_constants_still_exported_from_app_constants(self):
+        from editor_assistant.config.constants import MAX_API_RETRIES
+
+        assert isinstance(MAX_API_RETRIES, int)
+
+    @pytest.mark.unit
     def test_llm_client_has_generate_response(self):
         from editor_assistant.llm_client import LLMClient
 

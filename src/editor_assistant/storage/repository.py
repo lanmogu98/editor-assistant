@@ -2,12 +2,12 @@
 Repository for database CRUD operations.
 """
 
-import sqlite3
 import hashlib
-from typing import List, Dict, Any, Optional
+import sqlite3
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
+from typing import List, Dict, Any, Optional, cast
 
 from .database import get_connection, init_database, get_database_path
 
@@ -100,7 +100,7 @@ class RunRepository:
                VALUES (?, ?, ?, ?)""",
             (input_type, source_path, title, content_hash),
         )
-        input_id = cursor.lastrowid
+        input_id = cast(int, cursor.lastrowid)
         conn.commit()
         conn.close()
 
@@ -150,7 +150,7 @@ class RunRepository:
             """,
             (task, model, thinking_level, 1 if stream else 0, currency),
         )
-        run_id = cursor.lastrowid
+        run_id = cast(int, cursor.lastrowid)
 
         # Link inputs
         for input_id in input_ids:
@@ -217,7 +217,7 @@ class RunRepository:
                VALUES (?, ?, ?, ?)""",
             (run_id, output_type, content_type, content),
         )
-        output_id = cursor.lastrowid
+        output_id = cast(int, cursor.lastrowid)
 
         conn.commit()
         conn.close()

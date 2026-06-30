@@ -18,10 +18,10 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, MagicMock
 
-
 # ============================================================================
 # PYTEST CONFIGURATION
 # ============================================================================
+
 
 def pytest_addoption(parser):
     """Add custom pytest command-line options."""
@@ -30,17 +30,21 @@ def pytest_addoption(parser):
         action="store",
         default="base",
         choices=["base", "advanced"],
-        help="Model tier for integration tests: base (deepseek-v3.2) or advanced (gemini-2.5-flash-free)"
+        help="Model tier for integration tests: base (deepseek-v3.2) or advanced (gemini-2.5-flash-free)",
     )
 
 
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "unit: Fast unit tests (mocked)")
-    config.addinivalue_line("markers", "integration: Integration tests (real API)")
+    config.addinivalue_line(
+        "markers", "integration: Integration tests (real API)"
+    )
     config.addinivalue_line("markers", "slow: Slow running tests")
     config.addinivalue_line("markers", "expensive: Tests that cost money")
-    config.addinivalue_line("markers", "advanced: Tests requiring advanced models (gemini)")
+    config.addinivalue_line(
+        "markers", "advanced: Tests requiring advanced models (gemini)"
+    )
 
 
 # ============================================================================
@@ -49,22 +53,23 @@ def pytest_configure(config):
 # This fixture runs automatically for ALL tests in the entire test session.
 # It ensures that NO test can ever touch the production database.
 
+
 @pytest.fixture(scope="session", autouse=True)
 def isolate_database_from_production(tmp_path_factory):
     """
     CRITICAL: Force ALL tests to use a temporary database directory.
-    
+
     Uses EDITOR_ASSISTANT_TEST_DB_DIR (separate from production env var).
     This prevents any test from accidentally touching ~/.editor_assistant/
     """
     # Create a session-wide temp directory for the database
     test_db_dir = tmp_path_factory.mktemp("test_editor_assistant")
-    
+
     # Use the TEST-specific environment variable (not the production one)
     os.environ["EDITOR_ASSISTANT_TEST_DB_DIR"] = str(test_db_dir)
-    
+
     yield test_db_dir
-    
+
     # Clean up after all tests
     if "EDITOR_ASSISTANT_TEST_DB_DIR" in os.environ:
         del os.environ["EDITOR_ASSISTANT_TEST_DB_DIR"]
@@ -73,6 +78,7 @@ def isolate_database_from_production(tmp_path_factory):
 # ============================================================================
 # PATH FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def project_root() -> Path:
@@ -97,12 +103,13 @@ def temp_dir():
 # SAMPLE DATA FIXTURES
 # ============================================================================
 
+
 @pytest.fixture
 def sample_paper_content(sample_data_dir) -> str:
     """Load Shannon's paper as raw content."""
     paper_path = sample_data_dir / "A Mathematical Theory of Communication.md"
     if paper_path.exists():
-        return paper_path.read_text(encoding='utf-8')
+        return paper_path.read_text(encoding="utf-8")
     return _get_fallback_paper_content()
 
 
@@ -110,12 +117,13 @@ def sample_paper_content(sample_data_dir) -> str:
 def sample_paper_article(sample_paper_content):
     """Create an MDArticle from the sample paper."""
     from editor_assistant.data_models import MDArticle, InputType
+
     return MDArticle(
         type=InputType.PAPER,
         content=sample_paper_content,
         title="A Mathematical Theory of Communication",
         authors="Claude Shannon",
-        source_path="sample_data/shannon.pdf"
+        source_path="sample_data/shannon.pdf",
     )
 
 
@@ -140,11 +148,12 @@ The findings were published in Nature today.
 def sample_news_article(sample_news_content):
     """Create an MDArticle from sample news."""
     from editor_assistant.data_models import MDArticle, InputType
+
     return MDArticle(
         type=InputType.NEWS,
         content=sample_news_content,
         title="Quantum Computing Breakthrough",
-        source_path="https://example.com/news"
+        source_path="https://example.com/news",
     )
 
 
@@ -167,17 +176,19 @@ More test content for validation.
 def short_paper_article(short_test_content):
     """Create a minimal MDArticle for quick tests."""
     from editor_assistant.data_models import MDArticle, InputType
+
     return MDArticle(
         type=InputType.PAPER,
         content=short_test_content,
         title="Test Document",
-        source_path="/tmp/test.md"
+        source_path="/tmp/test.md",
     )
 
 
 # ============================================================================
 # MOCK FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def mock_llm_response() -> str:
@@ -203,7 +214,7 @@ def mock_llm_client(mock_llm_response):
     mock.get_token_usage.return_value = {
         "total_input_tokens": 1000,
         "total_output_tokens": 500,
-        "cost": {"total_cost": 0.01}
+        "cost": {"total_cost": 0.01},
     }
     mock.save_token_usage_report = MagicMock()
     return mock
@@ -226,8 +237,8 @@ def mock_failing_llm_client():
 
 # Model constants for integration tests
 INTEGRATION_MODELS = {
-    "base": "deepseek-v3.2",              # Cheap, fast - default for integration tests
-    "advanced": "gemini-2.5-flash-free"   # Free tier Gemini 2.5 - for advanced model testing
+    "base": "deepseek-v3.2",  # Cheap, fast - default for integration tests
+    "advanced": "gemini-2.5-flash-free",  # Free tier Gemini 2.5 - for advanced model testing
 }
 
 
@@ -242,6 +253,7 @@ def budget_model_name(request) -> str:
 def real_llm_client(budget_model_name):
     """Create a real LLM client for integration tests."""
     from editor_assistant.llm_client import LLMClient
+
     return LLMClient(budget_model_name)
 
 
@@ -261,6 +273,7 @@ def base_model_name() -> str:
 # SKIP CONDITIONS
 # ============================================================================
 
+
 @pytest.fixture
 def skip_without_api_key():
     """Skip test if required API keys are not set."""
@@ -272,6 +285,7 @@ def skip_without_api_key():
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
 
 def _get_fallback_paper_content() -> str:
     """Fallback paper content when file not available."""

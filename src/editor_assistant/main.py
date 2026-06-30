@@ -43,7 +43,7 @@ class EditorAssistant:
                         content=content,
                         title=Path(input.path).stem,
                         source_path=input.path,
-                        output_path=input.path,
+                        output_path=Path(input.path),
                     ),
                     None,
                 )
@@ -68,7 +68,7 @@ class EditorAssistant:
         process_type: Union[ProcessType, str],
         output_to_console=True,
         save_files=False,
-        progress_callbacks: Dict[str, Callable[[str], None]] = None,
+        progress_callbacks: Optional[Dict[str, Callable[[str], None]]] = None,
         done_callback: Optional[Callable[[str, bool], None]] = None,
     ):
         # early return if no paths are provided
@@ -164,7 +164,7 @@ class EditorAssistant:
                     self.logger.warning(
                         f"Failed to process {article_title}: {result}"
                     )
-                else:
+                elif isinstance(result, tuple):
                     success, _ = result
                     if not success:
                         self.logger.warning(

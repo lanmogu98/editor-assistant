@@ -39,7 +39,9 @@ def converter() -> MarkdownConverter:
 
 
 @pytest.mark.unit
-def test_html_file_uses_clean_html_converter(monkeypatch, tmp_path: Path, converter: MarkdownConverter) -> None:
+def test_html_file_uses_clean_html_converter(
+    monkeypatch, tmp_path: Path, converter: MarkdownConverter
+) -> None:
     """
     If the input is an HTML file, we prefer CleanHTML2Markdown.
     """
@@ -60,10 +62,14 @@ def test_html_file_uses_clean_html_converter(monkeypatch, tmp_path: Path, conver
     # NOTE: MarkdownConverter imports CleanHTML2Markdown *inside* convert_content():
     #   from .clean_html_to_md import CleanHTML2Markdown
     # So we patch it at its defining module path.
-    with patch("editor_assistant.clean_html_to_md.CleanHTML2Markdown") as MockClean:
+    with patch(
+        "editor_assistant.clean_html_to_md.CleanHTML2Markdown"
+    ) as MockClean:
         MockClean.return_value.convert.return_value = md_from_html
 
-        result = converter.convert_content(str(html_path), type=InputType.PAPER)
+        result = converter.convert_content(
+            str(html_path), type=InputType.PAPER
+        )
 
     assert result is not None
     assert result.title == "A-B"  # '/' replaced
@@ -92,7 +98,9 @@ def test_html_file_falls_back_to_markitdown_when_html_conversion_returns_none(
         title="From MarkItDown",
     )
 
-    with patch("editor_assistant.clean_html_to_md.CleanHTML2Markdown") as MockClean:
+    with patch(
+        "editor_assistant.clean_html_to_md.CleanHTML2Markdown"
+    ) as MockClean:
         MockClean.return_value.convert.return_value = None
 
         result = converter.convert_content(str(html_path), type=InputType.NEWS)
@@ -105,7 +113,9 @@ def test_html_file_falls_back_to_markitdown_when_html_conversion_returns_none(
 
 
 @pytest.mark.unit
-def test_markitdown_failure_returns_none(monkeypatch, tmp_path: Path, converter: MarkdownConverter) -> None:
+def test_markitdown_failure_returns_none(
+    monkeypatch, tmp_path: Path, converter: MarkdownConverter
+) -> None:
     """
     If MarkItDown conversion raises, convert_content should return None.
     """
@@ -122,7 +132,9 @@ def test_markitdown_failure_returns_none(monkeypatch, tmp_path: Path, converter:
 
 
 @pytest.mark.unit
-def test_url_html_writes_output_under_webpage_dir(monkeypatch, tmp_path: Path, converter: MarkdownConverter) -> None:
+def test_url_html_writes_output_under_webpage_dir(
+    monkeypatch, tmp_path: Path, converter: MarkdownConverter
+) -> None:
     """
     For HTML URLs, MarkdownConverter writes outputs under a `webpage/` folder.
 
@@ -141,12 +153,12 @@ def test_url_html_writes_output_under_webpage_dir(monkeypatch, tmp_path: Path, c
         converter="CleanHTML2Markdown",
     )
 
-    with patch("editor_assistant.clean_html_to_md.CleanHTML2Markdown") as MockClean:
+    with patch(
+        "editor_assistant.clean_html_to_md.CleanHTML2Markdown"
+    ) as MockClean:
         MockClean.return_value.convert.return_value = md_from_html
         result = converter.convert_content(url, type=InputType.PAPER)
 
     assert result is not None
     assert Path(result.output_path).exists()
     assert "webpage" in str(result.output_path)
-
-

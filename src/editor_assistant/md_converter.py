@@ -20,7 +20,7 @@ An MDArticle consists of the markdown content as well as necessary metadata.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
@@ -190,7 +190,7 @@ class MarkdownConverter:
         with open(md_article.output_path, "w") as f:
             f.write(md_article.title) if md_article.title else None
             f.write(f"\nsource: {md_article.source_path}\n\n")
-            f.write(md_article.content)
+            f.write(cast(str, md_article.content))
 
         return md_article
 
@@ -231,7 +231,7 @@ def main():
                 f.write(f"url: {processed_content.source_path}\n\n")
                 f.write(f"title: {processed_content.title}\n\n")
                 f.write(f"authors: {processed_content.authors}\n\n")
-                f.write(processed_content.content)
+                f.write(cast(str, processed_content.content))
             print(f"Saved to {output_path}")
 
 

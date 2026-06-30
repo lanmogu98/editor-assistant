@@ -26,8 +26,10 @@ async def test_process_multiple_all_inputs_fail():
       `editor_assistant.main` so no real conversion or LLM work is done.
     - `MDProcessor.process_mds(...)` is also async, so the mock must be awaitable (`AsyncMock`).
     """
-    with patch("editor_assistant.main.MarkdownConverter") as MockConverter, \
-         patch("editor_assistant.main.MDProcessor") as MockProcessor:
+    with (
+        patch("editor_assistant.main.MarkdownConverter") as MockConverter,
+        patch("editor_assistant.main.MDProcessor") as MockProcessor,
+    ):
         mock_converter = MockConverter.return_value
         mock_converter.convert_content.side_effect = Exception("boom")
 
@@ -44,7 +46,9 @@ async def test_process_multiple_all_inputs_fail():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_process_multiple_partial_fail_warns_but_processes(tmp_path, capsys):
+async def test_process_multiple_partial_fail_warns_but_processes(
+    tmp_path, capsys
+):
     """
     When some inputs fail conversion, processing continues with the successful inputs.
 
@@ -70,12 +74,14 @@ async def test_process_multiple_partial_fail_warns_but_processes(tmp_path, capsy
         output_path=str(good_path),
     )
 
-    with patch("editor_assistant.main.MarkdownConverter") as MockConverter, \
-         patch("editor_assistant.main.MDProcessor") as MockProcessor:
+    with (
+        patch("editor_assistant.main.MarkdownConverter") as MockConverter,
+        patch("editor_assistant.main.MDProcessor") as MockProcessor,
+    ):
         mock_converter = MockConverter.return_value
         mock_converter.convert_content.side_effect = [
             good_article,  # for good input
-            None,          # for bad input
+            None,  # for bad input
         ]
 
         mock_processor = MockProcessor.return_value

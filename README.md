@@ -6,7 +6,20 @@
 
 Editor Assistant is an AI-powered Python CLI and library for turning research papers, articles, web pages, and converted documents into briefs, outlines, and translations with LLMs. It is built for personal research workflows, but the core client and config modules can also be imported by other Python projects.
 
-**Version: 0.5.1**
+**Version: 0.6.0**
+
+### Package Boundary
+
+Editor Assistant now consumes the `llm-exec-core` package for model catalog loading, provider routing, token accounting, and HTTP execution. The app layer owns document workflow, tasks, prompts, SQLite storage, CLI commands, output paths, and app logging.
+
+This branch is a coordinated two-repo/local-migration branch. Keep the current sibling-checkout dependency mode:
+
+```toml
+[tool.uv.sources]
+llm-exec-core = { path = "../llm-exec-core", editable = true }
+```
+
+That relative source is intentional for this PR and for CI/workspace checkouts that test both repos together. Only after `llm-exec-core` is published should the app switch to a release-consumer configuration by removing `[tool.uv.sources]` and pinning `llm-exec-core==0.1.0`.
 
 ### Features
 
@@ -30,6 +43,8 @@ git clone https://github.com/lanmogu98/editor-assistant.git
 cd editor-assistant
 uv sync
 ```
+
+On this migration branch, `uv sync` expects a sibling checkout at `../llm-exec-core` because `pyproject.toml` uses a relative `[tool.uv.sources]` entry. In CI, use a workspace layout that checks out both repos side by side.
 
 For a runtime-only environment:
 
@@ -188,7 +203,7 @@ Global options:
 
 ### Supported Models
 
-Model names are loaded from `src/editor_assistant/config/llm_config.yml`, which is the source of truth. Use `uv run editor-assistant brief --help` to see the current `--model` choices.
+Model names are loaded from `llm_exec_core/llm_config.yml` in the `llm-exec-core` package. In this repo, `src/editor_assistant/config/llm_models.py` is a compatibility shim that re-exports the core catalog loader for older imports. Use `uv run editor-assistant brief --help` to see the current `--model` choices.
 
 Current default model: `glm-4.7-or`.
 
@@ -317,7 +332,20 @@ This project is licensed under the MIT License.
 
 Editor Assistant 是一个 AI 驱动的 Python CLI 和库，用于把研究论文、文章、网页和转换后的文档处理成简讯、大纲和翻译。它主要服务个人研究工作流，也可以被其他 Python 项目复用其 LLM client 和配置模块。
 
-**版本：0.5.1**
+**版本：0.6.0**
+
+### 包边界
+
+Editor Assistant 现在通过 `llm-exec-core` 包来提供模型目录加载、provider 路由、token 统计和 HTTP 执行能力；应用层仍负责文档工作流、任务、prompt、SQLite 持久化、CLI、输出路径和应用日志。
+
+当前分支是一个双仓协同的本地迁移分支，必须保留 sibling checkout 的依赖方式：
+
+```toml
+[tool.uv.sources]
+llm-exec-core = { path = "../llm-exec-core", editable = true }
+```
+
+这个相对路径是当前 PR 和双仓 CI/workspace checkout 的预期配置。只有在 `llm-exec-core` 正式发布之后，才应移除 `[tool.uv.sources]`，并把依赖改成 `llm-exec-core==0.1.0`。
 
 ### 功能特色
 
@@ -341,6 +369,8 @@ git clone https://github.com/lanmogu98/editor-assistant.git
 cd editor-assistant
 uv sync
 ```
+
+在这个迁移分支上，`uv sync` 依赖 `../llm-exec-core` 这个 sibling checkout，因为 `pyproject.toml` 中使用了相对 `[tool.uv.sources]`。CI 也需要采用双仓并排 checkout 的 workspace 布局。
 
 仅安装运行依赖：
 
@@ -498,7 +528,7 @@ uv run editor-assistant export history.csv --limit 100
 
 ### 支持的模型
 
-模型名称来自 `src/editor_assistant/config/llm_config.yml`，这是当前单一事实来源。可用 `uv run editor-assistant brief --help` 查看最新 `--model` 选项。
+模型名称来自 `llm-exec-core` 包内的 `llm_exec_core/llm_config.yml`。本仓库中的 `src/editor_assistant/config/llm_models.py` 只是兼容层，会转发到 core catalog loader；可用 `uv run editor-assistant brief --help` 查看最新 `--model` 选项。
 
 当前默认模型：`glm-4.7-or`。
 

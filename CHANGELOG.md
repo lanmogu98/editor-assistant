@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Documented downstream package contract for LinkResearcher and other workers.
+
+## [0.6.0] - 2026-06-30
+
+### Added
 - **Resume Command**: `editor-assistant resume` to find and re-execute interrupted/aborted runs
   - Finds runs with status `pending` or `aborted`
   - `--dry-run` flag to preview without executing
@@ -26,10 +31,11 @@ All notable changes to this project will be documented in this file.
   - `advanced`: gemini-2.5-flash-free
 
 ### Changed
+- Extracted LLM execution infrastructure into `llm-exec-core` and updated Editor Assistant to consume it as an external package.
 - **Default Model**: Changed from `deepseek-v3.2` to `glm-4.7-or`
 - **Model Config Refactor**: YAML is now the single source of truth for model/provider configuration.
   - Removed hardcoded `LLMModel` and `ServiceProvider` enums from `set_llm.py`
-  - Model list is now dynamically loaded from `llm_config.yml`
+  - Model list is now dynamically loaded from the shared `llm-exec-core` catalog
   - Adding new models only requires editing YAML, no Python code changes needed
 - **Documentation**: Updated references to `docs/ENGINEERING_GUIDE.md` (now configured as Cursor user rules)
 - **TODO Consolidation**: Merged `TODO_claude.md`, `TODO_codex.md`, `TODO_gemini.md` into single `TODO.md`

@@ -761,7 +761,7 @@ Examples:
 
     # Global options
     parser.add_argument(
-        "--version", action="version", version="%(prog)s 0.5.1"
+        "--version", action="version", version="%(prog)s 0.6.0"
     )
 
     # Create subcommands

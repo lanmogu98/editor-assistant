@@ -5,11 +5,11 @@ extracting only the main content from a webpage
 and removing all the noise like ads, headers, footers, etc.
 """
 
-import requests
+import requests  # type: ignore[import-untyped]
 from .data_models import MDArticle, InputType
 from .config.constants import DEFAULT_USER_AGENT, DEBUG_LOGGING_LEVEL
 import logging
-from typing import Optional
+from typing import Any, Optional, cast
 from enum import Enum
 
 HEADERS = {"User-Agent": DEFAULT_USER_AGENT}
@@ -38,7 +38,7 @@ class CleanHTML2Markdown:
         return self.h2t
 
     # Fetch the html content from the path
-    def _fetch_html_content(self, path) -> str:
+    def _fetch_html_content(self, path: str) -> Optional[str]:
         # handle url
         if path.startswith("http"):
             try:
@@ -62,9 +62,11 @@ class CleanHTML2Markdown:
                 return None
 
     # convert html to markdown using readabilipy
-    def _convert_by_readabilipy(self, path) -> MDArticle:
+    def _convert_by_readabilipy(self, path: str) -> Optional[MDArticle]:
         try:
-            from readabilipy import simple_json_from_html_string
+            from readabilipy import (  # type: ignore[import-untyped]
+                simple_json_from_html_string,
+            )
         except ImportError:
             raise ImportError(
                 "readabilipy is not installed."
@@ -78,7 +80,10 @@ class CleanHTML2Markdown:
             return None
 
         # Use Readability to extract the main content
-        article = simple_json_from_html_string(content, use_readability=True)
+        article = cast(
+            dict[str, Any],
+            simple_json_from_html_string(content, use_readability=True),
+        )
 
         # Initialize html2text
         h2t = self._init_html2text()
@@ -95,10 +100,12 @@ class CleanHTML2Markdown:
             converter="readabilipy",
         )
 
-    def _convert_by_trafilatura(self, path) -> Optional[MDArticle]:
+    def _convert_by_trafilatura(self, path: str) -> Optional[MDArticle]:
         """Convert HTML to markdown using trafilatura."""
         try:
-            from trafilatura import bare_extraction
+            from trafilatura import (  # type: ignore[import-untyped]
+                bare_extraction,
+            )
         except ImportError:
             raise ImportError(
                 "trafilatura is not installed. "
@@ -124,7 +131,8 @@ class CleanHTML2Markdown:
             with_metadata=True,
         )
 
-        if not result or not result.get("text"):
+        result_dict = cast(Optional[dict[str, Any]], result)
+        if not result_dict or not result_dict.get("text"):
             self.logger.error(
                 f"trafilatura failed to extract content from {path}"
             )
@@ -132,15 +140,15 @@ class CleanHTML2Markdown:
 
         return MDArticle(
             type=InputType.PAPER,
-            content=result.get("text", ""),
-            title=result.get("title", ""),
-            authors=result.get("author", ""),
+            content=result_dict.get("text", ""),
+            title=result_dict.get("title", ""),
+            authors=result_dict.get("author", ""),
             source_path=path,
             converter="trafilatura",
         )
 
     def convert(
-        self, path, converter_name=Converter.READABILIPY.value
+        self, path: str, converter_name: str = Converter.READABILIPY.value
     ) -> Optional[MDArticle]:
         match converter_name:
             case Converter.READABILIPY.value:
@@ -181,7 +189,7 @@ def main():
         if args.output:
             try:
                 with open(args.output, "w", encoding="utf-8") as f:
-                    f.write(result.content)
+                    f.write(cast(str, result.content))
                 print(f"Saved markdown to {args.output}")
             except Exception as e:
                 print(f"Error saving to file: {e}")

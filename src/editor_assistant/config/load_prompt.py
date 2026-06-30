@@ -42,6 +42,9 @@ class PromptLoader:
             raise FileNotFoundError(
                 f"Template '{template_name}' not found in prompt directories"
             ) from exc
+        raise FileNotFoundError(
+            f"Template '{template_name}' not found in prompt directories"
+        )
 
 
 # Global loader instance
