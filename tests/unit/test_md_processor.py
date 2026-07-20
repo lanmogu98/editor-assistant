@@ -196,6 +196,6 @@ class TestMDProcessorWithRealClient:
     def test_processor_initializes_with_real_client(self, monkeypatch):
         """Test processor can initialize with real client."""
         monkeypatch.setenv("DEEPSEEK_API_KEY_VOLC", "test-key-volc")
-        processor = MDProcessor("deepseek-v3.2", stream=False)
-        assert processor.model_name == "deepseek-v3.2"
+        processor = MDProcessor("deepseek-v4-flash-volc", stream=False)
+        assert processor.model_name == "deepseek-v4-flash-volc"
         assert processor.stream is False

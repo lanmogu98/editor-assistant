@@ -7,6 +7,11 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Documented downstream package contract for LinkResearcher and other workers.
 
+### Changed
+- Editor Assistant now packages and owns the exact `llm-exec-core` 0.3.0 21-model catalog while continuing to use core for schema validation and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
+- Changed the CLI/library migration default from `glm-4.7-or` to `glm-5.2-or`. Removed names such as `glm-4.7-or` and `glm-4.6-or` are not restored or mapped.
+- Constrained the runtime dependency to `llm-exec-core>=0.3.0,<0.4.0` while retaining the sibling editable source for development.
+
 ## [0.6.0] - 2026-06-30
 
 ### Added

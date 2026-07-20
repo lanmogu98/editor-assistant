@@ -49,7 +49,7 @@ class TestAsyncLLMClient:
         mock_httpx_client.post.return_value = mock_response
 
         # Initialize client
-        client = LLMClient("deepseek-v3.2")
+        client = LLMClient("deepseek-v4-flash-volc")
 
         # Execute (should be awaitable)
         response, usage = await client.generate_response("Hello")
@@ -90,7 +90,7 @@ class TestAsyncLLMClient:
 
         mock_httpx_client.stream = mock_stream
 
-        client = LLMClient("deepseek-v3.2")
+        client = LLMClient("deepseek-v4-flash-volc")
         streamed_chunks = []
         callback = streamed_chunks.append
 
@@ -109,7 +109,7 @@ class TestAsyncLLMClient:
         """Test that client supports async context manager."""
         from editor_assistant.llm_client import LLMClient
 
-        async with LLMClient("deepseek-v3.2") as client:
+        async with LLMClient("deepseek-v4-flash-volc") as client:
             assert client is not None
             # Internal client should be initialized
             assert client._async_client is not None
@@ -121,12 +121,12 @@ class TestAsyncLLMClient:
         self, monkeypatch, mock_env_vars, mock_httpx_client
     ):
         """Final HTTP errors include the response body."""
-        import editor_assistant.llm_client as llm_client_module
+        import llm_exec_core.client as core_client_module
         from editor_assistant.llm_client import LLMClient
 
-        monkeypatch.setattr(llm_client_module, "MAX_API_RETRIES", 1)
+        monkeypatch.setattr(core_client_module, "MAX_API_RETRIES", 1)
 
-        client = LLMClient("deepseek-v3.2")
+        client = LLMClient("deepseek-v4-flash-volc")
         request = httpx.Request("POST", client.api_url)
         mock_httpx_client.post.return_value = httpx.Response(
             404,
@@ -145,16 +145,16 @@ class TestAsyncLLMClient:
         self, monkeypatch, mock_httpx_client
     ):
         """Pinned OpenRouter 404 can retry with a smaller output budget."""
-        import editor_assistant.llm_client as llm_client_module
+        import llm_exec_core.client as core_client_module
         from editor_assistant.llm_client import LLMClient
 
         monkeypatch.setenv("ZHIPU_API_KEY_OPENROUTER", "test-openrouter-key")
-        monkeypatch.setattr(llm_client_module, "MAX_API_RETRIES", 2)
+        monkeypatch.setattr(core_client_module, "MAX_API_RETRIES", 2)
         monkeypatch.setattr(
-            llm_client_module, "INITIAL_RETRY_DELAY_SECONDS", 0
+            core_client_module, "INITIAL_RETRY_DELAY_SECONDS", 0
         )
 
-        client = LLMClient("glm-4.7-or")
+        client = LLMClient("glm-5.2-or")
         request = httpx.Request("POST", client.api_url)
         responses = [
             httpx.Response(

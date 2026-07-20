@@ -1,0 +1,386 @@
+# |
+#   This is the single source of truth for all LLM configuration.
+#   The structure is: provider -> provider_settings -> model_name -> model_details
+#   Users can add new models to the config file in the format demonstrated below.
+#    - provider: the name of the LLM provider.
+#    - provider_settings: the settings of the LLM provider.
+#    - model_name: the name of the LLM model.
+#    - model_details: the details of the LLM model.
+#    - pricing: the pricing of the LLM model, per 1M tokens.
+#    - pricing_currency: the currency of the pricing.
+#    - max_tokens: the maximum number of tokens the model can generate.
+#    - context_window: the maximum number of tokens the model can process.
+#    - rate_limit (optional): per-provider rate limiting configuration
+#        - min_interval_seconds: minimum time between requests (default: 0.5)
+#        - max_requests_per_minute: max requests per minute, 0 = unlimited (default: 60)
+#
+#   In default, and as a highly recommend practice, the API key of each model is
+#   stored in the environment variable.
+
+#-------------------------------------------------------------------------------
+# Shared endpoints for reuse across providers
+#-------------------------------------------------------------------------------
+_shared_endpoints:
+  volcengine: &volcengine_endpoint "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+  openrouter: &openrouter_endpoint "https://openrouter.ai/api/v1/chat/completions"
+
+
+deepseek-volcengine:
+  api_key_env_var: "DEEPSEEK_API_KEY_VOLC"
+  api_base_url: *volcengine_endpoint
+  temperature: 0.4
+  max_tokens: 384000
+  context_window: 1024000
+  pricing_currency: "¥"
+  models:
+    deepseek-v4-flash-volc:
+      id: "deepseek-v4-flash-260425"
+      pricing: { input: 1.00, output: 2.00 }
+      capabilities:
+        version: "deepseek-volcengine-v4-flash-2026-07-20"
+        source: "https://www.volcengine.com/docs/82379/1330310?lang=zh"
+        source_date: "2026-07-20"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    deepseek-v4-pro-volc:
+      id: "deepseek-v4-pro-260425"
+      pricing: { input: 12.00, output: 24.00 }
+      capabilities:
+        version: "deepseek-volcengine-v4-pro-2026-07-20"
+        source: "https://www.volcengine.com/docs/82379/1330310?lang=zh"
+        source_date: "2026-07-20"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+
+# DeepSeek native API V4 models and ordinary cache-miss pricing.
+deepseek:
+  api_key_env_var: "DEEPSEEK_API_KEY"
+  api_base_url: "https://api.deepseek.com/chat/completions"
+  temperature: 0.4
+  max_tokens: 384000
+  context_window: 1000000
+  pricing_currency: "¥"
+  models:
+    deepseek-v4-flash:
+      id: "deepseek-v4-flash"
+      pricing: { input: 1.00, output: 2.00 }
+      capabilities:
+        version: "deepseek-native-v4-flash-2026-07-20"
+        source: "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"
+        source_date: "2026-07-20"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    deepseek-v4-pro:
+      id: "deepseek-v4-pro"
+      pricing: { input: 3.00, output: 6.00 }
+      capabilities:
+        version: "deepseek-native-v4-pro-2026-07-20"
+        source: "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"
+        source_date: "2026-07-20"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+
+gemini:
+  api_key_env_var: "GEMINI_API_KEY"
+  api_base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+  temperature: 1.0  # Gemini 3 recommends default 1.0 to avoid looping issues
+  max_tokens: 65536
+  context_window: 1048576
+  pricing_currency: "$"
+  # Thinking defaults vary by model; do not force a provider-wide override.
+  models:
+    gemini-3-flash:
+      id: "gemini-3-flash-preview"
+      pricing: { input: 0.5, output: 3.00 }
+      capabilities:
+        version: "gemini-openai-compat-2026-07-02"
+        source: "https://ai.google.dev/gemini-api/docs/openai"
+        source_date: "2026-07-02"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning_effort"]
+    gemini-3.1-flash-lite:
+      id: "gemini-3.1-flash-lite"
+      pricing: { input: 0.25, output: 1.50 }
+      capabilities:
+        version: "gemini-openai-compat-2026-07-02"
+        source: "https://ai.google.dev/gemini-api/docs/openai"
+        source_date: "2026-07-02"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning_effort"]
+    gemini-3.1-pro:
+      id: "gemini-3.1-pro-preview"
+      pricing: { input: 2.50, output: 15.00 }
+    gemini-3.5-flash:
+      id: "gemini-3.5-flash"
+      pricing: { input: 1.50, output: 9.00 }
+      capabilities:
+        version: "gemini-3.5-flash-2026-07-20"
+        source: "https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash"
+        source_date: "2026-07-20"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning_effort"]
+
+# kimi-volcengine: sunset by Volcengine (model id "kimi-k2-250905" returns 404
+# as of 2026-05-09; Moonshot's official K2 series sunset is 2026-05-25). Block
+# preserved as commented placeholder for K2.5 / K2.6 (tracked in #20).
+# kimi-volcengine:
+#   api_key_env_var: "KIMI_API_KEY_VOLC"
+#   api_base_url: *volcengine_endpoint
+#   temperature: 0.5
+#   max_tokens: 32000
+#   context_window: 128000
+#   pricing_currency: "¥"
+#   models:
+#     kimi-k2:
+#       id: "kimi-k2-250905"
+#       pricing: {input: 4.00, output: 16.00}
+
+# Alibaba Bailian (百炼) — same OpenAI-compatible endpoint as legacy DashScope.
+qwen:
+  api_key_env_var: "QWEN_API_KEY"
+  api_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+  temperature: 0.6
+  max_tokens: 32768
+  context_window: 995904
+  pricing_currency: "¥"
+  models:
+    qwen3.6-flash:
+      id: "qwen3.6-flash"
+      pricing: {input: 0.30, output: 0.60}
+      capabilities:
+        version: "qwen-bailian-2026-07-02"
+        source: "https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope"
+        source_date: "2026-07-02"
+        strict_response_schema: false
+        json_object_response: false
+        tools: false
+        tool_streaming: false
+        tool_choice: false
+        reasoning_controls: []
+
+zhipu:
+  api_key_env_var: "ZHIPU_API_KEY"
+  api_base_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+  temperature: 0.6
+  max_tokens: 128000
+  context_window: 200000
+  pricing_currency: "$"
+  models:
+    glm-5.2:
+      id: "glm-5.2"
+      pricing: {input: 1.05, output: 3.50}
+      capabilities:
+        version: "zhipu-glm-5.2-2026-07-02"
+        source: "https://docs.bigmodel.cn/cn/guide/capabilities/struct-output"
+        source_date: "2026-07-02"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    glm-5:
+      id: "glm-5"
+      pricing: {input: 0.60, output: 1.92}
+    glm-5.1:
+      id: "glm-5.1"
+      pricing: {input: 1.05, output: 3.50}
+
+zhipu-openrouter:
+  api_key_env_var: "ZHIPU_API_KEY_OPENROUTER"
+  api_base_url: *openrouter_endpoint
+  temperature: 0.6
+  max_tokens: 65536
+  max_tokens_retry:
+    status_code: 404
+    body_contains: "no allowed providers"
+    max_tokens_limit: 8192
+  context_window: 202752
+  pricing_currency: "$"
+  # OpenRouter official routing controls (pin to Z.AI route; no fallbacks)
+  request_overrides:
+    provider:
+      only: ["z-ai"]
+      allow_fallbacks: false
+  models:
+    glm-5.2-or:
+      id: "z-ai/glm-5.2"
+      pricing: {input: 1.05, output: 3.50}
+      capabilities:
+        version: "openrouter-z-ai-glm-5.2-2026-07-15"
+        source: "https://openrouter.ai/api/v1/models"
+        source_date: "2026-07-15"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        parallel_tool_calls: true
+        reasoning_controls: ["reasoning", "include_reasoning", "reasoning_effort"]
+        openrouter_supported_parameters:
+          - response_format
+          - structured_outputs
+          - tools
+          - tool_choice
+          - parallel_tool_calls
+          - max_tokens
+          - temperature
+          - reasoning
+          - include_reasoning
+          - reasoning_effort
+    glm-5-or:
+      id: "z-ai/glm-5"
+      pricing: {input: 0.60, output: 1.92}
+    glm-5.1-or:
+      id: "z-ai/glm-5.1"
+      pricing: {input: 1.05, output: 3.50}
+    glm-5-turbo-or:
+      id: "z-ai/glm-5-turbo"
+      pricing: {input: 1.20, output: 4.00}
+
+doubao:
+  api_key_env_var: "DOUBAO_API_KEY"
+  api_base_url: *volcengine_endpoint
+  temperature: 0.6
+  max_tokens: 32000
+  context_window: 256000
+  pricing_currency: "¥"
+  models:
+    doubao-seed-2.1-pro:
+      id: "doubao-seed-2-1-pro-260628"
+      pricing: {input: 0.80, output: 2.00}
+      capabilities:
+        version: "volcengine-doubao-seed-2.1-pro-2026-07-02"
+        source: "https://www.volcengine.com/docs/82379/1330310"
+        source_date: "2026-07-02"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    doubao-seed-1.6:
+      id: "doubao-seed-1-6-250615"
+      pricing: {input: 0.80, output: 2.00}
+
+openai-openrouter:
+  api_key_env_var: "OPENAI_API_KEY_OPENROUTER"
+  api_base_url: *openrouter_endpoint
+  temperature: 0.6
+  max_tokens: 16384
+  context_window: 128000
+  pricing_currency: "$"
+  models:
+    gpt-5.5-or:
+      id: "openai/gpt-5.5"
+      pricing: {input: 5.00, output: 30.00}
+      capabilities:
+        version: "openrouter-openai-gpt-5.5-2026-07-15"
+        source: "https://openrouter.ai/api/v1/models"
+        source_date: "2026-07-15"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning", "include_reasoning", "reasoning_effort"]
+        openrouter_supported_parameters:
+          - response_format
+          - structured_outputs
+          - tools
+          - tool_choice
+          - max_tokens
+          - reasoning
+          - include_reasoning
+          - reasoning_effort
+          - max_completion_tokens
+
+anthropic-openrouter:
+  api_key_env_var: "ANTHROPIC_API_KEY_OPENROUTER"
+  api_base_url: *openrouter_endpoint
+  temperature: 0.6
+  max_tokens: 64000
+  context_window: 200000
+  pricing_currency: "$"
+  # Example: per-provider rate limiting (optional, uses defaults if not specified)
+  rate_limit:
+    min_interval_seconds: 1.0  # Claude is expensive, slow down requests
+    max_requests_per_minute: 30
+  models:
+    claude-sonnet-5-or:
+      id: "anthropic/claude-sonnet-5"
+      pricing: {input: 3.00, output: 15.00}
+      capabilities:
+        version: "openrouter-anthropic-sonnet-5-2026-07-15"
+        source: "https://openrouter.ai/api/v1/models"
+        source_date: "2026-07-15"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning", "include_reasoning", "reasoning_effort", "verbosity"]
+        openrouter_supported_parameters:
+          - response_format
+          - structured_outputs
+          - tools
+          - tool_choice
+          - max_tokens
+          - max_completion_tokens
+          - reasoning
+          - include_reasoning
+          - reasoning_effort
+          - verbosity
+    claude-opus-4.8-or:
+      id: "anthropic/claude-opus-4.8"
+      pricing: {input: 5.00, output: 25.00}
+      capabilities:
+        version: "openrouter-anthropic-opus-4.8-2026-07-15"
+        source: "https://openrouter.ai/api/v1/models"
+        source_date: "2026-07-15"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning", "include_reasoning", "reasoning_effort", "verbosity"]
+        openrouter_supported_parameters:
+          - response_format
+          - structured_outputs
+          - tools
+          - tool_choice
+          - max_tokens
+          - max_completion_tokens
+          - temperature
+          - reasoning
+          - include_reasoning
+          - reasoning_effort
+          - verbosity

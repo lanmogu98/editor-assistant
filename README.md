@@ -10,7 +10,7 @@ Editor Assistant is an AI-powered Python CLI and library for turning research pa
 
 ### Package Boundary
 
-Editor Assistant now consumes the `llm-exec-core` package for model catalog loading, provider routing, token accounting, and HTTP execution. The app layer owns document workflow, tasks, prompts, SQLite storage, CLI commands, output paths, and app logging.
+Editor Assistant uses `llm-exec-core` for catalog schema and loading, provider routing, token accounting, and HTTP execution. The app layer owns the packaged default model catalog as well as document workflow, tasks, prompts, SQLite storage, CLI commands, output paths, and app logging.
 
 This branch is a coordinated two-repo/local-migration branch. Keep the current sibling-checkout dependency mode:
 
@@ -19,7 +19,7 @@ This branch is a coordinated two-repo/local-migration branch. Keep the current s
 llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-That relative source is intentional for this PR and for CI/workspace checkouts that test both repos together. Only after `llm-exec-core` is published should the app switch to a release-consumer configuration by removing `[tool.uv.sources]` and pinning `llm-exec-core==0.1.0`.
+That relative source remains intentional for local development and workspace checkouts that test both repos together. Published installs use the declared `llm-exec-core>=0.3.0,<0.4.0` compatibility range; the editable source does not change that package boundary.
 
 ### Features
 
@@ -74,9 +74,6 @@ export DEEPSEEK_API_KEY=your_deepseek_api_key
 # Gemini paid API key
 export GEMINI_API_KEY=your_gemini_api_key
 
-# Gemini AI Studio free-tier key
-export GEMINI_FT_API_KEY=your_gemini_free_tier_api_key
-
 # Qwen via Alibaba Bailian / DashScope-compatible endpoint
 export QWEN_API_KEY=your_qwen_api_key
 
@@ -108,7 +105,7 @@ All examples below use `uv run` because this is the recommended source-checkout 
 
 ```bash
 uv run editor-assistant brief paper=https://example.com/research-article
-uv run editor-assistant brief paper=paper-a.pdf paper=paper-b.pdf --model deepseek-r1 --debug
+uv run editor-assistant brief paper=paper-a.pdf paper=paper-b.pdf --model deepseek-v4-flash-volc --debug
 uv run editor-assistant brief paper=paper.pdf --save-files
 ```
 
@@ -118,7 +115,7 @@ uv run editor-assistant brief paper=paper.pdf --save-files
 
 ```bash
 uv run editor-assistant outline https://arxiv.org/paper.pdf
-uv run editor-assistant outline paper.pdf --model deepseek-r1
+uv run editor-assistant outline paper.pdf --model deepseek-v4-flash-volc
 uv run editor-assistant outline paper.pdf --save-files
 ```
 
@@ -128,8 +125,8 @@ uv run editor-assistant outline paper.pdf --save-files
 
 ```bash
 uv run editor-assistant translate https://arxiv.org/paper.pdf
-uv run editor-assistant translate document.pdf --model gemini-2.5-flash-free
-uv run editor-assistant translate research.md --model deepseek-r1 --debug
+uv run editor-assistant translate document.pdf --model gemini-3.5-flash
+uv run editor-assistant translate research.md --model deepseek-v4-flash-volc --debug
 uv run editor-assistant translate research.md --save-files
 ```
 
@@ -149,7 +146,7 @@ uv run editor-assistant process paper=paper.pdf --tasks brief,outline --no-strea
 
 ```bash
 uv run editor-assistant batch ./docs/ --ext .md --task translate
-uv run editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
+uv run editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v4-flash-volc
 uv run editor-assistant batch ./papers/ --ext .html --task outline --save-files
 ```
 
@@ -190,7 +187,7 @@ uv run editor-assistant export history.csv --limit 100
 
 These options are available on generation commands such as `brief`, `outline`, `translate`, `process`, and `batch`:
 
-- `--model`: Choose an LLM model. Default: `glm-4.7-or`.
+- `--model`: Choose an LLM model. Default: `glm-5.2-or`.
 - `--thinking`: Reasoning level for supported Gemini models: `low`, `medium`, or `high`.
 - `--no-stream`: Disable streaming output.
 - `--save-files`: Persist generated markdown files and token reports to disk. The SQLite run database is still updated either way.
@@ -203,40 +200,48 @@ Global options:
 
 ### Supported Models
 
-Model names are loaded from `llm_exec_core/llm_config.yml` in the `llm-exec-core` package. In this repo, `src/editor_assistant/config/llm_models.py` is a compatibility shim that re-exports the core catalog loader for older imports. Use `uv run editor-assistant brief --help` to see the current `--model` choices.
+Model names are loaded from Editor Assistant's packaged `config/llm_config.yml`. `llm-exec-core` still owns schema validation and explicit-source loading, while `src/editor_assistant/config/llm_models.py` preserves the existing app import path. Omitting `config_source` uses the packaged app catalog; callers may pass a `pathlib.Path` or raw dictionary to `LLMClient`, `LLMClient.get_supported_models()`, or the compatibility config functions to use an isolated alternative catalog.
 
-Current default model: `glm-4.7-or`.
+Current default model: `glm-5.2-or`.
+
+```python
+from pathlib import Path
+
+from editor_assistant.llm_client import LLMClient
+
+models = LLMClient.get_supported_models(Path("custom_llm_config.yml"))
+client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
+```
 
 #### DeepSeek
 
-- Volcengine (`DEEPSEEK_API_KEY_VOLC`): `deepseek-v3.2`, `deepseek-r1`
+- Volcengine (`DEEPSEEK_API_KEY_VOLC`): `deepseek-v4-flash-volc`, `deepseek-v4-pro-volc`
 - Official API (`DEEPSEEK_API_KEY`): `deepseek-v4-flash`, `deepseek-v4-pro`
 
 #### Gemini
 
-- Paid key (`GEMINI_API_KEY`): `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro`
-- Free-tier key (`GEMINI_FT_API_KEY`): `gemini-2.5-flash-free`, `gemini-2.5-flash-lite-free`, `gemini-3-flash-free`, `gemini-3.1-flash-lite-free`
+- Paid key (`GEMINI_API_KEY`): `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro`, `gemini-3.5-flash`
 
 #### Qwen
 
-- `qwen-turbo`, `qwen-plus`, `qwen3.5-plus`, `qwen3-max-preview`, `qwen3-max`
+- `qwen3.6-flash`
 
 #### GLM / Zhipu
 
-- Zhipu API (`ZHIPU_API_KEY`): `glm-4.5`, `glm-4.6`, `glm-4.7`, `glm-5`, `glm-5.1`
-- OpenRouter (`ZHIPU_API_KEY_OPENROUTER`): `glm-4.5-or`, `glm-4.6-or`, `glm-4.7-or`, `glm-5-or`, `glm-5.1-or`, `glm-5-turbo-or`
+- Zhipu API (`ZHIPU_API_KEY`): `glm-5.2`, `glm-5`, `glm-5.1`
+- OpenRouter (`ZHIPU_API_KEY_OPENROUTER`): `glm-5.2-or`, `glm-5-or`, `glm-5.1-or`, `glm-5-turbo-or`
 
 #### Doubao
 
-- `doubao-seed-1.6`
+- `doubao-seed-2.1-pro`, `doubao-seed-1.6`
 
 #### OpenAI via OpenRouter
 
-- `gpt-4o-or`, `gpt-4.1-or`, `gpt-5-or`, `gpt-5.2-or`, `gpt-5.4-or`, `gpt-5.5-or`
+- `gpt-5.5-or`
 
 #### Anthropic via OpenRouter
 
-- `claude-sonnet-4-or`, `claude-opus-4.6-or`, `claude-sonnet-4.6-or`, `claude-opus-4.7-or`, `claude-haiku-4.5-or`
+- `claude-sonnet-5-or`, `claude-opus-4.8-or`
 
 ### Python API
 
@@ -248,7 +253,7 @@ from editor_assistant.main import EditorAssistant
 
 
 async def main():
-    assistant = EditorAssistant("glm-4.7-or", debug_mode=True)
+    assistant = EditorAssistant("glm-5.2-or", debug_mode=True)
 
     await assistant.process_multiple(
         [Input(type=InputType.PAPER, path="paper.pdf")],
@@ -310,7 +315,7 @@ Important current CLI conventions:
 - `brief` and `process` require typed source arguments: `paper=...` or `news=...`; multiple supplied inputs are processed independently.
 - `outline` and `translate` take a single plain input path or URL.
 - Generated responses are saved to SQLite by default; file output is opt-in with `--save-files`.
-- The default model is `glm-4.7-or`.
+- The default model is `glm-5.2-or`. The removed `glm-4.7-or` and `glm-4.6-or` names are not aliases; migrate callers to a supported model explicitly.
 
 Older v0.1 syntax such as `--article paper:paper.pdf` is no longer supported.
 
@@ -336,7 +341,7 @@ Editor Assistant 是一个 AI 驱动的 Python CLI 和库，用于把研究论�
 
 ### 包边界
 
-Editor Assistant 现在通过 `llm-exec-core` 包来提供模型目录加载、provider 路由、token 统计和 HTTP 执行能力；应用层仍负责文档工作流、任务、prompt、SQLite 持久化、CLI、输出路径和应用日志。
+Editor Assistant 使用 `llm-exec-core` 提供模型目录 schema 与加载、provider 路由、token 统计和 HTTP 执行能力；应用层拥有打包的默认模型目录，同时继续负责文档工作流、任务、prompt、SQLite 持久化、CLI、输出路径和应用日志。
 
 当前分支是一个双仓协同的本地迁移分支，必须保留 sibling checkout 的依赖方式：
 
@@ -345,7 +350,7 @@ Editor Assistant 现在通过 `llm-exec-core` 包来提供模型目录加载、p
 llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-这个相对路径是当前 PR 和双仓 CI/workspace checkout 的预期配置。只有在 `llm-exec-core` 正式发布之后，才应移除 `[tool.uv.sources]`，并把依赖改成 `llm-exec-core==0.1.0`。
+这个相对路径仍用于本地开发和双仓 workspace checkout。发布安装遵循声明的 `llm-exec-core>=0.3.0,<0.4.0` 兼容范围；editable source 不会改变该包边界。
 
 ### 功能特色
 
@@ -400,9 +405,6 @@ export DEEPSEEK_API_KEY=your_deepseek_api_key
 # Gemini paid API key
 export GEMINI_API_KEY=your_gemini_api_key
 
-# Gemini AI Studio free-tier key
-export GEMINI_FT_API_KEY=your_gemini_free_tier_api_key
-
 # Qwen via Alibaba Bailian / DashScope-compatible endpoint
 export QWEN_API_KEY=your_qwen_api_key
 
@@ -434,7 +436,7 @@ export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 
 ```bash
 uv run editor-assistant brief paper=https://example.com/research-article
-uv run editor-assistant brief paper=paper-a.pdf paper=paper-b.pdf --model deepseek-r1 --debug
+uv run editor-assistant brief paper=paper-a.pdf paper=paper-b.pdf --model deepseek-v4-flash-volc --debug
 uv run editor-assistant brief paper=paper.pdf --save-files
 ```
 
@@ -444,7 +446,7 @@ uv run editor-assistant brief paper=paper.pdf --save-files
 
 ```bash
 uv run editor-assistant outline https://arxiv.org/paper.pdf
-uv run editor-assistant outline paper.pdf --model deepseek-r1
+uv run editor-assistant outline paper.pdf --model deepseek-v4-flash-volc
 uv run editor-assistant outline paper.pdf --save-files
 ```
 
@@ -454,8 +456,8 @@ uv run editor-assistant outline paper.pdf --save-files
 
 ```bash
 uv run editor-assistant translate https://arxiv.org/paper.pdf
-uv run editor-assistant translate document.pdf --model gemini-2.5-flash-free
-uv run editor-assistant translate research.md --model deepseek-r1 --debug
+uv run editor-assistant translate document.pdf --model gemini-3.5-flash
+uv run editor-assistant translate research.md --model deepseek-v4-flash-volc --debug
 uv run editor-assistant translate research.md --save-files
 ```
 
@@ -475,7 +477,7 @@ uv run editor-assistant process paper=paper.pdf --tasks brief,outline --no-strea
 
 ```bash
 uv run editor-assistant batch ./docs/ --ext .md --task translate
-uv run editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v3.2
+uv run editor-assistant batch ./papers/ --ext .pdf --task brief --model deepseek-v4-flash-volc
 uv run editor-assistant batch ./papers/ --ext .html --task outline --save-files
 ```
 
@@ -515,7 +517,7 @@ uv run editor-assistant export history.csv --limit 100
 
 以下选项适用于 `brief`、`outline`、`translate`、`process`、`batch` 等生成命令：
 
-- `--model`：选择 LLM 模型。默认值：`glm-4.7-or`。
+- `--model`：选择 LLM 模型。默认值：`glm-5.2-or`。
 - `--thinking`：支持的 Gemini 模型推理强度，可选 `low`、`medium`、`high`。
 - `--no-stream`：关闭流式输出。
 - `--save-files`：把生成的 Markdown 文件和 token 报告写入磁盘。无论是否启用，SQLite 数据库都会更新。
@@ -528,40 +530,48 @@ uv run editor-assistant export history.csv --limit 100
 
 ### 支持的模型
 
-模型名称来自 `llm-exec-core` 包内的 `llm_exec_core/llm_config.yml`。本仓库中的 `src/editor_assistant/config/llm_models.py` 只是兼容层，会转发到 core catalog loader；可用 `uv run editor-assistant brief --help` 查看最新 `--model` 选项。
+模型名称来自 Editor Assistant 打包的 `config/llm_config.yml`。`llm-exec-core` 继续负责 schema 验证和显式来源加载，`src/editor_assistant/config/llm_models.py` 保留现有应用导入路径。省略 `config_source` 时使用应用目录；调用方也可以向 `LLMClient`、`LLMClient.get_supported_models()` 或兼容配置函数传入 `pathlib.Path` 或原始字典，以使用相互隔离的替代目录。
 
-当前默认模型：`glm-4.7-or`。
+当前默认模型：`glm-5.2-or`。
+
+```python
+from pathlib import Path
+
+from editor_assistant.llm_client import LLMClient
+
+models = LLMClient.get_supported_models(Path("custom_llm_config.yml"))
+client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
+```
 
 #### DeepSeek
 
-- 火山引擎 (`DEEPSEEK_API_KEY_VOLC`)：`deepseek-v3.2`、`deepseek-r1`
+- 火山引擎 (`DEEPSEEK_API_KEY_VOLC`)：`deepseek-v4-flash-volc`、`deepseek-v4-pro-volc`
 - 官方 API (`DEEPSEEK_API_KEY`)：`deepseek-v4-flash`、`deepseek-v4-pro`
 
 #### Gemini
 
-- 付费 key (`GEMINI_API_KEY`)：`gemini-3-flash`、`gemini-3.1-flash-lite`、`gemini-3.1-pro`
-- 免费层 key (`GEMINI_FT_API_KEY`)：`gemini-2.5-flash-free`、`gemini-2.5-flash-lite-free`、`gemini-3-flash-free`、`gemini-3.1-flash-lite-free`
+- 付费 key (`GEMINI_API_KEY`)：`gemini-3-flash`、`gemini-3.1-flash-lite`、`gemini-3.1-pro`、`gemini-3.5-flash`
 
 #### Qwen
 
-- `qwen-turbo`、`qwen-plus`、`qwen3.5-plus`、`qwen3-max-preview`、`qwen3-max`
+- `qwen3.6-flash`
 
 #### GLM / 智谱
 
-- 智谱 API (`ZHIPU_API_KEY`)：`glm-4.5`、`glm-4.6`、`glm-4.7`、`glm-5`、`glm-5.1`
-- OpenRouter (`ZHIPU_API_KEY_OPENROUTER`)：`glm-4.5-or`、`glm-4.6-or`、`glm-4.7-or`、`glm-5-or`、`glm-5.1-or`、`glm-5-turbo-or`
+- 智谱 API (`ZHIPU_API_KEY`)：`glm-5.2`、`glm-5`、`glm-5.1`
+- OpenRouter (`ZHIPU_API_KEY_OPENROUTER`)：`glm-5.2-or`、`glm-5-or`、`glm-5.1-or`、`glm-5-turbo-or`
 
 #### Doubao
 
-- `doubao-seed-1.6`
+- `doubao-seed-2.1-pro`、`doubao-seed-1.6`
 
 #### OpenAI via OpenRouter
 
-- `gpt-4o-or`、`gpt-4.1-or`、`gpt-5-or`、`gpt-5.2-or`、`gpt-5.4-or`、`gpt-5.5-or`
+- `gpt-5.5-or`
 
 #### Anthropic via OpenRouter
 
-- `claude-sonnet-4-or`、`claude-opus-4.6-or`、`claude-sonnet-4.6-or`、`claude-opus-4.7-or`、`claude-haiku-4.5-or`
+- `claude-sonnet-5-or`、`claude-opus-4.8-or`
 
 ### Python API
 
@@ -573,7 +583,7 @@ from editor_assistant.main import EditorAssistant
 
 
 async def main():
-    assistant = EditorAssistant("glm-4.7-or", debug_mode=True)
+    assistant = EditorAssistant("glm-5.2-or", debug_mode=True)
 
     await assistant.process_multiple(
         [Input(type=InputType.PAPER, path="paper.pdf")],
@@ -634,7 +644,7 @@ uv run black src/ tests/
 - `brief` 和 `process` 使用 `paper=...` 或 `news=...` 这类带类型输入；传入多个输入时会逐个独立处理。
 - `outline` 和 `translate` 接收单个普通路径或 URL。
 - 生成结果默认写入 SQLite；文件输出需要显式加 `--save-files`。
-- 默认模型为 `glm-4.7-or`。
+- 默认模型为 `glm-5.2-or`。已移除的 `glm-4.7-or` 和 `glm-4.6-or` 不是别名；调用方必须显式迁移到受支持的模型。
 
 旧版 v0.1 的 `--article paper:paper.pdf` 语法已经不再支持。
 
