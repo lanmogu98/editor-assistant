@@ -7,7 +7,7 @@ name = "editor_assistant"
 version = "0.6.0"
 requires-python = ">=3.10"
 dependencies = [
-    "llm-exec-core",
+    "llm-exec-core>=0.3.0,<0.4.0",
     "markitdown[all]",
     "requests",  # Deprecated: will be removed after async migration complete
     "httpx>=0.25.0",
@@ -41,9 +41,9 @@ dev = [
 [tool.black]
 line-length = 79
 
-# include prompt templates in the package
+# include runtime configuration in the package
 [tool.setuptools]
-package-data = { "editor_assistant" = ["config/prompts/*.txt"] }
+package-data = { "editor_assistant" = ["config/llm_config.yml", "config/prompts/*.txt"] }
 
 [tool.uv.sources]
 llm-exec-core = { path = "../llm-exec-core", editable = true }

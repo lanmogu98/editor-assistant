@@ -6,8 +6,11 @@ Keeping them in one place makes tuning easier and documents assumptions.
 """
 
 import logging
+from pathlib import Path
 
 from llm_exec_core import constants as _core_constants
+
+LLM_CONFIG_PATH = Path(__file__).with_name("llm_config.yml")
 
 API_REQUEST_TIMEOUT_SECONDS = _core_constants.API_REQUEST_TIMEOUT_SECONDS
 CHAR_TOKEN_RATIO = _core_constants.CHAR_TOKEN_RATIO
@@ -78,6 +81,7 @@ DEFAULT_USER_AGENT = (
 URL_HEAD_TIMEOUT_SECONDS = 10
 
 __all__ = [
+    "LLM_CONFIG_PATH",
     "API_REQUEST_TIMEOUT_SECONDS",
     "CHAR_TOKEN_RATIO",
     "CHAR_TOKEN_RATIO_EN",

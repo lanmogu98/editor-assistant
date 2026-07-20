@@ -40,7 +40,7 @@ class TestLLMClientInit:
         """Test client initializes with a valid model name."""
         from editor_assistant.llm_client import LLMClient
 
-        client = LLMClient("deepseek-v3.2")
+        client = LLMClient("deepseek-v4-flash-volc")
 
         assert client.model is not None
         assert client.context_window > 0
@@ -51,7 +51,7 @@ class TestLLMClientInit:
         """Test thinking_level is applied."""
         from editor_assistant.llm_client import LLMClient
 
-        client = LLMClient("deepseek-v3.2", thinking_level="high")
+        client = LLMClient("deepseek-v4-flash-volc", thinking_level="high")
 
         # thinking_level should be in request_overrides
         assert "reasoning_effort" in client.request_overrides
@@ -66,7 +66,7 @@ class TestLLMClientTokenUsage:
         """Test token usage starts at zero."""
         from editor_assistant.llm_client import LLMClient
 
-        client = LLMClient("deepseek-v3.2")
+        client = LLMClient("deepseek-v4-flash-volc")
 
         usage = client.get_token_usage()
         assert usage["total_input_tokens"] == 0
@@ -78,7 +78,7 @@ class TestLLMClientTokenUsage:
         """Test token usage has expected structure."""
         from editor_assistant.llm_client import LLMClient
 
-        client = LLMClient("deepseek-v3.2")
+        client = LLMClient("deepseek-v4-flash-volc")
 
         usage = client.get_token_usage()
         assert "total_input_tokens" in usage

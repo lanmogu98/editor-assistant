@@ -35,7 +35,7 @@ from .clean_html_to_md import CleanHTML2Markdown
 from .config.logging_config import progress
 from .storage import RunRepository
 
-DEFAULT_MODEL = "glm-4.7-or"
+DEFAULT_MODEL = "glm-5.2-or"
 
 
 def add_common_arguments(parser):
