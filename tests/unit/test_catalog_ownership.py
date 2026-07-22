@@ -42,7 +42,7 @@ EXPECTED_MODELS = [
     "claude-opus-4.8-or",
 ]
 
-CATALOG_SHA256 = (
+RELEASE_CORE_CATALOG_SHA256 = (
     "490c5df6988c43b65badf28f75a8507e09c11505a2d4f47ecb2bda42984abfd4"
 )
 
@@ -70,32 +70,32 @@ def _write_custom_config(tmp_path: Path) -> Path:
     return config_path
 
 
-def _forbid_core_default(monkeypatch, tmp_path: Path) -> None:
-    missing_path = tmp_path / "core-default-must-not-be-used.yml"
-    monkeypatch.setattr(core_config, "_DEFAULT_PROVIDER_SETTINGS", None)
-    monkeypatch.setattr(
-        core_config, "_get_default_config_path", lambda: missing_path
-    )
-
-
-def test_app_catalog_is_exact_core_030_copy():
+def test_app_catalog_is_owned_independently_from_core_041():
     from editor_assistant.config.constants import LLM_CONFIG_PATH
 
     core_catalog_path = Path(core_config.__file__).with_name("llm_config.yml")
     app_bytes = LLM_CONFIG_PATH.read_bytes()
     core_bytes = core_catalog_path.read_bytes()
 
-    assert llm_exec_core.__version__ == "0.3.0"
-    assert app_bytes == core_bytes
-    assert hashlib.sha256(app_bytes).hexdigest() == CATALOG_SHA256
-    assert yaml.safe_load(app_bytes) == yaml.safe_load(core_bytes)
+    assert llm_exec_core.__version__ == "0.4.1"
+    assert (
+        hashlib.sha256(core_bytes).hexdigest() == RELEASE_CORE_CATALOG_SHA256
+    )
+    assert app_bytes != core_bytes
+    assert yaml.safe_load(app_bytes) != yaml.safe_load(core_bytes)
 
 
 def test_catalog_is_available_as_package_data():
+    from editor_assistant.config.constants import LLM_CONFIG_PATH
+
     catalog = files("editor_assistant.config").joinpath("llm_config.yml")
 
     assert catalog.is_file()
-    assert hashlib.sha256(catalog.read_bytes()).hexdigest() == CATALOG_SHA256
+    assert catalog.read_bytes() == LLM_CONFIG_PATH.read_bytes()
+    assert (
+        hashlib.sha256(catalog.read_bytes()).hexdigest()
+        != RELEASE_CORE_CATALOG_SHA256
+    )
 
 
 def test_project_metadata_packages_catalog_and_constrains_core():
@@ -106,25 +106,23 @@ def test_project_metadata_packages_catalog_and_constrains_core():
         .read_text(encoding="utf-8")
     )
 
-    assert '"llm-exec-core>=0.3.0,<0.4.0"' in pyproject
+    assert '"llm-exec-core>=0.4.1,<0.5.0"' in pyproject
     assert '"config/llm_config.yml"' in pyproject
     assert 'path = "../llm-exec-core", editable = true' in pyproject
 
 
 def test_default_discovery_uses_app_catalog_without_key_or_network(
-    monkeypatch, tmp_path
+    monkeypatch,
 ):
+    from editor_assistant.config.constants import LLM_CONFIG_PATH
     from editor_assistant.llm_client import LLMClient
 
-    core_catalog = yaml.safe_load(
-        Path(core_config.__file__)
-        .with_name("llm_config.yml")
-        .read_text(encoding="utf-8")
-    )
-    for provider_name, provider in core_catalog.items():
+    app_catalog = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8"))
+    for provider_name, provider in app_catalog.items():
         if not provider_name.startswith("_"):
             monkeypatch.delenv(provider["api_key_env_var"], raising=False)
-    _forbid_core_default(monkeypatch, tmp_path)
+            for alias in provider.get("api_key_env_aliases", []):
+                monkeypatch.delenv(alias, raising=False)
 
     with (
         patch(
@@ -156,11 +154,10 @@ def test_cli_parser_uses_exact_catalog_and_glm_52_default():
     assert list(model_action.choices) == EXPECTED_MODELS
 
 
-def test_default_client_construction_uses_app_catalog(monkeypatch, tmp_path):
+def test_default_client_construction_uses_app_catalog(monkeypatch):
     from editor_assistant.llm_client import LLMClient
 
     monkeypatch.setenv("ZHIPU_API_KEY_OPENROUTER", "test-key")
-    _forbid_core_default(monkeypatch, tmp_path)
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
@@ -181,7 +178,6 @@ def test_explicit_client_construction_and_discovery_preserve_source(
     if source_kind == "path":
         config_source = _write_custom_config(tmp_path)
     monkeypatch.setenv("CUSTOM_TEST_API_KEY", "test-key")
-    _forbid_core_default(monkeypatch, tmp_path)
 
     client = LLMClient("custom-model", config_source=config_source)
 
@@ -195,11 +191,10 @@ def test_explicit_client_construction_and_discovery_preserve_source(
     "order", [("default", "explicit"), ("explicit", "default")]
 )
 def test_default_and_explicit_discovery_are_isolated_in_both_orders(
-    monkeypatch, tmp_path, order
+    order,
 ):
     from editor_assistant.llm_client import LLMClient
 
-    _forbid_core_default(monkeypatch, tmp_path)
     results = {}
 
     for source_name in order:
@@ -214,17 +209,13 @@ def test_default_and_explicit_discovery_are_isolated_in_both_orders(
     assert results["explicit"] == ["custom-model"]
 
 
-def test_config_compatibility_api_defaults_and_explicit_override(
-    monkeypatch, tmp_path
-):
+def test_config_compatibility_api_defaults_and_explicit_override():
     from editor_assistant.config.llm_models import (
         get_model_details,
         get_provider_settings,
         get_supported_models,
         load_all_settings,
     )
-
-    _forbid_core_default(monkeypatch, tmp_path)
 
     assert get_supported_models() == EXPECTED_MODELS
     settings = load_all_settings()

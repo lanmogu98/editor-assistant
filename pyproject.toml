@@ -7,7 +7,7 @@ name = "editor_assistant"
 version = "0.6.0"
 requires-python = ">=3.10"
 dependencies = [
-    "llm-exec-core>=0.3.0,<0.4.0",
+    "llm-exec-core>=0.4.1,<0.5.0",
     "markitdown[all]",
     "requests",  # Deprecated: will be removed after async migration complete
     "httpx>=0.25.0",

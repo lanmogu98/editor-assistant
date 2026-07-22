@@ -166,24 +166,34 @@ gemini:
 # Alibaba Bailian (百炼) — same OpenAI-compatible endpoint as legacy DashScope.
 qwen:
   api_key_env_var: "QWEN_API_KEY"
+  api_key_env_aliases: ["DASHSCOPE_API_KEY"]
   api_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+  api_base_url_env_var: "QWEN_API_BASE_URL"
   temperature: 0.6
-  max_tokens: 32768
-  context_window: 995904
+  max_tokens: 65536
+  context_window: 1000000
+  # The Chat API still accepts max_tokens; migrate only under a future decision.
+  output_token_field: "max_tokens"
   pricing_currency: "¥"
   models:
     qwen3.6-flash:
       id: "qwen3.6-flash"
+      request_overrides:
+        enable_thinking: false
+      # Historical compatibility placeholders only, not authoritative rates.
+      # Current billing varies by region, token tier, cache, Batch, and mode;
+      # the shared flat schema cannot encode it (related-only core issue #23).
       pricing: {input: 0.30, output: 0.60}
       capabilities:
-        version: "qwen-bailian-2026-07-02"
-        source: "https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope"
-        source_date: "2026-07-02"
+        version: "qwen-bailian-2026-07-22"
+        source: "https://help.aliyun.com/en/model-studio/text-generation-model/"
+        source_date: "2026-07-22"
         strict_response_schema: false
-        json_object_response: false
-        tools: false
-        tool_streaming: false
-        tool_choice: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        parallel_tool_calls: true
         reasoning_controls: []
 
 zhipu:

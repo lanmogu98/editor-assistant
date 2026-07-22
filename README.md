@@ -19,7 +19,7 @@ This branch is a coordinated two-repo/local-migration branch. Keep the current s
 llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-That relative source remains intentional for local development and workspace checkouts that test both repos together. Published installs use the declared `llm-exec-core>=0.3.0,<0.4.0` compatibility range; the editable source does not change that package boundary.
+That relative source remains intentional for local development and workspace checkouts that test both repos together. Published installs use the declared `llm-exec-core>=0.4.1,<0.5.0` compatibility range; the editable source does not change that package boundary.
 
 ### Features
 
@@ -76,6 +76,12 @@ export GEMINI_API_KEY=your_gemini_api_key
 
 # Qwen via Alibaba Bailian / DashScope-compatible endpoint
 export QWEN_API_KEY=your_qwen_api_key
+
+# If QWEN_API_KEY is unset, the official DashScope variable is the fallback
+export DASHSCOPE_API_KEY=your_qwen_api_key
+
+# Optional Qwen endpoint override: SDK base or full chat/completions URL
+export QWEN_API_BASE_URL=https://your-workspace.example/compatible-mode/v1
 
 # GLM via Zhipu AI
 export ZHIPU_API_KEY=your_zhipu_api_key
@@ -226,6 +232,12 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 - `qwen3.6-flash`
 
+`qwen3.6-flash` uses a 1,000,000-token context window and a 65,536-token maximum output. Editor Assistant explicitly sends `enable_thinking: false`; it does not translate `thinking_level` to Qwen `reasoning_effort`. `max_tokens` remains the selected Chat API field for this minimal refresh, although Alibaba marks it for future deprecation in favor of `max_completion_tokens`.
+
+`QWEN_API_KEY` has precedence over `DASHSCOPE_API_KEY`. If `QWEN_API_BASE_URL` is unset, the existing complete Beijing-compatible endpoint remains the fallback. An override may be either an SDK-style base ending in `/v1` or a complete `/chat/completions` endpoint.
+
+The catalog's `¥0.30` input and `¥0.60` output values are historical, non-authoritative compatibility placeholders. Current Qwen3.6 Flash billing varies by region, token tier, cache, Batch eligibility, deployment, and mode; do not use these flat values as a billing quote. Tiered pricing support remains related-only work in [llm-exec-core #23](https://github.com/lanmogu98/llm-exec-core/issues/23).
+
 #### GLM / Zhipu
 
 - Zhipu API (`ZHIPU_API_KEY`): `glm-5.2`, `glm-5`, `glm-5.1`
@@ -350,7 +362,7 @@ Editor Assistant 使用 `llm-exec-core` 提供模型目录 schema 与加载、pr
 llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-这个相对路径仍用于本地开发和双仓 workspace checkout。发布安装遵循声明的 `llm-exec-core>=0.3.0,<0.4.0` 兼容范围；editable source 不会改变该包边界。
+这个相对路径仍用于本地开发和双仓 workspace checkout。发布安装遵循声明的 `llm-exec-core>=0.4.1,<0.5.0` 兼容范围；editable source 不会改变该包边界。
 
 ### 功能特色
 
@@ -407,6 +419,12 @@ export GEMINI_API_KEY=your_gemini_api_key
 
 # Qwen via Alibaba Bailian / DashScope-compatible endpoint
 export QWEN_API_KEY=your_qwen_api_key
+
+# QWEN_API_KEY 未设置时，回退到 DashScope 官方变量
+export DASHSCOPE_API_KEY=your_qwen_api_key
+
+# 可选的 Qwen endpoint 覆盖：SDK base 或完整 chat/completions URL
+export QWEN_API_BASE_URL=https://your-workspace.example/compatible-mode/v1
 
 # GLM via Zhipu AI
 export ZHIPU_API_KEY=your_zhipu_api_key
@@ -555,6 +573,12 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 #### Qwen
 
 - `qwen3.6-flash`
+
+`qwen3.6-flash` 使用 1,000,000 token 上下文窗口，最大输出为 65,536 token。Editor Assistant 会显式发送 `enable_thinking: false`，不会把 `thinking_level` 映射为 Qwen 的 `reasoning_effort`。本次最小刷新继续使用 Chat API 的 `max_tokens` 字段；阿里云已提示未来应迁移到 `max_completion_tokens`。
+
+`QWEN_API_KEY` 的优先级高于 `DASHSCOPE_API_KEY`。未设置 `QWEN_API_BASE_URL` 时，继续使用现有的北京兼容完整 endpoint；覆盖值可以是以 `/v1` 结尾的 SDK base，也可以是完整的 `/chat/completions` endpoint。
+
+目录中的输入 `¥0.30`、输出 `¥0.60` 是历史兼容占位值，并非权威价格。当前 Qwen3.6 Flash 计费会随地域、token 阶梯、缓存、Batch 资格、部署方式和模式变化，请勿把这组平面值当作计费报价。阶梯定价 schema 仍由相关但不阻塞本 Issue 的 [llm-exec-core #23](https://github.com/lanmogu98/llm-exec-core/issues/23) 跟踪。
 
 #### GLM / 智谱
 
