@@ -95,3 +95,38 @@ async def test_process_multiple_partial_fail_warns_but_processes(
         # Ensure warning emitted for failed input (printed to stdout)
         captured = capsys.readouterr().out
         assert "failed" in captured.lower() or "Failed" in captured
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_process_multiple_keeps_legacy_none_and_done_callback():
+    """The orchestration wrapper keeps its existing public result contract."""
+    article = MDArticle(
+        type=InputType.PAPER,
+        content="Content. " * 500,
+        title="good",
+        source_path="good.pdf",
+    )
+    done_callback = MagicMock()
+
+    with (
+        patch("editor_assistant.main.MarkdownConverter"),
+        patch("editor_assistant.main.MDProcessor") as processor_cls,
+    ):
+        processor = processor_cls.return_value
+        processor.llm_client.model_name = "test-model"
+        processor.process_mds = AsyncMock(return_value=(True, 123))
+        assistant = EditorAssistant("test-model", stream=False)
+        assistant._process_input_to_article = AsyncMock(
+            return_value=(article, None)
+        )
+
+        result = await assistant.process_multiple(
+            [Input(type=InputType.PAPER, path="good.pdf")],
+            "brief",
+            done_callback=done_callback,
+        )
+
+    assert result is None
+    processor.process_mds.assert_awaited_once()
+    done_callback.assert_called_once_with("good.pdf", True)

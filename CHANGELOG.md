@@ -7,11 +7,12 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Documented downstream package contract for LinkResearcher and other workers.
 - Added the dated Qwen/Bailian catalog decision record for Issue #31.
+- Added JSON-aware `OutputArtifact`, success-only `TaskExecutionResult`, and `MDProcessor.execute_task()` while preserving the legacy task wrappers.
 
 ### Changed
 - Editor Assistant continues to package and own its 21-model catalog while using `llm-exec-core` 0.4.1 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
 - Changed the CLI/library migration default from `glm-4.7-or` to `glm-5.2-or`. Removed names such as `glm-4.7-or` and `glm-4.6-or` are not restored or mapped.
-- Constrained the runtime dependency to `llm-exec-core>=0.4.1,<0.5.0` while retaining the sibling editable source for development.
+- Locked the runtime dependency to the reviewed `llm-exec-core` 0.4.1 GitHub release artifact instead of a sibling editable checkout.
 - Refreshed only `qwen3.6-flash`: non-thinking requests are explicit, connection key/endpoint fallbacks are configurable, context/output limits are 1M/64K, and supported JSON/tool capabilities are recorded without adding Qwen models.
 - Retained Qwen's historical `¥0.30`/`¥0.60` flat prices only as non-authoritative compatibility placeholders pending tiered-pricing schema work in related-only `llm-exec-core` #23.
 

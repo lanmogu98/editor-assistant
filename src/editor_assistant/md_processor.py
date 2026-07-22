@@ -29,10 +29,16 @@ from .config.constants import (
 )
 
 # for LLM processing
-from .llm_client import LLMClient
+from .llm_client import LLMClient, LLMResult
 
 # for data models
-from .data_models import MDArticle, ProcessType, SaveType
+from .data_models import (
+    MDArticle,
+    OutputArtifact,
+    ProcessType,
+    SaveType,
+    TaskExecutionResult,
+)
 
 # for the pluggable task system
 from .tasks import TaskRegistry, Task
@@ -130,6 +136,31 @@ class MDProcessor:
         # Concurrency control
         self._semaphore = asyncio.Semaphore(max_concurrent)
 
+    async def execute_task(
+        self,
+        md_articles: List[MDArticle],
+        task_type: Union[ProcessType, str],
+        output_to_console: bool = True,
+        save_files: bool = False,
+        stream_callback: Optional[Callable[[str], None]] = None,
+    ) -> TaskExecutionResult:
+        """Execute a task and return its successful typed result.
+
+        Validation, provider, and post-processing exceptions propagate to
+        typed callers.
+        """
+        result = await self._execute_task(
+            md_articles,
+            task_type,
+            output_to_console=output_to_console,
+            save_files=save_files,
+            stream_callback=stream_callback,
+            use_legacy_client=False,
+        )
+        if result is None:
+            raise RuntimeError("Typed task execution produced no result.")
+        return result
+
     async def process_mds(
         self,
         md_articles: List[MDArticle],
@@ -138,6 +169,41 @@ class MDProcessor:
         save_files: bool = False,
         stream_callback: Optional[Callable[[str], None]] = None,
     ) -> tuple[bool, int]:
+        """Compatibility wrapper returning the legacy success tuple."""
+        run_id = -1
+
+        def remember_run_id(value: int) -> None:
+            nonlocal run_id
+            run_id = value
+
+        try:
+            await self._execute_task(
+                md_articles,
+                task_type,
+                output_to_console=output_to_console,
+                save_files=save_files,
+                stream_callback=stream_callback,
+                use_legacy_client=True,
+                on_run_created=remember_run_id,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            return False, run_id
+
+        return True, run_id
+
+    async def _execute_task(
+        self,
+        md_articles: List[MDArticle],
+        task_type: Union[ProcessType, str],
+        output_to_console: bool,
+        save_files: bool,
+        stream_callback: Optional[Callable[[str], None]],
+        *,
+        use_legacy_client: bool,
+        on_run_created: Optional[Callable[[int], None]] = None,
+    ) -> Optional[TaskExecutionResult]:
         """
         Process documents using the pluggable task system (Async).
 
@@ -158,10 +224,11 @@ class MDProcessor:
         task_cls = TaskRegistry.get(task_name)
         if task_cls is None:
             available_tasks = TaskRegistry.list_tasks()
-            error(
+            message = (
                 f"Unknown task type: {task_name}. Available: {available_tasks}"
             )
-            return False, run_id
+            error(message)
+            raise ValueError(message)
 
         # Instantiate task
         task: Task = task_cls()
@@ -169,8 +236,9 @@ class MDProcessor:
         # Validate inputs (task-level)
         is_valid, err_msg = task.validate(md_articles)
         if not is_valid:
-            error(f"Validation failed for {task_name}: {err_msg}")
-            return False, run_id
+            message = f"Validation failed for {task_name}: {err_msg}"
+            error(message)
+            raise ValueError(message)
 
         # Content validation per article
         for md_article in md_articles:
@@ -187,14 +255,15 @@ class MDProcessor:
                 if warn_msg:
                     warning(warn_msg)
                 if not is_content_valid:
-                    error(
+                    message = (
                         "Content invalid for "
                         f"{md_article.title or 'Untitled'}: {warn_msg}"
                     )
-                    return False, run_id
+                    error(message)
+                    raise ValueError(message)
             except BlockedPublisherError as e:
                 error(f"Blocked publisher: {e}")
-                return False, run_id
+                raise
 
         # Context budget check
         for md_article in md_articles:
@@ -202,7 +271,7 @@ class MDProcessor:
                 check_context_budget(md_article.content or "", self.llm_client)
             except ContentTooLargeError as e:
                 error(f"Content too large: {md_article.title}: {str(e)}")
-                return False, run_id
+                raise
 
         # Create run record in database (Async via thread pool)
         # Offload synchronous DB write to prevent blocking the event loop
@@ -213,6 +282,8 @@ class MDProcessor:
         except Exception as e:
             self.logger.warning(f"Async DB creation failed, falling back: {e}")
             run_id = self._create_run_record(md_articles, task_name)
+        if on_run_created is not None:
+            on_run_created(run_id)
 
         # Create base title
         title_base = (
@@ -247,16 +318,17 @@ class MDProcessor:
             prompt = task.build_prompt(md_articles)
         except Exception as e:
             error(f"Failed to build prompt: {e}")
-            return False, run_id
+            raise
 
         # Check prompt size
         try:
             check_context_budget(prompt, self.llm_client)
         except ContentTooLargeError as e:
             error(f"Prompt too large: {str(e)}")
-            return False, run_id
+            raise
 
         # Make LLM request (Async with Semaphore)
+        llm_result: Optional[LLMResult] = None
         try:
             progress(f"Processing document with {len(prompt)} characters...")
             async with self._semaphore:
@@ -280,24 +352,33 @@ class MDProcessor:
 
                     final_callback = suppress_output
 
-                response, usage_stats = await self._make_api_request(
-                    prompt,
-                    task_name,
-                    stream=self.stream,
-                    stream_callback=final_callback,
-                )
+                if use_legacy_client:
+                    response, usage_stats = await self._make_api_request(
+                        prompt,
+                        task_name,
+                        stream=self.stream,
+                        stream_callback=final_callback,
+                    )
+                else:
+                    llm_result = await self._make_typed_api_request(
+                        prompt,
+                        task_name,
+                        stream=self.stream,
+                        stream_callback=final_callback,
+                    )
+                    response, usage_stats = llm_result.to_legacy_tuple()
                 if app_prints_stream:
                     print(flush=True)
-        except Exception as e:
-            error(f"Error making API request: {str(e)}")
-            await asyncio.to_thread(
-                self._update_run_status, run_id, "failed", str(e)
-            )
-            return False, run_id
         except asyncio.CancelledError:
             warning(f"Run {run_id} cancelled during API request")
             await asyncio.to_thread(
                 self._update_run_status, run_id, "aborted", "Cancelled by user"
+            )
+            raise
+        except Exception as e:
+            error(f"Error making API request: {str(e)}")
+            await asyncio.to_thread(
+                self._update_run_status, run_id, "failed", str(e)
             )
             raise
 
@@ -320,7 +401,7 @@ class MDProcessor:
             await asyncio.to_thread(
                 self._update_run_status, run_id, "failed", str(e)
             )
-            return False, run_id
+            raise
 
         # Save all outputs
         should_print = output_to_console and not self.stream
@@ -356,16 +437,16 @@ class MDProcessor:
                     self._save_output_to_db, run_id, output_name, content
                 )
 
-        except Exception as e:
-            error(f"Error saving response: {str(e)}")
-            await asyncio.to_thread(
-                self._update_run_status, run_id, "failed", str(e)
-            )
-            return False, run_id
         except asyncio.CancelledError:
             warning(f"Run {run_id} cancelled during saving")
             await asyncio.to_thread(
                 self._update_run_status, run_id, "aborted", "Cancelled by user"
+            )
+            raise
+        except Exception as e:
+            error(f"Error saving response: {str(e)}")
+            await asyncio.to_thread(
+                self._update_run_status, run_id, "failed", str(e)
             )
             raise
 
@@ -384,7 +465,23 @@ class MDProcessor:
         # Mark run as successful (Async via thread pool)
         await asyncio.to_thread(self._update_run_status, run_id, "success")
 
-        return True, run_id
+        if llm_result is None:
+            return None
+
+        artifacts = {
+            output_name: OutputArtifact(
+                value=content,
+                content_type="text/plain",
+                serialized_text=content,
+            )
+            for output_name, content in outputs.items()
+        }
+        return TaskExecutionResult(
+            task_name=task_name,
+            run_id=run_id,
+            outputs=artifacts,
+            llm_result=llm_result,
+        )
 
     # save content to a file
     def _save_content(
@@ -415,6 +512,21 @@ class MDProcessor:
         except IOError as e:
             error(f"Error saving content: {str(e)}")
             raise
+
+    async def _make_typed_api_request(
+        self,
+        prompt: str,
+        request_name: str,
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str], None]] = None,
+    ) -> LLMResult:
+        """Make an API request and preserve the core typed result."""
+        return await self.llm_client.generate(
+            prompt,
+            request_name,
+            stream=stream,
+            stream_callback=stream_callback,
+        )
 
     async def _make_api_request(
         self,

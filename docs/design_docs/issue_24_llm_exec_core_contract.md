@@ -5,24 +5,27 @@
 - Distribution: `llm-exec-core`
 - Import package: `llm_exec_core`
 - Initial package version: `0.1.0`
+- Reviewed typed-result release: `0.4.1`
 - First editor-assistant consumer version: `0.6.0`
 
 ## Reference Strategy
 
-During local migration, `editor-assistant` references the sibling package with relative `[tool.uv.sources]` or a uv workspace.
-
-For release consumption, applications pin `llm-exec-core==0.1.0`.
-
-Final committed `editor-assistant` config must not contain absolute `file://` paths. Local development uses relative `[tool.uv.sources]` or a uv workspace; release consumption uses the pinned package.
+`editor-assistant` consumes the published 0.4.1 wheel from the GitHub release
+and records its SHA-256
+`30dbc41afa29cf1e74d572703a93111f65ab7581eae4d69d739fe292d007e6f7`
+in `uv.lock`. The committed project and lock files contain no sibling,
+editable, or unreleased core source.
 
 ## Minimal Worker Import
 
 ```python
+from pathlib import Path
+
 from llm_exec_core import LLMClient
 
 
-async def run_llm_step(prompt: str) -> str:
-    client = LLMClient("glm-4.7-or")
+async def run_llm_step(prompt: str, catalog: Path) -> str:
+    client = LLMClient("glm-5.2-or", config_source=catalog)
     result = await client.generate(
         prompt,
         request_name="linkresearcher_ingest",
@@ -40,6 +43,28 @@ async def run_llm_step(prompt: str) -> str:
 - `usage`: token counts, costs, and currency.
 - `metadata`: request id, run id, model, provider, timing, and trace context.
 - `structured`: parsed caller-owned structured output, or `None`.
+
+## Editor Task Result
+
+`MDProcessor.execute_task()` is the additive typed Editor entry point. On
+success it returns `TaskExecutionResult` with:
+
+- `task_name`: the resolved registry task name.
+- `run_id`: the Editor persistence run id.
+- `outputs`: a mapping of output names to `OutputArtifact` values.
+- `llm_result`: the original core `LLMResult` object.
+
+`OutputArtifact` retains a typed string or JSON value, an explicit
+`text/plain` or `application/json` content type, and its serialized text. The
+existing `brief`, `outline`, and `translate` tasks remain text-only and produce
+text artifacts without prompt or output changes.
+
+The typed entry point calls core `generate()` and propagates validation,
+provider, and post-processing exceptions. `process_mds() -> tuple[bool, int]`
+continues using the legacy `generate_response()` adapter and translates the
+same expected failures to its existing boolean/run-id result.
+`EditorAssistant.process_multiple()` remains a `None`-returning compatibility
+orchestrator over `process_mds()`.
 
 ## Execution Metadata Boundary
 

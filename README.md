@@ -12,14 +12,10 @@ Editor Assistant is an AI-powered Python CLI and library for turning research pa
 
 Editor Assistant uses `llm-exec-core` for catalog schema and loading, provider routing, token accounting, and HTTP execution. The app layer owns the packaged default model catalog as well as document workflow, tasks, prompts, SQLite storage, CLI commands, output paths, and app logging.
 
-This branch is a coordinated two-repo/local-migration branch. Keep the current sibling-checkout dependency mode:
-
-```toml
-[tool.uv.sources]
-llm-exec-core = { path = "../llm-exec-core", editable = true }
-```
-
-That relative source remains intentional for local development and workspace checkouts that test both repos together. Published installs use the declared `llm-exec-core>=0.4.1,<0.5.0` compatibility range; the editable source does not change that package boundary.
+Editor Assistant consumes the reviewed `llm-exec-core` 0.4.1 GitHub release
+wheel directly. `uv.lock` pins the published artifact with SHA-256
+`30dbc41afa29cf1e74d572703a93111f65ab7581eae4d69d739fe292d007e6f7`;
+no sibling or editable core checkout is used.
 
 ### Features
 
@@ -44,7 +40,8 @@ cd editor-assistant
 uv sync
 ```
 
-On this migration branch, `uv sync` expects a sibling checkout at `../llm-exec-core` because `pyproject.toml` uses a relative `[tool.uv.sources]` entry. In CI, use a workspace layout that checks out both repos side by side.
+`uv sync` resolves the locked `llm-exec-core` release artifact without a
+sibling repository checkout.
 
 For a runtime-only environment:
 
@@ -282,6 +279,43 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+For already-converted documents, `MDProcessor.execute_task()` is the additive
+typed Python entry point. It returns a success-only `TaskExecutionResult` with
+named `OutputArtifact` values and the original core `LLMResult`, including
+`text`, `structured`, typed usage, and planning metadata. Validation, provider,
+and post-processing exceptions propagate. The existing `process_mds()` tuple
+and `EditorAssistant.process_multiple()` behavior remain compatibility APIs.
+
+```python
+from pathlib import Path
+
+from editor_assistant.data_models import InputType, MDArticle, ProcessType
+from editor_assistant.md_processor import MDProcessor
+
+processor = MDProcessor("glm-5.2-or", stream=False)
+result = await processor.execute_task(
+    [
+        MDArticle(
+            type=InputType.PAPER,
+            content=Path("paper.md").read_text(encoding="utf-8"),
+            title="Paper",
+            source_path="paper.md",
+        )
+    ],
+    ProcessType.OUTLINE,
+    output_to_console=False,
+)
+
+print(result.outputs["main"].serialized_text)
+print(result.llm_result.usage.total_tokens)
+print(result.llm_result.metadata.planning)
+```
+
+The current `brief`, `outline`, and `translate` tasks remain text tasks and
+produce `text/plain` artifacts. `OutputArtifact` can also represent a typed JSON
+value as `application/json`; schema-aware task configuration is intentionally
+outside this API addition.
+
 ### Supported Input Formats
 
 The converter supports common document and web formats through MarkItDown plus local HTML extraction helpers:
@@ -355,14 +389,10 @@ Editor Assistant 是一个 AI 驱动的 Python CLI 和库，用于把研究论�
 
 Editor Assistant 使用 `llm-exec-core` 提供模型目录 schema 与加载、provider 路由、token 统计和 HTTP 执行能力；应用层拥有打包的默认模型目录，同时继续负责文档工作流、任务、prompt、SQLite 持久化、CLI、输出路径和应用日志。
 
-当前分支是一个双仓协同的本地迁移分支，必须保留 sibling checkout 的依赖方式：
-
-```toml
-[tool.uv.sources]
-llm-exec-core = { path = "../llm-exec-core", editable = true }
-```
-
-这个相对路径仍用于本地开发和双仓 workspace checkout。发布安装遵循声明的 `llm-exec-core>=0.4.1,<0.5.0` 兼容范围；editable source 不会改变该包边界。
+Editor Assistant 直接使用经过评审的 `llm-exec-core` 0.4.1 GitHub 发布
+wheel。`uv.lock` 以 SHA-256
+`30dbc41afa29cf1e74d572703a93111f65ab7581eae4d69d739fe292d007e6f7`
+锁定该发布产物，不再依赖 sibling 或 editable core checkout。
 
 ### 功能特色
 
@@ -387,7 +417,7 @@ cd editor-assistant
 uv sync
 ```
 
-在这个迁移分支上，`uv sync` 依赖 `../llm-exec-core` 这个 sibling checkout，因为 `pyproject.toml` 中使用了相对 `[tool.uv.sources]`。CI 也需要采用双仓并排 checkout 的 workspace 布局。
+`uv sync` 会直接解析锁定的 `llm-exec-core` 发布产物，不需要相邻仓库。
 
 仅安装运行依赖：
 
@@ -623,6 +653,42 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+对于已经转换为 Markdown 的文档，`MDProcessor.execute_task()` 是新增的带
+类型 Python 入口。它只在成功时返回 `TaskExecutionResult`，其中包含具名
+`OutputArtifact` 和原始 core `LLMResult`，因此会保留 `text`、`structured`、
+带类型 usage 和 planning metadata。校验、provider 与后处理异常会继续向上
+抛出；现有 `process_mds()` 元组和 `EditorAssistant.process_multiple()` 行为
+仍作为兼容 API 保留。
+
+```python
+from pathlib import Path
+
+from editor_assistant.data_models import InputType, MDArticle, ProcessType
+from editor_assistant.md_processor import MDProcessor
+
+processor = MDProcessor("glm-5.2-or", stream=False)
+result = await processor.execute_task(
+    [
+        MDArticle(
+            type=InputType.PAPER,
+            content=Path("paper.md").read_text(encoding="utf-8"),
+            title="Paper",
+            source_path="paper.md",
+        )
+    ],
+    ProcessType.OUTLINE,
+    output_to_console=False,
+)
+
+print(result.outputs["main"].serialized_text)
+print(result.llm_result.usage.total_tokens)
+print(result.llm_result.metadata.planning)
+```
+
+当前 `brief`、`outline` 与 `translate` 仍是文本任务，并产生 `text/plain`
+artifact。`OutputArtifact` 也能以 `application/json` 表示带类型 JSON 值；
+schema-aware task 配置不属于本次 API 增量范围。
 
 ### 支持的输入格式
 

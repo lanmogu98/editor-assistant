@@ -728,7 +728,7 @@ requires-dist = [
     { name = "html2text" },
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "jinja2" },
-    { name = "llm-exec-core", editable = "../llm-exec-core" },
+    { name = "llm-exec-core", url = "https://github.com/lanmogu98/llm-exec-core/releases/download/0.4.1/llm_exec_core-0.4.1-py3-none-any.whl" },
     { name = "markitdown", extras = ["all"] },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -1075,12 +1075,15 @@ wheels = [
 [[package]]
 name = "llm-exec-core"
 version = "0.4.1"
-source = { editable = "../llm-exec-core" }
+source = { url = "https://github.com/lanmogu98/llm-exec-core/releases/download/0.4.1/llm_exec_core-0.4.1-py3-none-any.whl" }
 dependencies = [
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pyyaml" },
+]
+wheels = [
+    { url = "https://github.com/lanmogu98/llm-exec-core/releases/download/0.4.1/llm_exec_core-0.4.1-py3-none-any.whl", hash = "sha256:30dbc41afa29cf1e74d572703a93111f65ab7581eae4d69d739fe292d007e6f7" },
 ]
 
 [package.metadata]
@@ -1089,17 +1092,6 @@ requires-dist = [
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pyyaml" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=23.0.0" },
-    { name = "flake8", specifier = ">=6.0.0" },
-    { name = "mypy", specifier = ">=1.0.0" },
-    { name = "pytest", specifier = ">=7.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.21.0" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20260518" },
-    { name = "types-pyyaml" },
 ]
 
 [[package]]

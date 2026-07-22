@@ -3,6 +3,7 @@ Unit tests for data models.
 """
 
 import pytest
+import editor_assistant.data_models as data_models
 from editor_assistant.data_models import (
     InputType,
     Input,
@@ -106,3 +107,22 @@ class TestSaveType:
         """Test that SaveType has expected values."""
         assert SaveType.PROMPT.value == "prompt"
         assert SaveType.RESPONSE.value == "response"
+
+
+class TestOutputArtifact:
+    """Test typed task output artifacts."""
+
+    @pytest.mark.unit
+    def test_output_artifact_represents_json_without_flattening_value(self):
+        """JSON artifacts retain both the typed value and serialization."""
+        value = {"items": [1, True, None]}
+
+        artifact = data_models.OutputArtifact(
+            value=value,
+            content_type="application/json",
+            serialized_text='{"items":[1,true,null]}',
+        )
+
+        assert artifact.value is value
+        assert artifact.content_type == "application/json"
+        assert artifact.serialized_text == '{"items":[1,true,null]}'
