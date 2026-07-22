@@ -1,9 +1,24 @@
 # This file contains the data models for the project.
 
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Literal, Mapping, Optional, TypeAlias
+
+from llm_exec_core import LLMResult
+from pydantic import BaseModel, ConfigDict
+
+JSONValue: TypeAlias = (
+    None
+    | bool
+    | int
+    | float
+    | str
+    | list["JSONValue"]
+    | dict[str, "JSONValue"]
+)
 
 
 # for the input source data
@@ -52,6 +67,25 @@ class MDArticle(BaseModel):
     output_path: Optional[Path] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)  # Allow Path type
+
+
+@dataclass(slots=True)
+class OutputArtifact:
+    """A typed task output and its stable serialized representation."""
+
+    value: str | JSONValue
+    content_type: Literal["text/plain", "application/json"]
+    serialized_text: str
+
+
+@dataclass(slots=True)
+class TaskExecutionResult:
+    """Successful task execution with Editor and core result metadata."""
+
+    task_name: str
+    run_id: int
+    outputs: Mapping[str, OutputArtifact]
+    llm_result: LLMResult
 
 
 class SaveType(str, Enum):

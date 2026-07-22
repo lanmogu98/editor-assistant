@@ -98,17 +98,25 @@ def test_catalog_is_available_as_package_data():
     )
 
 
-def test_project_metadata_packages_catalog_and_constrains_core():
-    pyproject = (
-        Path(__file__)
-        .parents[2]
-        .joinpath("pyproject.toml")
-        .read_text(encoding="utf-8")
+def test_project_metadata_packages_catalog_and_uses_released_core():
+    project_root = Path(__file__).parents[2]
+    pyproject = project_root.joinpath("pyproject.toml").read_text(
+        encoding="utf-8"
+    )
+    lockfile = project_root.joinpath("uv.lock").read_text(encoding="utf-8")
+    release_url = (
+        "https://github.com/lanmogu98/llm-exec-core/releases/download/"
+        "0.4.1/llm_exec_core-0.4.1-py3-none-any.whl"
     )
 
-    assert '"llm-exec-core>=0.4.1,<0.5.0"' in pyproject
+    assert f'"llm-exec-core @ {release_url}"' in pyproject
     assert '"config/llm_config.yml"' in pyproject
-    assert 'path = "../llm-exec-core", editable = true' in pyproject
+    assert 'path = "../llm-exec-core", editable = true' not in pyproject
+    assert f'source = {{ url = "{release_url}" }}' in lockfile
+    assert (
+        "sha256:30dbc41afa29cf1e74d572703a93111f65ab7581eae4d69d739fe292d007e6f7"
+        in lockfile
+    )
 
 
 def test_default_discovery_uses_app_catalog_without_key_or_network(

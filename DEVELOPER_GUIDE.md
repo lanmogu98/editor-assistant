@@ -32,14 +32,11 @@ This document provides technical documentation for developers contributing to Ed
 
 `llm-exec-core` now owns the model catalog (`llm_exec_core/llm_config.yml`), provider config loading, HTTP transport, streaming assembly, and token accounting. Editor Assistant uses that package as a dependency and keeps ownership of document workflow, task definitions, prompt templates, SQLite persistence, CLI behavior, output paths, and application logging.
 
-For this migration branch, the committed dependency mode is intentionally local and coordinated across two repos:
-
-```toml
-[tool.uv.sources]
-llm-exec-core = { path = "../llm-exec-core", editable = true }
-```
-
-Keep that relative source for sibling checkout and CI workspace runs on this branch. The publish/release step happens later: after `llm-exec-core` is published, remove `[tool.uv.sources]` and pin `llm-exec-core==0.1.0`.
+The committed dependency is the reviewed `llm-exec-core` 0.4.1 GitHub release
+wheel. `uv.lock` records the release URL and SHA-256
+`30dbc41afa29cf1e74d572703a93111f65ab7581eae4d69d739fe292d007e6f7`.
+Development, validation, and CI must use that locked release artifact rather
+than a sibling or editable core checkout.
 
 ---
 
@@ -66,7 +63,7 @@ Keep that relative source for sibling checkout and CI workspace runs on this bra
 ┌────────────────────────────┐     ┌──────────────────────────────────┐
 │    Content Conversion      │     │       Content Processing         │
 │    (md_converter.py)       │     │       (md_processor.py)          │
-│    - PDF, DOCX, HTML       │ --> │       [Async] process_mds()      │
+│    - PDF, DOCX, HTML       │ --> │ [Async] execute_task/process_mds │
 │    - URL fetching          │     │       - Prompt building          │
 │    - Format detection      │     │       - Semaphore control        │
 │    [Sync] (CPU Bound)      │     │       - Output formatting        │
@@ -98,9 +95,10 @@ Keep that relative source for sibling checkout and CI workspace runs on this bra
 Input (URL/PDF/MD) 
     → MarkdownConverter.convert_content() [Sync] (or direct `.md` read)
     → MDArticle (normalized content)
-    → EditorAssistant.process_multiple() [Async Fan-out]
-    → MDProcessor.process_mds() [Async] (Semaphore-limited)
-    → editor_assistant.llm_client.LLMClient.generate_response() [Async shim to llm_exec_core]
+    → EditorAssistant.process_multiple() [legacy async fan-out]
+    → MDProcessor.process_mds() → LLMClient.generate_response() [legacy tuple]
+or
+MDArticle → MDProcessor.execute_task() → LLMClient.generate() [typed result]
     → Output (SQLite run history + optional files under `llm_summaries/`)
 ```
 
@@ -115,11 +113,11 @@ Input (URL/PDF/MD)
 | `cli.py` | Async Command-line interface | `main()`, `create_parser()`, `cmd_generate_brief()` (async), `cmd_resume()` (async), `cmd_export()` |
 | `main.py` | Async Orchestration | `EditorAssistant` |
 | `md_converter.py` | Format conversion (Sync) | `MarkdownConverter` |
-| `md_processor.py` | Async LLM processing | `MDProcessor` (uses `asyncio.Semaphore`) |
+| `md_processor.py` | Async LLM processing | `MDProcessor.execute_task()`, compatibility `process_mds()` |
 | `llm_client.py` | Legacy import shim for extracted client | `LLMClient` re-export from `llm_exec_core.client` |
 | `clean_html_to_md.py` | HTML extraction | `CleanHTML2Markdown` |
 | `content_validation.py` | Input validation | `validate_content()`, `BlockedPublisherError` |
-| `data_models.py` | Data structures | `MDArticle`, `Input`, `ProcessType`, `InputType` |
+| `data_models.py` | Data structures | `MDArticle`, `OutputArtifact`, `TaskExecutionResult`, `Input`, `ProcessType`, `InputType` |
 
 ### Config Modules
 

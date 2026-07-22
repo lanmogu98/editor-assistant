@@ -7,7 +7,7 @@ name = "editor_assistant"
 version = "0.6.0"
 requires-python = ">=3.10"
 dependencies = [
-    "llm-exec-core>=0.4.1,<0.5.0",
+    "llm-exec-core @ https://github.com/lanmogu98/llm-exec-core/releases/download/0.4.1/llm_exec_core-0.4.1-py3-none-any.whl",
     "markitdown[all]",
     "requests",  # Deprecated: will be removed after async migration complete
     "httpx>=0.25.0",
@@ -44,6 +44,3 @@ line-length = 79
 # include runtime configuration in the package
 [tool.setuptools]
 package-data = { "editor_assistant" = ["config/llm_config.yml", "config/prompts/*.txt"] }
-
-[tool.uv.sources]
-llm-exec-core = { path = "../llm-exec-core", editable = true }
