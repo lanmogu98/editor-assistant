@@ -1074,7 +1074,7 @@ wheels = [
 
 [[package]]
 name = "llm-exec-core"
-version = "0.3.0"
+version = "0.4.1"
 source = { editable = "../llm-exec-core" }
 dependencies = [
     { name = "httpx" },
