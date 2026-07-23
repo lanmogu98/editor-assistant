@@ -1,271 +1,444 @@
 # Reliable Core Releases & Editor Dependency Delivery
 
-**Status:** accepted design; implementation not authorized by this document
-
-**Date:** 2026-07-23
+**Status:** accepted design; audited 2026-07-23; implementation not authorized
 
 **Program Epic:** [editor-assistant#38](https://github.com/lanmogu98/editor-assistant/issues/38)
 
 **GitHub Project:** [Reliable Core Releases & Editor Dependency Delivery](https://github.com/users/lanmogu98/projects/11)
 
-## Purpose
+## Purpose and authority
 
-Create a reproducible cross-repository delivery path in which `llm-exec-core`
-publishes validated Python artifacts through GitHub Releases and
-`editor-assistant` consumes, tests, and proposes upgrades to those immutable
-artifacts without following the Core `main` branch.
+Create a reproducible cross-repository delivery path in which
+`llm-exec-core` publishes validated, immutable Python artifacts through GitHub
+Releases and `editor-assistant` consumes, tests, and proposes upgrades to those
+artifacts without following Core `main`.
 
-This is a planning contract. Creating the Project, Epic, child Issues, and this
-document does not authorize workflow implementation, repository-setting
-changes, releases, pull requests, merges, secrets, bypasses, or direct updates
-to `main`. Each implementation Issue requires a later explicit dispatch.
+This document, the Project, and its Issues are planning contracts. They do not
+authorize workflow implementation, repository-setting changes, releases,
+pull requests, merges, secrets, approvals, bypasses, or direct updates to
+`main`. Every child needs a later explicit dispatch for its exact actor, scope,
+branch/PR delivery, and any separately withheld owner action.
 
-## Current state and problem
+## Audited current state
 
-- `llm-exec-core` is currently version `0.4.1` and already has an offline CI
-  workflow for Python 3.10 and 3.13, but no automated GitHub Release workflow.
-- `editor-assistant` declares `llm-exec-core>=0.4.1,<0.5.0`, then overrides it
-  with an editable sibling path in `[tool.uv.sources]`:
-  `../llm-exec-core`.
-- A clean Editor checkout therefore cannot reproduce the dependency without a
-  particular local directory layout.
-- Editor has no CI workflow and no active `main` protection tied to real check
-  names.
-- Core changes frequently enough that relying on a maintainer to notice every
-  Release and edit Editor manually is not a dependable update mechanism.
+- Core `main` is version `0.4.1`; its version also appears in
+  `llm_exec_core.__version__`, the root `uv.lock` package entry, and version
+  assertions.
+- Core tags use bare versions such as `0.4.1`, not `v0.4.1`.
+- Core has locked, provider-offline CI on Python 3.10 and 3.13, but no Release
+  workflow. Its required checks are `CI / python-3.10` and
+  `CI / python-3.13`.
+- Existing Release `0.4.1` predates this program. GitHub Release immutability
+  applies only to future Releases, so `0.4.1` is not an eligible Editor
+  artifact.
+- Editor declares `llm-exec-core>=0.4.1,<0.5.0`, then overrides it with the
+  editable sibling path `../llm-exec-core` in `[tool.uv.sources]`; `uv.lock`,
+  `README.md`, and `DEVELOPER_GUIDE.md` encode that local layout.
+- Editor has no CI workflow and no active `main` Ruleset tied to real checks.
+- The 2026-07-23 local feasibility baseline on Python 3.13 completed
+  `uv sync --locked`, 183 unit tests, Black, Flake8, and mypy successfully.
+  Python 3.10 remains a required real CI result.
+
+"Provider-offline" means tests perform no provider/live/paid LLM calls and
+receive no provider credentials. Runner bootstrap still downloads declared
+package and Release artifacts over HTTPS.
 
 ## Accepted decisions
 
-1. Publish Core distributions through GitHub Releases, not PyPI.
-2. Build wheel and sdist from an exact versioned source commit and tag.
-3. Editor consumes an immutable Release wheel URL and never follows Core
-   `main`.
-4. Stable releases below `0.5.0` are eligible for routine update PRs.
-5. `0.5.0` and later require an explicit compatibility assessment and are not
-   adopted automatically.
-6. Generated dependency PRs never auto-merge.
-7. Required Editor CI is offline and uses no provider API keys or paid LLM
-   calls.
-8. Editor `main` uses a solo-maintainer-friendly Ruleset: PR required, zero
-   approvals required, real checks required and current, conversations
-   resolved, force pushes and deletion blocked, and no default administrator
-   bypass.
+1. Publish Core distributions through public GitHub Releases, not PyPI.
+2. Core tags are exact normalized PEP 440 versions without a `v` prefix.
+3. Enable GitHub Release immutability before any program Release. Convention,
+   checksums, and an unmoved tag are not substitutes for the platform control.
+4. Build wheel and sdist from one exact reviewed `main` commit and verify all
+   intentional version loci plus distribution metadata.
+5. Editor consumes one immutable Release wheel through a PEP 508 HTTPS URL
+   ending in `#sha256=<verified-wheel-digest>`; it never follows Core `main`.
+6. The GitHub asset digest, `SHA256SUMS`, downloaded bytes, URL fragment,
+   wheel metadata, package `__version__`, Release tag, and tag target must
+   agree.
+7. Stable immutable Releases below `0.5.0` are eligible for routine update
+   PRs. Crossing `0.5.0` opens one boundary-keyed compatibility assessment and
+   never changes the dependency automatically.
+8. Generated dependency PRs are neither approved nor auto-merged.
+9. Editor CI exposes three stable checks and executes candidate code only with
+   a read-only token.
+10. Editor `main` uses a solo-maintainer Ruleset with zero approvals, strict
+    GitHub-Actions-sourced checks, resolved conversations, no force/delete,
+    and no bypass actor.
+11. Repository default `GITHUB_TOKEN` permissions stay read-only. Release
+    immutability and Actions-created-PR capability are explicit, separate
+    owner-setting prerequisites rather than hidden workflow assumptions.
+12. Updater production mutation is additionally gated by the repository
+    variable `LLM_EXEC_CORE_UPDATER_ENABLED`. It remains absent or `false`
+    through #44 and is enabled only inside the explicitly dispatched #43
+    rehearsal, preventing scheduled runs from mutating state between gates.
 
 ## Program structure and dependency order
 
-The GitHub Project contains the Epic plus seven implementation/validation
-contracts. Its numeric `Sequence` field is persisted and sorted ascending.
+GitHub native parent/sub-issue and blocked-by relations are the dependency
+source of truth. Project `Sequence` mirrors them and is sorted ascending.
 
-| Sequence | Repository | Contract | Depends on | Required result |
-|---:|---|---|---|---|
+| Sequence | Repository | Contract | Depends on | Observable result |
+| ---: | --- | --- | --- | --- |
 | 0 | Editor | [Epic #38](https://github.com/lanmogu98/editor-assistant/issues/38) | — | Program coordination and final acceptance |
-| 1 | Core | [#39](https://github.com/lanmogu98/llm-exec-core/issues/39) | Existing Core CI | Controlled, validated Release workflow |
-| 2 | Core | [#40](https://github.com/lanmogu98/llm-exec-core/issues/40) | Core #39 | First legitimate workflow-produced stable Release |
-| 3 | Editor | [#39](https://github.com/lanmogu98/editor-assistant/issues/39) | Core #40 | Immutable Release dependency and regenerated lock |
-| 4 | Editor | [#40](https://github.com/lanmogu98/editor-assistant/issues/40) | Editor #39 | Stable quality and Python compatibility checks |
-| 5 | Editor | [#41](https://github.com/lanmogu98/editor-assistant/issues/41) | Editor #40 | Active `main` Ruleset using observed check names |
-| 6 | Editor | [#42](https://github.com/lanmogu98/editor-assistant/issues/42) | Editor #41 | Compatible-Release updater that opens CI-gated PRs |
-| 7 | Editor | [#43](https://github.com/lanmogu98/editor-assistant/issues/43) | Editor #42 | Recorded end-to-end production rehearsal |
+| 1 | Core | [#39](https://github.com/lanmogu98/llm-exec-core/issues/39) | Existing Core CI | Reviewed Release workflow and post-merge dry run |
+| 2 | Core | [#41](https://github.com/lanmogu98/llm-exec-core/issues/41) | Core #39 | Future Releases made immutable by owner setting |
+| 3 | Core | [#42](https://github.com/lanmogu98/llm-exec-core/issues/42) | Core #41 | Legitimate compatible version commit on `main` |
+| 4 | Core | [#40](https://github.com/lanmogu98/llm-exec-core/issues/40) | Core #42 | First immutable workflow-produced stable Release |
+| 5 | Editor | [#39](https://github.com/lanmogu98/editor-assistant/issues/39) | Core #40 | Hash-bearing immutable dependency and lock |
+| 6 | Editor | [#40](https://github.com/lanmogu98/editor-assistant/issues/40) | Editor #39 | Stable quality and Python compatibility checks |
+| 7 | Editor | [#41](https://github.com/lanmogu98/editor-assistant/issues/41) | Editor #40 | Active `main` Ruleset using observed check names |
+| 8 | Editor | [#42](https://github.com/lanmogu98/editor-assistant/issues/42) | Editor #41 | Reviewed updater and non-mutating post-merge dry run |
+| 9 | Editor | [#44](https://github.com/lanmogu98/editor-assistant/issues/44) | Editor #42 | PR switch enabled while mutation stays inactive |
+| 10 | Editor | [#43](https://github.com/lanmogu98/editor-assistant/issues/43) | Editor #44 | Controlled activation and production rehearsal |
 
 ```mermaid
 flowchart LR
-    C1["Core #39<br/>Release workflow"] --> C2["Core #40<br/>First legitimate Release"]
-    C2 --> E1["Editor #39<br/>Immutable dependency"]
-    E1 --> E2["Editor #40<br/>Offline CI"]
+    C1["Core #39<br/>Release workflow"] --> C2["Core #41<br/>Immutable Releases"]
+    C2 --> C3["Core #42<br/>Version preparation"]
+    C3 --> C4["Core #40<br/>First immutable Release"]
+    C4 --> E1["Editor #39<br/>Immutable dependency"]
+    E1 --> E2["Editor #40<br/>Provider-offline CI"]
     E2 --> E3["Editor #41<br/>main Ruleset"]
-    E3 --> E4["Editor #42<br/>Update PR automation"]
-    E4 --> E5["Editor #43<br/>End-to-end rehearsal"]
+    E3 --> E4["Editor #42<br/>Updater implementation"]
+    E4 --> E5["Editor #44<br/>Actions PR setting"]
+    E5 --> E6["Editor #43<br/>Activation + rehearsal"]
 ```
 
-No child starts before its predecessor is complete. The Epic closes only after
-the sequence-7 rehearsal has passed and its evidence is recorded.
+No child starts before its native blocker closes. The Epic closes only after
+sequence 10 passes and its evidence is recorded.
 
-## Architecture
+## Contract details
 
-### 1. Core Release workflow
+### 1. Core Release workflow — Core #39
 
-Core #39 adds one controlled Release workflow, expected at
-`.github/workflows/release.yml`.
+Add `.github/workflows/release.yml`, manually dispatched with exact `version`
+and Boolean `dry_run` inputs. It must:
 
-The workflow is manually dispatched with an exact version and a dry-run/publish
-mode. It must:
+1. run only for the dispatched current `main` SHA;
+2. use a bare no-`v` tag;
+3. match input, `pyproject.toml`, `llm_exec_core.__version__`, the root
+   `uv.lock` entry, wheel/sdist metadata, and intended tag;
+4. reject non-normalized input and existing tags/Releases/assets before
+   mutation;
+5. run Core's canonical locked gates on Python 3.10 and 3.13;
+6. build wheel and sdist once, then clean-install each distribution separately
+   on both Pythons with import/metadata/version assertions;
+7. generate `SHA256SUMS`;
+8. upload ordinary workflow artifacts only in dry-run mode;
+9. in publish mode, create the tag and draft, attach the complete assets,
+   publish, then read back tag target, asset digests, and `immutable: true`;
+10. serialize release attempts without cancelling an in-flight publish.
 
-1. run only against the intended `main` commit;
-2. require the input version to equal `project.version` in `pyproject.toml`;
-3. require the corresponding `vX.Y.Z` tag and public Release not to exist;
-4. run the canonical locked CI gates already used by Core;
-5. build wheel and sdist with `uv build`;
-6. install the built wheel in clean Python 3.10 and 3.13 environments and run
-   a minimal import/version smoke test;
-7. generate a `SHA256SUMS` file for both distributions;
-8. in dry-run mode, upload only workflow artifacts and create no tag or
-   Release; and
-9. in publish mode, create the exact tag, stage a draft Release, upload the
-   wheel, sdist, and checksums, then publish only after every preceding gate
-   succeeds.
+Actions are full-SHA pinned. Defaults are read-only; only the publication job
+gets `contents: write`. No provider key, PAT, live call, untrusted PR code, or
+`pull_request_target` is allowed.
 
-The workflow uses concurrency control to prevent overlapping releases. Actions
-are pinned to immutable commit SHAs. Default permissions are read-only;
-`contents: write` is scoped only to the publishing job.
+`workflow_dispatch` only receives events after the workflow exists on the
+default branch. Therefore the implementation PR first passes existing CI and
+independent exact-head review, the maintainer merges, and then a dry run on the
+resulting `main` SHA closes #39. A failure requires a repair PR. #39 creates no
+stable Release.
 
-Release assets are append-only from the program's perspective. A bad public
-artifact is never overwritten under an existing tag. It is documented and
-superseded by a new patch Release.
+### 2. Release immutability — Core #41
 
-Core #39 proves the workflow in dry-run mode but does not invent a stable
-version merely to finish the Issue. Core #40 performs the next legitimate
-stable Release after the change set and version are independently justified.
+After #39's dry run, the maintainer enables **Settings → General → Releases →
+Enable release immutability**. UI and
+`GET /repos/lanmogu98/llm-exec-core/immutable-releases` must read back enabled.
+The Issue records the prior state, retrieval date, and owner-enforcement state.
 
-### 2. Immutable Editor dependency
+This Issue creates no tag or Release and changes no workflow permission.
+Existing `0.4.1` remains mutable/ineligible because the setting is prospective.
 
-Editor #39 removes the editable sibling source and replaces the dependency with
-a standard PEP 508 direct reference to the validated wheel, for example:
+### 3. Legitimate version preparation — Core #42
+
+Prepare one focused version-only PR after release-worthy product changes are
+already reviewed on `main`. The version must be stable, newer than `0.4.1`,
+below `0.5.0`, absent from tags/Releases, and justified by compatibility impact.
+
+The bounded surface is `project.version`, `llm_exec_core.__version__`, the root
+package version in `uv.lock`, direct version assertions, and minimal
+changelog/release-note preparation. Refreshing the lock may change only that
+root version; third-party versions, sources, and hashes remain identical.
+Runtime, catalog, schema, dependency, workflow, and unrelated lock changes are
+excluded. The PR passes `uv lock --check`, canonical CI, and independent
+review; it creates no Release or tag. If no legitimate compatible version is
+ready, the program waits.
+
+### 4. First immutable Release — Core #40
+
+On Core #42's exact merged `main` SHA, run dry-run and then owner-dispatched
+publish mode. Record:
+
+- source SHA, no-`v` tag, tag target, Release/run URLs;
+- agreeing Core `pyproject.toml`, `__version__`, root `uv.lock`, and
+  distribution versions;
+- `immutable: true` and successful Release-attestation verification;
+- wheel, sdist, `SHA256SUMS`, GitHub asset digests, and matching local hashes;
+- generated notes range; and
+- Python 3.10/3.13 clean-install, import, and version evidence for both wheel
+  and sdist.
+
+The consumer URL must support appending `#sha256=<wheel digest>`. A public bad
+Release is preserved and superseded; it is never rewritten.
+
+### 5. Immutable Editor dependency — Editor #39
+
+Replace the range plus sibling override with:
 
 ```toml
-"llm-exec-core @ https://github.com/lanmogu98/llm-exec-core/releases/download/vX.Y.Z/llm_exec_core-X.Y.Z-py3-none-any.whl"
+"llm-exec-core @ https://github.com/lanmogu98/llm-exec-core/releases/download/X.Y.Z/llm_exec_core-X.Y.Z-py3-none-any.whl#sha256=<verified-wheel-digest>"
 ```
 
-`uv.lock` is regenerated and committed. The Release tag, wheel filename,
-package metadata version, and locked artifact hash must agree.
+Regenerate `uv.lock` without a global upgrade. Lock changes must be limited to
+the Editor root requirement, Core, and dependency-closure changes required by
+the new Core metadata; unrelated locked versions, sources, and hashes remain
+unchanged. Update both languages in `README.md`, the stale sibling and `0.1.0`
+instructions in `DEVELOPER_GUIDE.md`, and the existing dependency contract
+tests. Those tests parse the direct URL/version/hash, reject local sources, and
+enforce a stable pin below `0.5.0`; crossing the boundary requires an explicit
+assessment plus an intentional policy-test change. Validate from clean
+no-sibling checkouts with:
 
-A direct reference is already an exact pin, so PEP 508 does not combine it with
-`<0.5.0` on the same requirement. The `0.5.0` ceiling is instead a hard policy
-gate in the updater: it may rewrite the exact URL only when the candidate
-version is stable and `<0.5.0`. Before updater automation exists, the exact URL
-itself prevents unplanned movement.
+- `uv sync --locked`;
+- `uv run --frozen pytest tests/unit/`;
+- `uv build` plus Editor wheel metadata inspection; and
+- `pip install .` and public-import/version smoke tests on Python 3.10/3.13.
 
-Acceptance requires both `uv` and ordinary `pip` installation from a clean
-checkout without a sibling Core repository, on Python 3.10 and 3.13.
+The updater owns the `<0.5.0` policy; a direct URL cannot carry a simultaneous
+range specifier.
 
-### 3. Editor CI contract
+### 6. Editor CI — Editor #40
 
-Editor #40 adds `.github/workflows/ci.yml`, triggered for every pull request to
-`main`, every push to `main`, and manual dispatch. It has no path filters and
-uses read-only permissions.
+Add `.github/workflows/ci.yml` for every PR to `main`, push to `main`, and
+manual dispatch, with no path or commit skip. Pin uv and all Actions; run
+`uv sync --locked`, then frozen commands. Default permission is
+`contents: read`.
 
-The required check names are stable contracts:
+Stable job/check names:
 
-- `Quality`
-- `Unit tests (Python 3.10)`
-- `Unit tests (Python 3.13)`
+- `Quality` — Python 3.13; Black on `src/ tests/`, Flake8 on `src/`, mypy on
+  `src/`;
+- `Unit tests (Python 3.10)` — full `tests/unit/`;
+- `Unit tests (Python 3.13)` — the same suite.
 
-`Quality` runs on Python 3.13 and checks Black formatting, Flake8 linting, and
-mypy typing using the repository's documented scopes. Unit jobs run only
-`tests/unit/` with the frozen lockfile. Integration tests, provider credentials,
-network LLM calls, and paid calls are excluded.
+The matrix uses `fail-fast: false`. Integration/stress/live/paid tests and
+provider credentials are excluded. A baseline problem becomes a focused
+blocker instead of a weakened check or hidden cleanup.
 
-If the existing baseline fails one of these commands, Editor #40 fixes only a
-small blocker that is directly necessary to establish the check. Larger cleanup
-is split into a focused follow-up Issue rather than hidden inside CI work.
+### 7. `main` Ruleset — Editor #41
 
-### 4. `main` Ruleset
+After recent real checks exist, create active `Protect main` targeting `main`:
 
-Editor #41 creates an active Ruleset named `Protect main` only after #40 has
-produced real check runs. It targets `main` and requires:
+- PR required, 0 approvals, conversations resolved;
+- all three exact checks required from the GitHub Actions expected source;
+- branch current with `main` before merge;
+- force push and deletion blocked;
+- no bypass actor.
 
-- changes through a pull request;
-- zero required approvals;
-- all review conversations resolved;
-- the exact three checks above;
-- the branch to be current with `main` before merge;
-- no force pushes; and
-- no branch deletion.
+Signed commits, linear history, deployments, code owners, auto-merge, and
+unrelated gates stay off. A safe PR proves pending/current-head enforcement;
+force/delete controls are verified by readback, not destructive tests.
 
-There is no default administrator bypass. Signed commits, linear history,
-deployment gates, and unrelated restrictions are out of scope.
+### 8. Compatible Release updater — Editor #42
 
-### 5. Compatible Release updater
+Add:
 
-Editor #42 adds `.github/workflows/update-llm-exec-core.yml`, scheduled daily and
-available through `workflow_dispatch`.
+- `.github/workflows/update-llm-exec-core.yml`;
+- `scripts/update_llm_exec_core.py` for deterministic PEP 440 selection,
+  integrity validation, and rewrite planning;
+- `tests/unit/test_update_llm_exec_core.py` with offline fixtures; and
+- an explicit `packaging` development dependency plus lock update.
 
-For each run it:
+The updater runs daily and by manual dry run, with one concurrency group. A
+write-capable path runs only when repository variable
+`LLM_EXEC_CORE_UPDATER_ENABLED` is exactly `true`. When the variable is absent
+or false, scheduled and non-dry-run invocations stop after read-only discovery
+and create no branch, PR, assessment Issue, or dependency-file mutation. Every
+updater invocation must use the workflow and source ref from current `main`;
+another ref fails before a write-capable job can start. It:
 
-1. queries public Releases in `lanmogu98/llm-exec-core`;
-2. ignores drafts, prereleases, invalid tags, and Releases missing the expected
-   wheel or checksum evidence;
-3. determines the exact currently pinned Core version from `pyproject.toml`;
-4. selects only a newer stable candidate below `0.5.0`;
-5. verifies that Release/tag/artifact versions and the published SHA256 entry
-   agree;
-6. updates the direct wheel URL and regenerates `uv.lock`;
-7. reuses one deterministic branch/PR for the candidate version; and
-8. includes old/new versions, Release notes, Release URL, artifact URL, and
-   checksum evidence in the PR body.
+1. paginates public Releases and parses versions with `packaging.version`;
+2. selects the greatest newer stable public version below `0.5.0` before any
+   integrity filtering, then requires that exact Release to be immutable and
+   complete;
+3. independently detects the `0.5.0` boundary, even in the same run;
+4. requires the wheel, sdist, checksum file, attestation, tag provenance,
+   `immutable: true`, and agreeing GitHub/file/download digests;
+5. fails rather than falling back when that greatest version is mutable,
+   malformed, incomplete, or internally inconsistent;
+6. rewrites the hash-bearing URL, performs a minimal non-global lock update,
+   checks it, enforces a two-file diff allowlist, and rejects lock changes
+   outside the Editor/Core dependency closure;
+7. owns one branch, `automation/update-llm-exec-core`, and at most one active
+   same-repository PR targeting `main`; an active PR advances to the greatest
+   candidate using guarded force-with-lease semantics;
+8. does not recreate a deliberately closed PR for the same candidate;
+9. keeps one assessment Issue keyed to boundary `0.5.0`; and
+10. never approves, auto-merges, bypasses, or pushes to `main`.
 
-Runs are idempotent. Repeating a run does not create duplicate PRs or duplicate
-assessment Issues. The workflow never enables auto-merge.
+Only the mutation job has `contents: write`, `pull-requests: write`,
+`issues: write`, and `actions: write`; it is conditioned on both current
+`main` and the activation variable. Candidate code is not installed or
+executed in that privileged job. Tags, filenames, notes, and API JSON are
+untrusted data and are never evaluated as shell code.
 
-For `0.5.0+`, the updater changes neither `pyproject.toml` nor `uv.lock`. It
-creates or updates one version-keyed compatibility-assessment Issue instead.
+After a generated branch/PR exists, the updater explicitly dispatches
+`.github/workflows/ci.yml` on that branch with
+`return_run_details=true`, requires the HTTP 200 response's
+`workflow_run_id`/URLs, and asserts event, branch, head SHA, and all three job
+names/results. It does not rely on the approval-required PR run generated by a
+`GITHUB_TOKEN` event or ambiguous after-the-fact run matching.
 
-The preferred credential is the repository-scoped `GITHUB_TOKEN`; no long-lived
-PAT is introduced by default. Because events created by `GITHUB_TOKEN` generally
-do not start another workflow, merely opening the PR is insufficient. The
-implementation must use and prove a secure explicit handoff, such as dispatching
-the CI workflow on the generated branch, so all three required check names are
-attached to the PR head commit. If that cannot be demonstrated, #42 remains
-blocked rather than weakening the Ruleset.
+Because the new updater also needs to exist on the default branch, #42 closes
+after its implementation PR is merged and a fixture-backed non-mutating dry run
+succeeds. Tests must prove the absent/false activation gate prevents every
+mutation and a non-`main` dispatch cannot enter the privileged job. Production
+remains inactive through #44.
 
-### 6. End-to-end rehearsal
+### 9. Actions-created PR setting — Editor #44
 
-Editor #43 uses the next legitimate compatible Core Release and records:
+After reviewing every workflow permission, the maintainer enables **Allow
+GitHub Actions to create and approve pull requests** while retaining read-only
+default workflow permissions. The combined GitHub switch does not authorize
+this workflow to approve anything; no approval or auto-merge code is present.
+The activation variable remains absent or `false`, so this setting gate cannot
+race a schedule into a production branch, PR, or assessment Issue.
 
-- Core Release workflow run, tag, Release, assets, and checksums;
-- updater run and generated Editor PR;
-- all three required checks on the PR head;
-- observed Ruleset refusal while a required check is absent/failing;
-- manual merge after all requirements pass;
-- the merge commit and green post-merge `main` run; and
-- a rollback-through-PR path to the previous validated Release.
+UI, `GET /repos/lanmogu98/editor-assistant/actions/permissions/workflow`, and
+`GET /repos/lanmogu98/editor-assistant/actions/variables` must agree. This
+setting-only Issue creates no PR and introduces no PAT, App key, deploy key, or
+provider secret. #43 owns changing `LLM_EXEC_CORE_UPDATER_ENABLED` to `true`,
+reading it back through the named-variable endpoint, and the first production
+run.
 
-The `0.5.0+` branch is rehearsed with read-only/dry-run fixture input. The
-program does not publish a fake stable Release merely to complete validation.
+### 10. Production rehearsal — Editor #43
+
+Use a later legitimate stable Core Release below `0.5.0`—not the initial
+Release already pinned by Editor #39. After all preconditions are re-read, the
+maintainer changes `LLM_EXEC_CORE_UPDATER_ENABLED` from absent/false to `true`,
+records UI and
+`GET /repos/lanmogu98/editor-assistant/actions/variables/LLM_EXEC_CORE_UPDATER_ENABLED`
+readback, and from that point #43 owns either the next scheduled run or an
+explicit production dispatch. Prove:
+
+1. immutable Release and artifact evidence;
+2. updater discovery and exactly one hash-bearing dependency PR;
+3. explicit CI dispatch run ID on the exact PR head;
+4. Ruleset block while checks are pending;
+5. all three checks passing;
+6. maintainer manual merge and green post-merge `main` CI.
+
+Use read-only fixture/dry-run input for the `0.5.0+` path, including the case
+where compatible and boundary Releases coexist. Do not create a fake Release
+or fake production assessment Issue.
+
+Open a rollback PR to the preceding validated immutable URL/hash, regenerate
+the lock, and let it reach green/mergeable Ruleset state. Record evidence and
+close it unmerged unless rollback is actually needed. This exercises recovery
+without deliberately leaving `main` behind.
 
 ## Failure and rollback semantics
 
-- Missing or inconsistent Core metadata, assets, or hashes fails closed before
-  publication or before an Editor PR is opened.
-- A failed Core publish attempt may leave a draft for controlled inspection,
-  but never a partially published stable Release.
-- Closing a generated Editor PR leaves the current dependency unchanged.
-- Editor rollback pins the immediately preceding validated wheel and lockfile
-  through the same PR, CI, and Ruleset path.
-- Direct `main` pushes, Ruleset bypasses, tag reuse, and asset replacement are
+- Metadata, tag, immutability, attestation, asset, digest, or lock mismatch
+  fails closed before consumer mutation.
+- Core validation failure creates no public Release. An incomplete draft may
+  be inspected/removed only by the maintainer.
+- A bad immutable public Release is marked unsuitable and superseded by a new
+  version; tag/asset rewriting is forbidden.
+- Closing a generated Editor PR leaves the current dependency unchanged and
+  suppresses recreation for the same candidate.
+- Editor rollback uses the immediately preceding validated URL/hash through a
+  normal PR, identical CI, and the Ruleset.
+- Before updater recovery or permission rollback, set
+  `LLM_EXEC_CORE_UPDATER_ENABLED=false` first so scheduled runs become
+  read-only before any other control changes.
+- Direct `main` pushes, Ruleset bypass, tag reuse, and asset replacement are
   never recovery mechanisms.
 
 ## Security boundaries
 
-- No provider API keys or paid service credentials enter CI.
-- Workflow permissions are explicit and minimal at job level.
-- Third-party Actions are pinned to immutable commits.
-- Release discovery is read-only against a public repository.
-- Only the updater job receives the permissions needed to write its branch,
-  PR, or assessment Issue.
-- No PAT is added unless a later focused design demonstrates that the accepted
-  repository-token path cannot meet the CI-trigger contract and the maintainer
-  separately approves the secret.
+- No provider API keys, paid calls, PATs, or production environment files.
+- Defaults are read-only; write scopes exist only on the two narrowly scoped
+  publication/updater jobs.
+- All external Actions are full-SHA pinned and uv is version-pinned.
+- Candidate Core code executes only in read-only Editor CI, never in the
+  write-capable updater job.
+- Public Release metadata and notes are untrusted input.
+- Required Ruleset checks accept GitHub Actions as the expected source.
+- No credential alternative is introduced without a new focused design and
+  explicit maintainer approval.
+
+## Known distribution constraint
+
+PEP 508 direct URLs are valid for pip/uv integration, and pip accepts them when
+Editor is installed locally or from a URL. Standards-conformant indexes such as
+PyPI reject uploaded distributions whose metadata contains direct URL
+dependencies. Publishing Editor itself to PyPI is therefore out of scope and
+would require revisiting Core distribution.
 
 ## Non-goals
 
-- Publishing Core to PyPI.
-- Tracking Core `main`, a floating branch, or an unversioned asset.
-- Automatically merging dependency updates.
-- Running live integration/provider tests in required CI.
-- Expanding into Core catalog, schema, pricing, or execution-boundary work.
-- Adding signed-commit or linear-history mandates.
-- Implementing any workflow as part of this design-document change.
+- Publishing Core or Editor to PyPI in this program.
+- Tracking Core `main`, a floating tag, or an unversioned/mutable asset.
+- Bot approval, automatic merge, or Ruleset bypass.
+- Live integration/provider tests in required CI.
+- Core catalog/schema/pricing/execution-boundary work.
+- Signed-commit or linear-history mandates.
+- Implementing any workflow or changing any setting as part of this planning
+  audit.
 
 ## Program completion criteria
 
-The program is complete only when all seven child contracts close in sequence,
-the end-to-end evidence is recorded in Editor #43, and the Epic acceptance
-checklist is satisfied. Until then, the Project remains the coordination
-surface and the individual Issue is the implementation authority for its own
-bounded step.
+The program is complete only when all ten native child contracts close in
+order, Project `Sequence` agrees, Editor #43 records exact evidence, and the
+Epic #38 acceptance checklist passes. Until then, the Project is coordination;
+each child Issue is the only implementation authority for its bounded concern.
+
+## Audit corrections incorporated
+
+The 2026-07-23 audit corrected these gaps and drifts:
+
+- changed design examples from a prefixed tag placeholder to the repository's
+  actual no-`v` `X.Y.Z` contract;
+- separated Release immutability, Core version preparation, and Actions PR
+  authorization into distinct Issues;
+- required actual GitHub immutable Releases and attestations;
+- added the PEP 508 `#sha256=` fragment and multi-source digest agreement;
+- added all Core version loci and wheel/sdist metadata checks;
+- handled the default-branch-only `workflow_dispatch` constraint explicitly;
+- made dependency synchronization enforce lock consistency with
+  `uv sync --locked`;
+- clarified provider-offline versus dependency-download network access;
+- bound required checks to the GitHub Actions source;
+- specified exact-head CI dispatch/run-ID verification for bot PRs;
+- required `return_run_details=true` so the dispatched CI run is identified
+  from the HTTP 200 response rather than timing-based lookup;
+- prevented candidate-code execution in the updater's write-capable job;
+- defined greatest-version, one-active-PR, closed-candidate, concurrent-run,
+  and boundary-deduplication behavior;
+- required wheel and sdist clean-install smoke tests on both supported Pythons;
+- required minimal lock diffs and a CI-enforced below-`0.5.0` dependency
+  policy, closing global-upgrade and manual-edit bypasses;
+- added an explicit repository-variable activation gate to prevent scheduled
+  mutation between updater merge, PR authorization, and production rehearsal;
+- reconciled rollback proof with a green unmerged rollback PR; and
+- promoted native sub-issue/blocked-by relations as dependency source of truth.
 
 ## External references
 
-- [GitHub: About releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+- [GitHub: Immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+- [GitHub: Preventing changes to releases](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/establish-provenance-and-integrity/prevent-release-changes)
+- [GitHub: Release REST API](https://docs.github.com/en/rest/releases/releases)
 - [GitHub: `GITHUB_TOKEN` event behavior](https://docs.github.com/en/actions/concepts/security/github_token)
-- [uv: Project dependencies and direct sources](https://docs.astral.sh/uv/concepts/projects/dependencies/)
+- [GitHub: Triggering workflows](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+- [GitHub: Workflows REST API](https://docs.github.com/en/rest/actions/workflows)
+- [GitHub: Required ruleset checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+- [GitHub: Managing Actions settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)
+- [GitHub: Actions variables REST API](https://docs.github.com/en/rest/actions/variables)
+- [GitHub: Adding sub-issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/adding-sub-issues)
+- [GitHub: Creating issue dependencies](https://docs.github.com/en/enterprise-cloud@latest/issues/tracking-your-work-with-issues/using-issues/creating-issue-dependencies)
+- [Python Packaging: Dependency specifiers](https://packaging.python.org/en/latest/specifications/dependency-specifiers/)
+- [Python Packaging: Version specifiers](https://packaging.python.org/en/latest/specifications/version-specifiers/)
+- [Setuptools: Dependency management](https://setuptools.pypa.io/en/stable/userguide/dependency_management.html)
+- [uv: Project dependencies](https://docs.astral.sh/uv/concepts/projects/dependencies/)
