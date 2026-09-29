@@ -147,6 +147,19 @@ gemini:
         tool_streaming: true
         tool_choice: true
         reasoning_controls: ["reasoning_effort"]
+    gemini-3.8-flash:
+      id: "gemini-3.8-flash"
+      pricing: { input: 0.75, output: 3.75 }
+      capabilities:
+        version: "gemini-3.8-flash-2026-09"
+        source: "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash"
+        source_date: "2026-09-29"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["reasoning_effort"]
 
 # kimi-volcengine: sunset by Volcengine (model id "kimi-k2-250905" returns 404
 # as of 2026-05-09; Moonshot's official K2 series sunset is 2026-05-25). Block
@@ -291,6 +304,19 @@ doubao:
         version: "volcengine-doubao-seed-2.1-pro-2026-07-02"
         source: "https://www.volcengine.com/docs/82379/1330310"
         source_date: "2026-07-02"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    doubao-seed-2.0-lite:
+      id: "doubao-seed-2-0-lite-260428"
+      pricing: {input: 0.30, output: 1.80}
+      capabilities:
+        version: "volcengine-doubao-seed-2.0-lite-2026-04-28"
+        source: "https://docs.volcengine.com/docs/ark/model-list"
+        source_date: "2026-09-29"
         strict_response_schema: true
         json_object_response: true
         tools: true

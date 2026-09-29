@@ -27,6 +27,7 @@ EXPECTED_MODELS = [
     "gemini-3.1-flash-lite",
     "gemini-3.1-pro",
     "gemini-3.5-flash",
+    "gemini-3.8-flash",
     "qwen3.6-flash",
     "glm-5.2",
     "glm-5",
@@ -36,11 +37,18 @@ EXPECTED_MODELS = [
     "glm-5.1-or",
     "glm-5-turbo-or",
     "doubao-seed-2.1-pro",
+    "doubao-seed-2.0-lite",
     "doubao-seed-1.6",
     "gpt-5.5-or",
     "claude-sonnet-5-or",
     "claude-opus-4.8-or",
 ]
+
+EXPERIMENT_MODELS = {
+    "gemini-3.8-flash": ("gemini-3.8-flash", "$"),
+    "deepseek-v4-flash": ("deepseek-v4-flash", "¥"),
+    "doubao-seed-2.0-lite": ("doubao-seed-2-0-lite-260428", "¥"),
+}
 
 RELEASE_CORE_CATALOG_SHA256 = (
     "490c5df6988c43b65badf28f75a8507e09c11505a2d4f47ecb2bda42984abfd4"
@@ -137,6 +145,26 @@ def test_default_discovery_uses_app_catalog_without_key_or_network(
         models = LLMClient.get_supported_models()
 
     assert models == EXPECTED_MODELS
+
+
+@pytest.mark.parametrize(
+    ("model_name", "expected_id", "expected_currency"),
+    [
+        (name, details[0], details[1])
+        for name, details in EXPERIMENT_MODELS.items()
+    ],
+)
+def test_translation_experiment_models_resolve_from_app_catalog(
+    model_name,
+    expected_id,
+    expected_currency,
+):
+    from editor_assistant.config.llm_models import get_model_details
+
+    provider, model = get_model_details(model_name)
+
+    assert model.id == expected_id
+    assert provider.pricing_currency == expected_currency
 
 
 def test_cli_parser_uses_exact_catalog_and_glm_52_default():

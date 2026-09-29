@@ -226,7 +226,7 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 #### Gemini
 
-- Paid key (`GEMINI_API_KEY`): `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro`, `gemini-3.5-flash`
+- Paid key (`GEMINI_API_KEY`): `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro`, `gemini-3.5-flash`, `gemini-3.8-flash`
 
 #### Qwen
 
@@ -245,7 +245,7 @@ The catalog's `¥0.30` input and `¥0.60` output values are historical, non-auth
 
 #### Doubao
 
-- `doubao-seed-2.1-pro`, `doubao-seed-1.6`
+- `doubao-seed-2.1-pro`, `doubao-seed-2.0-lite`, `doubao-seed-1.6`
 
 #### OpenAI via OpenRouter
 
@@ -568,7 +568,7 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 #### Gemini
 
-- 付费 key (`GEMINI_API_KEY`)：`gemini-3-flash`、`gemini-3.1-flash-lite`、`gemini-3.1-pro`、`gemini-3.5-flash`
+- 付费 key (`GEMINI_API_KEY`)：`gemini-3-flash`、`gemini-3.1-flash-lite`、`gemini-3.1-pro`、`gemini-3.5-flash`、`gemini-3.8-flash`
 
 #### Qwen
 
@@ -587,7 +587,7 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 #### Doubao
 
-- `doubao-seed-2.1-pro`、`doubao-seed-1.6`
+- `doubao-seed-2.1-pro`、`doubao-seed-2.0-lite`、`doubao-seed-1.6`
 
 #### OpenAI via OpenRouter
 
