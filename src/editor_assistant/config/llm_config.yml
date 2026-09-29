@@ -59,6 +59,37 @@ deepseek-volcengine:
         tool_streaming: true
         tool_choice: true
         reasoning_controls: ["thinking", "reasoning_effort"]
+    deepseek-v4-flash-preview-volc:
+      id: "deepseek-v4-flash-260425"
+      pricing: { input: 1.50, output: 4.50 }
+      capabilities:
+        version: "deepseek-volcengine-v4-flash-preview-2026-04-25"
+        source: "https://docs.volcengine.com/docs/ark/model-list"
+        source_date: "2026-09-29"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    deepseek-v4-flash-ga-volc:
+      id: "deepseek-v4-flash-ga-260731"
+      pricing: { input: 1.50, output: 4.50 }
+      capabilities:
+        version: "deepseek-volcengine-v4-flash-ga-2026-07-31"
+        source: "https://docs.volcengine.com/docs/ark/model-list"
+        source_date: "2026-09-29"
+        strict_response_schema: false
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    deepseek-v3.2-volc:
+      id: "deepseek-v3-2-251201"
+      pricing: { input: 2.00, output: 8.00 }
+      max_tokens: 32000
+      context_window: 128000
 
 # DeepSeek native API V4 models and ordinary cache-miss pricing.
 deepseek:
@@ -310,11 +341,51 @@ doubao:
         tool_streaming: true
         tool_choice: true
         reasoning_controls: ["thinking", "reasoning_effort"]
+    doubao-seed-2.1-lite:
+      id: "doubao-seed-2-1-lite-260915"
+      pricing: {input: 0.40, output: 1.35}
+      context_window: 1048576
+      capabilities:
+        version: "volcengine-doubao-seed-2.1-lite-2026-09-15"
+        source: "https://docs.volcengine.com/docs/ark/model-list"
+        source_date: "2026-09-29"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    doubao-seed-2.0-pro:
+      id: "doubao-seed-2-0-pro-260215"
+      pricing: {input: 1.60, output: 8.00}
+      capabilities:
+        version: "volcengine-doubao-seed-2.0-pro-2026-02-15"
+        source: "https://docs.volcengine.com/docs/ark/model-list"
+        source_date: "2026-09-29"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
     doubao-seed-2.0-lite:
       id: "doubao-seed-2-0-lite-260428"
       pricing: {input: 0.30, output: 1.80}
       capabilities:
         version: "volcengine-doubao-seed-2.0-lite-2026-04-28"
+        source: "https://docs.volcengine.com/docs/ark/model-list"
+        source_date: "2026-09-29"
+        strict_response_schema: true
+        json_object_response: true
+        tools: true
+        tool_streaming: true
+        tool_choice: true
+        reasoning_controls: ["thinking", "reasoning_effort"]
+    doubao-seed-2.0-mini:
+      id: "doubao-seed-2-0-mini-260428"
+      pricing: {input: 0.10, output: 1.00}
+      capabilities:
+        version: "volcengine-doubao-seed-2.0-mini-2026-04-28"
         source: "https://docs.volcengine.com/docs/ark/model-list"
         source_date: "2026-09-29"
         strict_response_schema: true

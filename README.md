@@ -221,7 +221,7 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 #### DeepSeek
 
-- Volcengine (`DEEPSEEK_API_KEY_VOLC`): `deepseek-v4-flash-volc`, `deepseek-v4-pro-volc`
+- Volcengine (`DEEPSEEK_API_KEY_VOLC`): `deepseek-v4-flash-volc`, `deepseek-v4-pro-volc`, `deepseek-v4-flash-preview-volc`, `deepseek-v4-flash-ga-volc`, `deepseek-v3.2-volc`
 - Official API (`DEEPSEEK_API_KEY`): `deepseek-v4-flash`, `deepseek-v4-pro`
 
 #### Gemini
@@ -245,7 +245,7 @@ The catalog's `¥0.30` input and `¥0.60` output values are historical, non-auth
 
 #### Doubao
 
-- `doubao-seed-2.1-pro`, `doubao-seed-2.0-lite`, `doubao-seed-1.6`
+- `doubao-seed-2.1-pro`, `doubao-seed-2.1-lite`, `doubao-seed-2.0-pro`, `doubao-seed-2.0-lite`, `doubao-seed-2.0-mini`, `doubao-seed-1.6`
 
 #### OpenAI via OpenRouter
 
@@ -563,7 +563,7 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 #### DeepSeek
 
-- 火山引擎 (`DEEPSEEK_API_KEY_VOLC`)：`deepseek-v4-flash-volc`、`deepseek-v4-pro-volc`
+- 火山引擎 (`DEEPSEEK_API_KEY_VOLC`)：`deepseek-v4-flash-volc`、`deepseek-v4-pro-volc`、`deepseek-v4-flash-preview-volc`、`deepseek-v4-flash-ga-volc`、`deepseek-v3.2-volc`
 - 官方 API (`DEEPSEEK_API_KEY`)：`deepseek-v4-flash`、`deepseek-v4-pro`
 
 #### Gemini
@@ -587,7 +587,7 @@ client = LLMClient(models[0], config_source=Path("custom_llm_config.yml"))
 
 #### Doubao
 
-- `doubao-seed-2.1-pro`、`doubao-seed-2.0-lite`、`doubao-seed-1.6`
+- `doubao-seed-2.1-pro`、`doubao-seed-2.1-lite`、`doubao-seed-2.0-pro`、`doubao-seed-2.0-lite`、`doubao-seed-2.0-mini`、`doubao-seed-1.6`
 
 #### OpenAI via OpenRouter
 

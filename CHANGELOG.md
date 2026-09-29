@@ -7,11 +7,11 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Documented downstream package contract for LinkResearcher and other workers.
 - Added the dated Qwen/Bailian catalog decision record for Issue #31.
-- Added `gemini-3.8-flash` and `doubao-seed-2.0-lite` to the app-owned model catalog.
+- Added translation benchmark aliases for DeepSeek V4 Flash Preview/GA, DeepSeek V3.2, Doubao Seed 2.1 Lite, and Doubao Seed 2.0 Pro/Lite/Mini.
 - Added usage notes and a dated translation experiment report for `scripts/auto_nobel_release.py`.
 
 ### Changed
-- Editor Assistant continues to package and own its 23-model catalog while using `llm-exec-core` 0.4.1 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
+- Editor Assistant continues to package and own its 29-model catalog while using `llm-exec-core` 0.4.1 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
 - Changed the CLI/library migration default from `glm-4.7-or` to `glm-5.2-or`. Removed names such as `glm-4.7-or` and `glm-4.6-or` are not restored or mapped.
 - Constrained the runtime dependency to `llm-exec-core>=0.4.1,<0.5.0` while retaining the sibling editable source for development.
 - Refreshed only `qwen3.6-flash`: non-thinking requests are explicit, connection key/endpoint fallbacks are configurable, context/output limits are 1M/64K, and supported JSON/tool capabilities are recorded without adding Qwen models.

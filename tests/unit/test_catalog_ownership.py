@@ -21,6 +21,9 @@ pytestmark = pytest.mark.unit
 EXPECTED_MODELS = [
     "deepseek-v4-flash-volc",
     "deepseek-v4-pro-volc",
+    "deepseek-v4-flash-preview-volc",
+    "deepseek-v4-flash-ga-volc",
+    "deepseek-v3.2-volc",
     "deepseek-v4-flash",
     "deepseek-v4-pro",
     "gemini-3-flash",
@@ -37,7 +40,10 @@ EXPECTED_MODELS = [
     "glm-5.1-or",
     "glm-5-turbo-or",
     "doubao-seed-2.1-pro",
+    "doubao-seed-2.1-lite",
+    "doubao-seed-2.0-pro",
     "doubao-seed-2.0-lite",
+    "doubao-seed-2.0-mini",
     "doubao-seed-1.6",
     "gpt-5.5-or",
     "claude-sonnet-5-or",
@@ -46,8 +52,16 @@ EXPECTED_MODELS = [
 
 EXPERIMENT_MODELS = {
     "gemini-3.8-flash": ("gemini-3.8-flash", "$"),
-    "deepseek-v4-flash": ("deepseek-v4-flash", "¥"),
+    "deepseek-v4-flash-preview-volc": (
+        "deepseek-v4-flash-260425",
+        "¥",
+    ),
+    "deepseek-v4-flash-ga-volc": ("deepseek-v4-flash-ga-260731", "¥"),
+    "deepseek-v3.2-volc": ("deepseek-v3-2-251201", "¥"),
+    "doubao-seed-2.1-lite": ("doubao-seed-2-1-lite-260915", "¥"),
+    "doubao-seed-2.0-pro": ("doubao-seed-2-0-pro-260215", "¥"),
     "doubao-seed-2.0-lite": ("doubao-seed-2-0-lite-260428", "¥"),
+    "doubao-seed-2.0-mini": ("doubao-seed-2-0-mini-260428", "¥"),
 }
 
 RELEASE_CORE_CATALOG_SHA256 = (

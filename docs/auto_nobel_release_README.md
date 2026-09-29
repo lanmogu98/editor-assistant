@@ -14,38 +14,48 @@
 
 ## 翻译实验
 
-所有模型必须使用同一份本地输入，才能比较延迟、token 用量和译文完整性。本轮模型为：
+所有模型必须使用同一份本地输入，才能比较延迟、token 用量和译文完整性。本轮使用完整 `press-release`，候选模型为：
 
 | CLI 模型名 | Provider 模型 ID | 说明 |
 | --- | --- | --- |
 | `gemini-3.8-flash` | `gemini-3.8-flash` | Gemini 付费 API |
-| `deepseek-v4-flash` | `deepseek-v4-flash` | 兼容别名，目前由 DeepSeek V4.1 Flash 实际提供服务 |
+| `deepseek-v4-flash-preview-volc` | `deepseek-v4-flash-260425` | 火山引擎 V4 Flash Preview |
+| `deepseek-v4-flash-ga-volc` | `deepseek-v4-flash-ga-260731` | 火山引擎 V4 Flash 正式版 |
+| `deepseek-v3.2-volc` | `deepseek-v3-2-251201` | 火山引擎 V3.2，已进入迁移/下线范围 |
+| `doubao-seed-2.1-lite` | `doubao-seed-2-1-lite-260915` | Doubao Seed 2.1 Lite |
+| `doubao-seed-2.0-pro` | `doubao-seed-2-0-pro-260215` | Doubao Seed 2.0 Pro |
 | `doubao-seed-2.0-lite` | `doubao-seed-2-0-lite-260428` | Doubao Seed 2.0 系列的 Lite 版本 |
+| `doubao-seed-2.0-mini` | `doubao-seed-2-0-mini-260428` | Doubao Seed 2.0 Mini |
 
 配置所需环境变量：
 
 ```bash
 export GEMINI_API_KEY=...
-export DEEPSEEK_API_KEY=...
+export DEEPSEEK_API_KEY_VOLC=...
 export DOUBAO_API_KEY=...
 ```
 
-分别执行三次翻译。`--no-stream` 避免控制台流式渲染干扰耗时比较，`--save-files` 保留译文和 token 报告。
+对可用模型分别执行翻译。`--no-stream` 避免控制台流式渲染干扰耗时比较，`--save-files` 保留译文和 token 报告。
 
 ```bash
 uv run editor-assistant translate SOURCE --model gemini-3.8-flash --no-stream --save-files
-uv run editor-assistant translate SOURCE --model deepseek-v4-flash --no-stream --save-files
+uv run editor-assistant translate SOURCE --model deepseek-v4-flash-preview-volc --no-stream --save-files
+uv run editor-assistant translate SOURCE --model deepseek-v4-flash-ga-volc --no-stream --save-files
+uv run editor-assistant translate SOURCE --model deepseek-v3.2-volc --no-stream --save-files
+uv run editor-assistant translate SOURCE --model doubao-seed-2.1-lite --no-stream --save-files
+uv run editor-assistant translate SOURCE --model doubao-seed-2.0-pro --no-stream --save-files
 uv run editor-assistant translate SOURCE --model doubao-seed-2.0-lite --no-stream --save-files
+uv run editor-assistant translate SOURCE --model doubao-seed-2.0-mini --no-stream --save-files
 ```
 
 CLI 会把 token 用量和模型处理时间写入 SQLite 历史记录：
 
 ```bash
-uv run editor-assistant history -n 3
+uv run editor-assistant history -n 8
 uv run editor-assistant show RUN_ID --output
 ```
 
-2026-09-29 的实测输入、方法和结果见 [翻译性能实验报告](reports/translation_performance_2026-09-29.md)。
+2026-09-29 的实测输入、方法和结果见 [翻译性能实验报告](reports/translation_performance_2026-09-29.md)。本次 V4 Preview、V4 GA、Doubao 2.1 Lite 和 Doubao 2.0 Lite 成功；Gemini key、V3.2 迁移状态和未开通模型的失败结果也记录在报告中。
 
 ## 生成横向对照文件
 
