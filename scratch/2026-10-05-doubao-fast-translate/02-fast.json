@@ -1,0 +1,97 @@
+{
+  "label": "02-fast",
+  "mode": "fast",
+  "argv": [
+    "editor-assistant",
+    "translate",
+    "runtime/nobel-medicine-2025.md",
+    "--model",
+    "doubao-seed-2.1-lite",
+    "--thinking",
+    "low",
+    "--service-tier",
+    "fast"
+  ],
+  "handler_elapsed_s": 73.24144658399746,
+  "error_type": null,
+  "db_run": {
+    "id": 1,
+    "status": "success",
+    "service_tier": "fast"
+  },
+  "outputs": [
+    {
+      "type": "main",
+      "chars": 8871,
+      "lines": 171,
+      "sha256": "3cef2aa7db51a7c691c77515f640070ddf5614b5d25e2d422592af7af455510b",
+      "file": "runtime/02-fast/main.md",
+      "chinese_chars": 4398,
+      "headings": 13
+    },
+    {
+      "type": "bilingual",
+      "chars": 28045,
+      "lines": 343,
+      "sha256": "28bbbc36399a16468768038c2c0b18b8f313a94aafa5b3b0fe559ed8b70caf3a",
+      "file": "runtime/02-fast/bilingual.md",
+      "chinese_chars": 4398,
+      "headings": 26
+    }
+  ],
+  "attempts": [
+    {
+      "number": 1,
+      "started_at_utc": "2026-10-05T08:00:28.619811+00:00",
+      "request_tier": "fast",
+      "request_model": "doubao-seed-2-1-lite-260915",
+      "request_sha256_without_tier": "e8583cca5ea925c5a95b9dadec5645ba0477d7036a1f1dad08586def3d29395e",
+      "request_controls": {
+        "model": "doubao-seed-2-1-lite-260915",
+        "temperature": 0.6,
+        "stream": true,
+        "max_tokens": 32000,
+        "reasoning_effort": "low",
+        "service_tier": "fast",
+        "stream_options": {
+          "include_usage": true
+        }
+      },
+      "prompt_chars": 20792,
+      "response_tiers": [
+        "fast"
+      ],
+      "finish_reasons": [
+        "stop"
+      ],
+      "service_status": [],
+      "content_chars": 8871,
+      "reasoning_chars": 1633,
+      "sse_event_count": 5663,
+      "done_received": true,
+      "first_event_s": 0.7086498749995371,
+      "first_token_s": 0.7086498749995371,
+      "first_content_s": 45.434145916995476,
+      "first_reasoning_s": 0.7086498749995371,
+      "last_content_s": 73.11139737500343,
+      "status_code": 200,
+      "headers_s": 0.7084706250025192,
+      "http_version": "HTTP/1.1",
+      "response_request_id": "0217911872287323fcbbbc46c102ed6c897f6f1babf6393dde0a8",
+      "response_id": "0217911872287323fcbbbc46c102ed6c897f6f1babf6393dde0a8",
+      "response_model": "doubao-seed-2-1-lite-260915",
+      "usage": {
+        "completion_tokens": 10531,
+        "prompt_tokens": 5607,
+        "total_tokens": 16138,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 5919
+        }
+      },
+      "api_end_s": 73.11144941700331
+    }
+  ]
+}

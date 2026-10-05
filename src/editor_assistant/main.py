@@ -16,12 +16,20 @@ from typing import Union, Optional, Tuple, Dict, Callable
 
 class EditorAssistant:
     def __init__(
-        self, model_name, debug_mode=False, thinking_level=None, stream=True
+        self,
+        model_name,
+        debug_mode=False,
+        thinking_level=None,
+        stream=True,
+        service_tier: Optional[str] = None,
     ):
         setup_logging(debug_mode)
         self.logger = logging.getLogger(__name__)
         self.md_processor = MDProcessor(
-            model_name, thinking_level=thinking_level, stream=stream
+            model_name,
+            thinking_level=thinking_level,
+            stream=stream,
+            service_tier=service_tier,
         )
         self.md_converter = MarkdownConverter()
 

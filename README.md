@@ -19,7 +19,7 @@ This branch is a coordinated two-repo/local-migration branch. Keep the current s
 llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-That relative source remains intentional for local development and workspace checkouts that test both repos together. Published installs use the declared `llm-exec-core>=0.4.1,<0.5.0` compatibility range; the editable source does not change that package boundary.
+That relative source remains intentional for local development and workspace checkouts that test both repos together. Published installs use the declared `llm-exec-core>=0.4.2,<0.5.0` compatibility range; the editable source does not change that package boundary.
 
 ### Features
 
@@ -195,9 +195,20 @@ These options are available on generation commands such as `brief`, `outline`, `
 
 - `--model`: Choose an LLM model. Default: `glm-5.2-or`.
 - `--thinking`: Reasoning level for supported Gemini models: `low`, `medium`, or `high`.
+- `--service-tier fast`: Request low-latency inference on supported Volcengine Ark models. Omitted by default; saved for `resume`.
 - `--no-stream`: Disable streaming output.
 - `--save-files`: Persist generated markdown files and token reports to disk. The SQLite run database is still updated either way.
 - `--debug`: Enable detailed debug logging.
+
+For example:
+
+```bash
+uv run editor-assistant brief paper=paper.pdf --model doubao-seed-2.0-pro --service-tier fast
+```
+
+Fast support was verified on 2026-10-05 against the official support list for the catalog's `doubao-seed-2.1-lite`, `doubao-seed-2.0-pro`, `doubao-seed-2.0-lite`, and `doubao-seed-2.0-mini` model IDs. Generation commands reject tiers without an explicit model capability declaration before input conversion, API-key lookup, or database creation. Existing catalogs and non-fast calls keep their defaults. This feature requires the paired `llm-exec-core` 0.4.2 changes; publishing that core version is a separate release step.
+
+Enable the model's low-latency service in Ark first. `fast` requests can fall back to regular inference; this option records the requested tier, not the actual tier returned by Ark. Fast pricing differs from regular pricing, so the existing flat cost estimates are not billing quotes. See [Volcengine's low-latency documentation](https://docs.volcengine.com/docs/ark/online-inference-low-latency?lang=zh).
 
 Global options:
 
@@ -362,7 +373,7 @@ Editor Assistant 使用 `llm-exec-core` 提供模型目录 schema 与加载、pr
 llm-exec-core = { path = "../llm-exec-core", editable = true }
 ```
 
-这个相对路径仍用于本地开发和双仓 workspace checkout。发布安装遵循声明的 `llm-exec-core>=0.4.1,<0.5.0` 兼容范围；editable source 不会改变该包边界。
+这个相对路径仍用于本地开发和双仓 workspace checkout。发布安装遵循声明的 `llm-exec-core>=0.4.2,<0.5.0` 兼容范围；editable source 不会改变该包边界。
 
 ### 功能特色
 
@@ -537,9 +548,20 @@ uv run editor-assistant export history.csv --limit 100
 
 - `--model`：选择 LLM 模型。默认值：`glm-5.2-or`。
 - `--thinking`：支持的 Gemini 模型推理强度，可选 `low`、`medium`、`high`。
+- `--service-tier fast`：为支持的火山方舟模型请求低延迟推理。默认不传入，`resume` 会恢复原选项。
 - `--no-stream`：关闭流式输出。
 - `--save-files`：把生成的 Markdown 文件和 token 报告写入磁盘。无论是否启用，SQLite 数据库都会更新。
 - `--debug`：启用详细调试日志。
+
+例如：
+
+```bash
+uv run editor-assistant brief paper=paper.pdf --model doubao-seed-2.0-pro --service-tier fast
+```
+
+2026-10-05 已按官方支持列表核对目录中的 `doubao-seed-2.1-lite`、`doubao-seed-2.0-pro`、`doubao-seed-2.0-lite`、`doubao-seed-2.0-mini` 模型 ID。生成命令会在输入转换、API key 查找和数据库创建之前拒绝没有明确能力声明的档位。旧目录与未指定档位的调用保留原默认行为。该功能依赖配套的 `llm-exec-core` 0.4.2 改动；core 版本发布属于单独的 release 步骤。
+
+请先在方舟开通模型的低延迟服务。`fast` 请求可能降级到常规推理；此选项记录的是请求档位，尚未记录方舟返回的实际档位。低延迟与常规推理定价不同，现有平面成本估算不能作为账单价格。详见[火山低延迟文档](https://docs.volcengine.com/docs/ark/online-inference-low-latency?lang=zh)。
 
 全局选项：
 

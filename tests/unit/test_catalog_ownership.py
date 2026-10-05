@@ -92,14 +92,14 @@ def _write_custom_config(tmp_path: Path) -> Path:
     return config_path
 
 
-def test_app_catalog_is_owned_independently_from_core_041():
+def test_app_catalog_is_owned_independently_from_core_catalog():
     from editor_assistant.config.constants import LLM_CONFIG_PATH
 
     core_catalog_path = Path(core_config.__file__).with_name("llm_config.yml")
     app_bytes = LLM_CONFIG_PATH.read_bytes()
     core_bytes = core_catalog_path.read_bytes()
 
-    assert llm_exec_core.__version__ == "0.4.1"
+    assert llm_exec_core.__version__ == "0.4.2"
     assert (
         hashlib.sha256(core_bytes).hexdigest() == RELEASE_CORE_CATALOG_SHA256
     )
@@ -128,7 +128,7 @@ def test_project_metadata_packages_catalog_and_constrains_core():
         .read_text(encoding="utf-8")
     )
 
-    assert '"llm-exec-core>=0.4.1,<0.5.0"' in pyproject
+    assert '"llm-exec-core>=0.4.2,<0.5.0"' in pyproject
     assert '"config/llm_config.yml"' in pyproject
     assert 'path = "../llm-exec-core", editable = true' in pyproject
 

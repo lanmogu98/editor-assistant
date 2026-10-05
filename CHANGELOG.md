@@ -5,15 +5,18 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Keep current-schema database initialization read-only; migrations recheck versions under the write lock, reject newer schemas, and roll back and close connections on failure.
+- Added opt-in `--service-tier fast` to generation commands using existing `llm-exec-core` request options. Requested tiers are saved, restored on resume, shown in run details, and exported; existing databases upgrade without losing history.
 - Documented downstream package contract for LinkResearcher and other workers.
 - Added the dated Qwen/Bailian catalog decision record for Issue #31.
 - Added translation benchmark aliases for DeepSeek V4 Flash Preview/GA, DeepSeek V3.2, Doubao Seed 2.1 Lite, and Doubao Seed 2.0 Pro/Lite/Mini.
 - Added usage notes and a dated translation experiment report for `scripts/auto_nobel_release.py`.
 
 ### Changed
+- Require `llm-exec-core>=0.4.2,<0.5.0` for optional service-tier capability declarations. Fast generation requires reviewed model support before input conversion or client/storage initialization.
 - Strengthened the default Chinese translation prompt with publication-oriented accuracy, terminology, style, and formatting rules while preserving line alignment for bilingual output.
 - Clarified that translation must not supply absent acronym expansions, must preserve tone across all genres, and must translate prose enclosed in code fences while retaining program code.
-- Editor Assistant continues to package and own its 29-model catalog while using `llm-exec-core` 0.4.1 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
+- Editor Assistant continues to package and own its 29-model catalog while using `llm-exec-core` 0.4.2 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
 - Changed the CLI/library migration default from `glm-4.7-or` to `glm-5.2-or`. Removed names such as `glm-4.7-or` and `glm-4.6-or` are not restored or mapped.
 - Constrained the runtime dependency to `llm-exec-core>=0.4.1,<0.5.0` while retaining the sibling editable source for development.
 - Refreshed only `qwen3.6-flash`: non-thinking requests are explicit, connection key/endpoint fallbacks are configurable, context/output limits are 1M/64K, and supported JSON/tool capabilities are recorded without adding Qwen models.

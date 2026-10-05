@@ -53,8 +53,7 @@ class RunRepository:
 
     def _ensure_initialized(self) -> None:
         """Ensure database is initialized."""
-        if not self.db_path.exists():
-            init_database(self.db_path)
+        init_database(self.db_path)
 
     def _get_conn(self) -> sqlite3.Connection:
         """Get database connection."""
@@ -121,7 +120,8 @@ class RunRepository:
         input_ids: List[int],
         thinking_level: Optional[str] = None,
         stream: bool = True,
-        currency: str = "$",
+        currency: Optional[str] = "$",
+        service_tier: Optional[str] = None,
     ) -> int:
         """
         Create a new run record.
@@ -132,7 +132,8 @@ class RunRepository:
             input_ids: List of input IDs
             thinking_level: Optional thinking level
             stream: Whether streaming was used
-            currency: Pricing currency symbol
+            currency: Pricing currency symbol, if known
+            service_tier: Optional requested inference service tier
 
         Returns:
             Run ID
@@ -144,11 +145,19 @@ class RunRepository:
         cursor.execute(
             """
             INSERT INTO runs (
-                task, model, thinking_level, stream, currency, status
+                task, model, thinking_level, stream, currency,
+                service_tier, status
             )
-            VALUES (?, ?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, ?, ?, 'pending')
             """,
-            (task, model, thinking_level, 1 if stream else 0, currency),
+            (
+                task,
+                model,
+                thinking_level,
+                1 if stream else 0,
+                currency,
+                service_tier,
+            ),
         )
         run_id = cast(int, cursor.lastrowid)
 
@@ -518,6 +527,7 @@ class RunRepository:
                 r.task,
                 r.model,
                 r.thinking_level,
+                r.service_tier,
                 r.stream,
                 r.currency,
                 r.status
@@ -577,6 +587,7 @@ class RunRepository:
                 r.task,
                 r.model,
                 r.thinking_level,
+                r.service_tier,
                 r.stream,
                 r.currency,
                 r.status,
@@ -680,6 +691,7 @@ class RunRepository:
             "cost_input",
             "cost_output",
             "total_cost",
+            "service_tier",
         ]
 
         with open(output_path, "w", newline="", encoding="utf-8") as f:
@@ -701,6 +713,7 @@ class RunRepository:
                     "task": run.get("task"),
                     "model": run.get("model"),
                     "thinking_level": run.get("thinking_level"),
+                    "service_tier": run.get("service_tier"),
                     "stream": run.get("stream"),
                     "currency": run.get("currency"),
                     "status": run.get("status"),

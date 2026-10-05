@@ -12,7 +12,7 @@ DEFAULT_DB_DIR = Path.home() / ".editor_assistant"
 DEFAULT_DB_NAME = "runs.db"
 
 # Schema version for migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def get_database_path() -> Path:
@@ -64,19 +64,36 @@ def init_database(db_path: Optional[Path] = None) -> None:
         db_path: Optional custom database path
     """
     conn = get_connection(db_path)
-    cursor = conn.cursor()
+    try:
+        version = get_schema_version(conn)
+        if version > SCHEMA_VERSION:
+            raise ValueError("Database schema is newer than supported.")
+        if version == SCHEMA_VERSION:
+            return
 
-    # Create tables
-    cursor.executescript(SCHEMA)
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            version = get_schema_version(conn)
+            if version > SCHEMA_VERSION:
+                raise ValueError("Database schema is newer than supported.")
+            if version == SCHEMA_VERSION:
+                return
 
-    # Set schema version
-    cursor.execute(
-        "INSERT OR REPLACE INTO schema_version (id, version) VALUES (1, ?)",
-        (SCHEMA_VERSION,),
-    )
-
-    conn.commit()
-    conn.close()
+            for statement in SCHEMA.split(";"):
+                if statement.strip():
+                    conn.execute(statement)
+            columns = {
+                row[1] for row in conn.execute("PRAGMA table_info(runs)")
+            }
+            if "service_tier" not in columns:
+                conn.execute("ALTER TABLE runs ADD COLUMN service_tier TEXT")
+            conn.execute(
+                "INSERT OR REPLACE INTO schema_version (id, version) "
+                "VALUES (1, ?)",
+                (SCHEMA_VERSION,),
+            )
+    finally:
+        conn.close()
 
 
 # Database schema
@@ -104,6 +121,7 @@ CREATE TABLE IF NOT EXISTS runs (
     task TEXT NOT NULL,                     -- brief, outline, translate
     model TEXT NOT NULL,                    -- deepseek-v3.2, gemini-3-flash
     thinking_level TEXT,                    -- low, medium, high, null
+    service_tier TEXT,
     stream INTEGER DEFAULT 1,               -- 0 or 1
     currency TEXT DEFAULT '$',              -- pricing currency symbol
     status TEXT DEFAULT 'pending',          -- pending, success, failed
