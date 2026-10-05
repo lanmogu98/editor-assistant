@@ -1,0 +1,116 @@
+[
+  {
+    "label": "01-default",
+    "translation_lines": 159,
+    "source_lines": 172,
+    "translation_nonblank_lines": 89,
+    "source_nonblank_lines": 89,
+    "translation_headings": 13,
+    "source_headings": 13,
+    "chinese_chars": 4280,
+    "technical_anchors": {
+      "FOXP3": true,
+      "CD4": true,
+      "CD25": true,
+      "IPEX": true
+    },
+    "translation_sha256": "cf62931efaf7d728813d798306d6d5cef5561ff9c742249339b06d66866006aa",
+    "trace_sha256": "a758db1e930375bb85913effc4379d5f33f37784ed225ceb16416bd02071ba51",
+    "reconciled": true
+  },
+  {
+    "label": "02-fast",
+    "translation_lines": 171,
+    "source_lines": 172,
+    "translation_nonblank_lines": 89,
+    "source_nonblank_lines": 89,
+    "translation_headings": 13,
+    "source_headings": 13,
+    "chinese_chars": 4398,
+    "technical_anchors": {
+      "FOXP3": true,
+      "CD4": true,
+      "CD25": true,
+      "IPEX": true
+    },
+    "translation_sha256": "3cef2aa7db51a7c691c77515f640070ddf5614b5d25e2d422592af7af455510b",
+    "trace_sha256": "8a25ac9e82ef162b2a671bdb4bc5ae77a7bec7d8401537fabc712732c8e205c1",
+    "reconciled": true
+  },
+  {
+    "label": "03-fast",
+    "translation_lines": 171,
+    "source_lines": 172,
+    "translation_nonblank_lines": 89,
+    "source_nonblank_lines": 89,
+    "translation_headings": 13,
+    "source_headings": 13,
+    "chinese_chars": 4628,
+    "technical_anchors": {
+      "FOXP3": true,
+      "CD4": true,
+      "CD25": true,
+      "IPEX": true
+    },
+    "translation_sha256": "bf569761b29c194392317fc841eb74400156fe2e78b52ddeb815d6127996121c",
+    "trace_sha256": "2c483ec5e8cb4dcec814813dc9d8d01fb6208c8bdf4bd48d62711a2d09b836d1",
+    "reconciled": true
+  },
+  {
+    "label": "04-default",
+    "translation_lines": 172,
+    "source_lines": 172,
+    "translation_nonblank_lines": 89,
+    "source_nonblank_lines": 89,
+    "translation_headings": 13,
+    "source_headings": 13,
+    "chinese_chars": 4560,
+    "technical_anchors": {
+      "FOXP3": true,
+      "CD4": true,
+      "CD25": true,
+      "IPEX": true
+    },
+    "translation_sha256": "6b4365873f8be01ababd341eccd4c9f97f8eccca5234078826006ac6f56d8a69",
+    "trace_sha256": "db6f944ca6c62f38e92e80fc73bd2a0f306daa2d6c0f43c3945a41cf28493186",
+    "reconciled": true
+  },
+  {
+    "label": "05-default",
+    "translation_lines": 171,
+    "source_lines": 172,
+    "translation_nonblank_lines": 89,
+    "source_nonblank_lines": 89,
+    "translation_headings": 13,
+    "source_headings": 13,
+    "chinese_chars": 4536,
+    "technical_anchors": {
+      "FOXP3": true,
+      "CD4": true,
+      "CD25": true,
+      "IPEX": true
+    },
+    "translation_sha256": "7c298c8106d8726bbbb596f81ffea5c9115edaf0b602878fe3c86262036f7561",
+    "trace_sha256": "fc1bcf0691668a8ba0cfd34211ca7cf0bd1429fa7781df7d9b306835a8c5ff4c",
+    "reconciled": true
+  },
+  {
+    "label": "06-fast",
+    "translation_lines": 171,
+    "source_lines": 172,
+    "translation_nonblank_lines": 89,
+    "source_nonblank_lines": 89,
+    "translation_headings": 13,
+    "source_headings": 13,
+    "chinese_chars": 4658,
+    "technical_anchors": {
+      "FOXP3": true,
+      "CD4": true,
+      "CD25": true,
+      "IPEX": true
+    },
+    "translation_sha256": "bbb66cd4304e5a67866ebf20196ba948050157a5bc16886f0fe4e7c78724d554",
+    "trace_sha256": "e3381018472e2873f817b5dd2be2d9b5d10b57077ff6137b119ab89ce3f1bfa4",
+    "reconciled": true
+  }
+]

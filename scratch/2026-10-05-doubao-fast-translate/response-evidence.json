@@ -1,0 +1,326 @@
+[
+  {
+    "label": "01-default",
+    "events": [
+      {
+        "elapsed_s": 0.8750757499947213,
+        "id": "021791187118985359db854caeb7990039c08834b9363f364cb75",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": null,
+        "finish_reasons": []
+      },
+      {
+        "elapsed_s": 109.35323300000164,
+        "id": "021791187118985359db854caeb7990039c08834b9363f364cb75",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": {
+          "completion_tokens": 9564,
+          "prompt_tokens": 5607,
+          "total_tokens": 15171,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5159
+          }
+        },
+        "finish_reasons": [
+          "stop"
+        ]
+      },
+      {
+        "elapsed_s": 109.35327733399754,
+        "id": "021791187118985359db854caeb7990039c08834b9363f364cb75",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": {
+          "completion_tokens": 9564,
+          "prompt_tokens": 5607,
+          "total_tokens": 15171,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5159
+          }
+        },
+        "finish_reasons": []
+      }
+    ]
+  },
+  {
+    "label": "02-fast",
+    "events": [
+      {
+        "elapsed_s": 0.7086498749995371,
+        "id": "0217911872287323fcbbbc46c102ed6c897f6f1babf6393dde0a8",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": null,
+        "finish_reasons": []
+      },
+      {
+        "elapsed_s": 73.11141858300834,
+        "id": "0217911872287323fcbbbc46c102ed6c897f6f1babf6393dde0a8",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": {
+          "completion_tokens": 10531,
+          "prompt_tokens": 5607,
+          "total_tokens": 16138,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5919
+          }
+        },
+        "finish_reasons": [
+          "stop"
+        ]
+      },
+      {
+        "elapsed_s": 73.11143750000338,
+        "id": "0217911872287323fcbbbc46c102ed6c897f6f1babf6393dde0a8",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": {
+          "completion_tokens": 10531,
+          "prompt_tokens": 5607,
+          "total_tokens": 16138,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5919
+          }
+        },
+        "finish_reasons": []
+      }
+    ]
+  },
+  {
+    "label": "03-fast",
+    "events": [
+      {
+        "elapsed_s": 0.391207916996791,
+        "id": "0217911873022318a3884a21a15d86e034982e8477ecac64735e2",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": null,
+        "finish_reasons": []
+      },
+      {
+        "elapsed_s": 73.65208775000065,
+        "id": "0217911873022318a3884a21a15d86e034982e8477ecac64735e2",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": {
+          "completion_tokens": 10685,
+          "prompt_tokens": 5607,
+          "total_tokens": 16292,
+          "prompt_tokens_details": {
+            "cached_tokens": 5607
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 6133
+          }
+        },
+        "finish_reasons": [
+          "stop"
+        ]
+      },
+      {
+        "elapsed_s": 73.65212079200137,
+        "id": "0217911873022318a3884a21a15d86e034982e8477ecac64735e2",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": {
+          "completion_tokens": 10685,
+          "prompt_tokens": 5607,
+          "total_tokens": 16292,
+          "prompt_tokens_details": {
+            "cached_tokens": 5607
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 6133
+          }
+        },
+        "finish_reasons": []
+      }
+    ]
+  },
+  {
+    "label": "04-default",
+    "events": [
+      {
+        "elapsed_s": 0.8377739999996265,
+        "id": "021791187376281311f6c611c45765838f98addceea9dd86e1059",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": null,
+        "finish_reasons": []
+      },
+      {
+        "elapsed_s": 103.24748045799788,
+        "id": "021791187376281311f6c611c45765838f98addceea9dd86e1059",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": {
+          "completion_tokens": 10472,
+          "prompt_tokens": 5607,
+          "total_tokens": 16079,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5933
+          }
+        },
+        "finish_reasons": [
+          "stop"
+        ]
+      },
+      {
+        "elapsed_s": 103.24773120800091,
+        "id": "021791187376281311f6c611c45765838f98addceea9dd86e1059",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": {
+          "completion_tokens": 10472,
+          "prompt_tokens": 5607,
+          "total_tokens": 16079,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5933
+          }
+        },
+        "finish_reasons": []
+      }
+    ]
+  },
+  {
+    "label": "05-default",
+    "events": [
+      {
+        "elapsed_s": 0.7459540830022888,
+        "id": "02179118747990841609daff26ab0794397d3d17654db7f657153",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": null,
+        "finish_reasons": []
+      },
+      {
+        "elapsed_s": 107.7692253330024,
+        "id": "02179118747990841609daff26ab0794397d3d17654db7f657153",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": {
+          "completion_tokens": 10849,
+          "prompt_tokens": 5607,
+          "total_tokens": 16456,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 6350
+          }
+        },
+        "finish_reasons": [
+          "stop"
+        ]
+      },
+      {
+        "elapsed_s": 107.76933766700677,
+        "id": "02179118747990841609daff26ab0794397d3d17654db7f657153",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "default",
+        "usage": {
+          "completion_tokens": 10849,
+          "prompt_tokens": 5607,
+          "total_tokens": 16456,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 6350
+          }
+        },
+        "finish_reasons": []
+      }
+    ]
+  },
+  {
+    "label": "06-fast",
+    "events": [
+      {
+        "elapsed_s": 0.2640190419915598,
+        "id": "0217911875880060ab9d8edb12c66686fe4c60e6bc8d0079f4d76",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": null,
+        "finish_reasons": []
+      },
+      {
+        "elapsed_s": 85.52828333398793,
+        "id": "0217911875880060ab9d8edb12c66686fe4c60e6bc8d0079f4d76",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": {
+          "completion_tokens": 12398,
+          "prompt_tokens": 5607,
+          "total_tokens": 18005,
+          "prompt_tokens_details": {
+            "cached_tokens": 5607
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 7857
+          }
+        },
+        "finish_reasons": [
+          "stop"
+        ]
+      },
+      {
+        "elapsed_s": 85.52829899999779,
+        "id": "0217911875880060ab9d8edb12c66686fe4c60e6bc8d0079f4d76",
+        "model": "doubao-seed-2-1-lite-260915",
+        "object": "chat.completion.chunk",
+        "service_tier": "fast",
+        "usage": {
+          "completion_tokens": 12398,
+          "prompt_tokens": 5607,
+          "total_tokens": 18005,
+          "prompt_tokens_details": {
+            "cached_tokens": 5607
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 7857
+          }
+        },
+        "finish_reasons": []
+      }
+    ]
+  }
+]

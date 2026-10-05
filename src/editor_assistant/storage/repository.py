@@ -120,7 +120,7 @@ class RunRepository:
         input_ids: List[int],
         thinking_level: Optional[str] = None,
         stream: bool = True,
-        currency: str = "$",
+        currency: Optional[str] = "$",
         service_tier: Optional[str] = None,
     ) -> int:
         """
@@ -132,7 +132,7 @@ class RunRepository:
             input_ids: List of input IDs
             thinking_level: Optional thinking level
             stream: Whether streaming was used
-            currency: Pricing currency symbol
+            currency: Pricing currency symbol, if known
             service_tier: Optional requested inference service tier
 
         Returns:
