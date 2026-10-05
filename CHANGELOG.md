@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Added usage notes and a dated translation experiment report for `scripts/auto_nobel_release.py`.
 
 ### Changed
+- Strengthened the default Chinese translation prompt with publication-oriented accuracy, terminology, style, and formatting rules while preserving line alignment for bilingual output.
 - Editor Assistant continues to package and own its 29-model catalog while using `llm-exec-core` 0.4.1 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
 - Changed the CLI/library migration default from `glm-4.7-or` to `glm-5.2-or`. Removed names such as `glm-4.7-or` and `glm-4.6-or` are not restored or mapped.
 - Constrained the runtime dependency to `llm-exec-core>=0.4.1,<0.5.0` while retaining the sibling editable source for development.
