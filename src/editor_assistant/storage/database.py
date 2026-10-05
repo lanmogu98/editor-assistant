@@ -64,23 +64,36 @@ def init_database(db_path: Optional[Path] = None) -> None:
         db_path: Optional custom database path
     """
     conn = get_connection(db_path)
-    cursor = conn.cursor()
+    try:
+        version = get_schema_version(conn)
+        if version > SCHEMA_VERSION:
+            raise ValueError("Database schema is newer than supported.")
+        if version == SCHEMA_VERSION:
+            return
 
-    # Create tables
-    cursor.executescript(SCHEMA)
-    cursor.execute("BEGIN IMMEDIATE")
-    columns = {row[1] for row in cursor.execute("PRAGMA table_info(runs)")}
-    if "service_tier" not in columns:
-        cursor.execute("ALTER TABLE runs ADD COLUMN service_tier TEXT")
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            version = get_schema_version(conn)
+            if version > SCHEMA_VERSION:
+                raise ValueError("Database schema is newer than supported.")
+            if version == SCHEMA_VERSION:
+                return
 
-    # Set schema version
-    cursor.execute(
-        "INSERT OR REPLACE INTO schema_version (id, version) VALUES (1, ?)",
-        (SCHEMA_VERSION,),
-    )
-
-    conn.commit()
-    conn.close()
+            for statement in SCHEMA.split(";"):
+                if statement.strip():
+                    conn.execute(statement)
+            columns = {
+                row[1] for row in conn.execute("PRAGMA table_info(runs)")
+            }
+            if "service_tier" not in columns:
+                conn.execute("ALTER TABLE runs ADD COLUMN service_tier TEXT")
+            conn.execute(
+                "INSERT OR REPLACE INTO schema_version (id, version) "
+                "VALUES (1, ?)",
+                (SCHEMA_VERSION,),
+            )
+    finally:
+        conn.close()
 
 
 # Database schema

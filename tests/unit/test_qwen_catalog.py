@@ -80,6 +80,7 @@ def test_qwen_capabilities_and_historical_pricing_are_exact():
         "parallel_tool_calls": True,
         "reasoning_controls": [],
         "openrouter_supported_parameters": [],
+        "service_tiers": None,
     }
     assert model.pricing.input == 0.30
     assert model.pricing.output == 0.60

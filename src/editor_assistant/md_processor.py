@@ -22,6 +22,7 @@ import os
 from llm_exec_core.usage import format_usage_report
 
 from .config.logging_config import error, progress, warning, user_message
+from .config.llm_models import get_model_details
 from .config.constants import (
     PROMPT_OVERHEAD_TOKENS,
     DEBUG_LOGGING_LEVEL,
@@ -119,6 +120,16 @@ class MDProcessor:
             max_concurrent: Maximum number of concurrent requests
             service_tier: Optional requested inference service tier
         """
+        if service_tier is not None:
+            _, model_details = get_model_details(model_name)
+            capabilities = model_details.capabilities
+            if capabilities is None or service_tier not in (
+                capabilities.service_tiers or []
+            ):
+                raise ValueError(
+                    f"{model_name} has no documented support for "
+                    f"service_tier={service_tier!r}."
+                )
         self.llm_client = LLMClient(model_name, thinking_level=thinking_level)
         self.model_name = model_name
         self.thinking_level = thinking_level

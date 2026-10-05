@@ -188,3 +188,178 @@ def test_existing_database_migrates_without_losing_runs(tmp_path):
     columns = [row[1] for row in conn.execute("PRAGMA table_info(runs)")]
     conn.close()
     assert columns.count("service_tier") == 1
+
+
+def test_current_database_initialization_does_not_need_write_lock(
+    tmp_path, monkeypatch
+):
+    from editor_assistant.storage import database
+
+    db_path = tmp_path / "runs.db"
+    run_id = RunRepository(db_path).create_run("outline", "test-model", [])
+    writer = get_connection(db_path)
+    writer.execute("BEGIN IMMEDIATE")
+    original_connect = database.get_connection
+
+    def connect(path=None):
+        conn = original_connect(path)
+        conn.execute("PRAGMA busy_timeout=0")
+        return conn
+
+    monkeypatch.setattr(database, "get_connection", connect)
+    try:
+        assert (
+            RunRepository(db_path).get_run_details(run_id)["model"]
+            == "test-model"
+        )
+    finally:
+        writer.rollback()
+        writer.close()
+
+
+def test_current_database_initialization_supports_read_only_connection(
+    tmp_path, monkeypatch
+):
+    import sqlite3
+    from editor_assistant.storage import database
+
+    db_path = tmp_path / "runs.db"
+    RunRepository(db_path)
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    monkeypatch.setattr(database, "get_connection", lambda path=None: conn)
+    database.init_database(db_path)
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        conn.execute("SELECT 1")
+
+
+def test_future_schema_version_is_not_overwritten(tmp_path):
+    from editor_assistant.storage.database import init_database
+
+    db_path = tmp_path / "runs.db"
+    RunRepository(db_path)
+    conn = get_connection(db_path)
+    conn.execute("UPDATE schema_version SET version=99")
+    conn.commit()
+    conn.close()
+    with pytest.raises(ValueError, match="newer"):
+        init_database(db_path)
+    conn = get_connection(db_path)
+    assert get_schema_version(conn) == 99
+    conn.close()
+
+
+def test_migration_rechecks_version_after_acquiring_lock(
+    tmp_path, monkeypatch
+):
+    from editor_assistant.storage import database
+
+    db_path = tmp_path / "runs.db"
+    RunRepository(db_path)
+    statements = []
+    conn = get_connection(db_path)
+    conn.set_trace_callback(statements.append)
+    monkeypatch.setattr(database, "get_connection", lambda path=None: conn)
+    with patch.object(
+        database, "get_schema_version", side_effect=[1, 2]
+    ) as version:
+        database.init_database(db_path)
+    assert version.call_count == 2
+    assert "BEGIN IMMEDIATE" in statements
+    assert not any(
+        sql.lstrip().startswith(("CREATE", "ALTER", "INSERT"))
+        for sql in statements
+    )
+
+
+def test_failed_migration_rolls_back_and_closes_connection(
+    tmp_path, monkeypatch
+):
+    import sqlite3
+    from editor_assistant.storage import database
+
+    db_path = tmp_path / "legacy.db"
+    conn = get_connection(db_path)
+    conn.executescript(SCHEMA.replace("    service_tier TEXT,\n", ""))
+    conn.execute("INSERT INTO schema_version VALUES (1, 1)")
+    conn.commit()
+
+    def deny_version_write(action, table, *args):
+        if action == sqlite3.SQLITE_INSERT and table == "schema_version":
+            return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+
+    conn.set_authorizer(deny_version_write)
+    monkeypatch.setattr(database, "get_connection", lambda path=None: conn)
+    with pytest.raises(sqlite3.DatabaseError, match="authorized"):
+        database.init_database(db_path)
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        conn.execute("SELECT 1")
+    check = get_connection(db_path)
+    assert get_schema_version(check) == 1
+    assert "service_tier" not in {
+        row[1] for row in check.execute("PRAGMA table_info(runs)")
+    }
+    check.close()
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["glm-5.2-or", "doubao-seed-2.1-pro", "doubao-seed-1.6", "qwen3.6-flash"],
+)
+def test_processor_rejects_unreviewed_fast_support_before_initializing_clients(
+    model,
+):
+    from editor_assistant.md_processor import MDProcessor
+
+    with (
+        patch("editor_assistant.md_processor.LLMClient") as client,
+        patch("editor_assistant.md_processor.RunRepository") as repository,
+    ):
+        with pytest.raises(
+            ValueError, match="no documented support.*service_tier.*fast"
+        ):
+            MDProcessor(model, service_tier="fast")
+    client.assert_not_called()
+    repository.assert_not_called()
+
+
+def test_fast_support_matches_reviewed_model_catalog():
+    from editor_assistant.config.llm_models import load_all_settings
+
+    supported = {
+        name
+        for provider in load_all_settings().values()
+        for name, model in provider.models.items()
+        if model.capabilities is not None
+        and "fast" in (model.capabilities.service_tiers or [])
+    }
+    assert supported == {
+        "doubao-seed-2.1-lite",
+        "doubao-seed-2.0-pro",
+        "doubao-seed-2.0-lite",
+        "doubao-seed-2.0-mini",
+    }
+
+
+def test_cli_rejects_unsupported_fast_before_reading_input(
+    monkeypatch, capsys
+):
+    from editor_assistant.cli import main
+
+    monkeypatch.delenv("DOUBAO_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "editor-assistant",
+            "outline",
+            "missing.md",
+            "--model",
+            "doubao-seed-2.1-pro",
+            "--service-tier",
+            "fast",
+        ],
+    )
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 1
+    assert "no documented support" in capsys.readouterr().out
