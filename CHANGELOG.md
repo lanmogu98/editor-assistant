@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added independent `--save-history` to `brief`, `outline`, `translate`, `process`, and `batch`, plus `save_history: bool = False` on `EditorAssistant` and `MDProcessor` constructors.
 - Keep current-schema database initialization read-only; migrations recheck versions under the write lock, reject newer schemas, and roll back and close connections on failure.
 - Added opt-in `--service-tier fast` to generation commands using existing `llm-exec-core` request options. Requested tiers are saved, restored on resume, shown in run details, and exported; existing databases upgrade without losing history.
 - Documented downstream package contract for LinkResearcher and other workers.
@@ -13,6 +14,9 @@ All notable changes to this project will be documented in this file.
 - Added usage notes and a dated translation experiment report for `scripts/auto_nobel_release.py`.
 
 ### Changed
+- **Default behavior change / 默认行为变更**: SQLite history saving is now disabled by default for CLI generation and the Python document APIs. Explicitly enable `--save-history` / `save_history=True` to retain previous persistence behavior; `--save-files` remains independent. With history disabled, no repository, database directory, initialization, migration, or database I/O occurs, and `process_mds()` returns `run_id=-1` even on success.
+- History commands only open existing databases and display an enabling hint when storage is missing. `resume` continues saving rerun results; existing databases and current-schema read-only initialization are preserved.
+- Non-streaming results print without requiring file saving. Streaming batches without either saving flag display generated content instead of suppressing it behind Rich progress.
 - Require `llm-exec-core>=0.4.2,<0.5.0` for optional service-tier capability declarations. Fast generation requires reviewed model support before input conversion or client/storage initialization.
 - Strengthened the default Chinese translation prompt with publication-oriented accuracy, terminology, style, and formatting rules while preserving line alignment for bilingual output.
 - Clarified that translation must not supply absent acronym expansions, must preserve tone across all genres, and must translate prose enclosed in code fences while retaining program code.

@@ -9,6 +9,7 @@ import argparse
 import sys
 import asyncio
 from pathlib import Path
+from typing import Optional
 
 # Optional rich import for better UI
 try:
@@ -34,6 +35,7 @@ from .md_converter import MarkdownConverter
 from .clean_html_to_md import CleanHTML2Markdown
 from .config.logging_config import progress
 from .storage import RunRepository
+from .storage.database import get_database_path
 
 DEFAULT_MODEL = "glm-5.2-or"
 
@@ -79,7 +81,12 @@ def add_common_arguments(parser):
     parser.add_argument(
         "--save-files",
         action="store_true",
-        help="Persist generated files to disk (DB is always updated)",
+        help="Persist generated files to disk (independent of history)",
+    )
+    parser.add_argument(
+        "--save-history",
+        action="store_true",
+        help="Save runs, outputs and token usage to local SQLite history",
     )
 
 
@@ -117,6 +124,7 @@ async def cmd_generate_brief(args):
         thinking_level=args.thinking,
         service_tier=getattr(args, "service_tier", None),
         stream=stream,
+        save_history=getattr(args, "save_history", False),
     )
 
     # Parse key=value sources into Input objects
@@ -136,6 +144,7 @@ async def cmd_generate_outline(args):
         thinking_level=args.thinking,
         service_tier=getattr(args, "service_tier", None),
         stream=stream,
+        save_history=getattr(args, "save_history", False),
     )
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
@@ -153,6 +162,7 @@ async def cmd_generate_translate(args):
         thinking_level=args.thinking,
         service_tier=getattr(args, "service_tier", None),
         stream=stream,
+        save_history=getattr(args, "save_history", False),
     )
     # Create Input object for the paper
     input_obj = Input(type=InputType.PAPER, path=args.input_file)
@@ -170,6 +180,7 @@ async def cmd_process_multi_task(args):
         thinking_level=args.thinking,
         service_tier=getattr(args, "service_tier", None),
         stream=stream,
+        save_history=getattr(args, "save_history", False),
     )
 
     # Parse sources into Input objects
@@ -212,6 +223,7 @@ async def cmd_batch_process(args):
         thinking_level=args.thinking,
         service_tier=getattr(args, "service_tier", None),
         stream=stream,
+        save_history=getattr(args, "save_history", False),
     )
 
     # Create Input objects for all files
@@ -221,7 +233,11 @@ async def cmd_batch_process(args):
     # Prepare callbacks for Rich UI if available and streaming enabled
     progress_callbacks = {}
 
-    if RICH_AVAILABLE and stream:
+    if (
+        RICH_AVAILABLE
+        and stream
+        and (args.save_files or getattr(args, "save_history", False))
+    ):
         # Suppress INFO logs to prevent interfering with Rich UI
         import logging
 
@@ -468,9 +484,22 @@ def cmd_clean_html(args):
 # =========================================================================
 
 
+def _open_history_repository() -> Optional[RunRepository]:
+    db_path = get_database_path(create_dir=False)
+    if not db_path.is_file():
+        print(
+            f"No history database found at {db_path}. "
+            "Use --save-history with a generation command to enable history."
+        )
+        return None
+    return RunRepository(db_path, create=False)
+
+
 def cmd_history(args):
     """Show run history."""
-    repo = RunRepository()
+    repo = _open_history_repository()
+    if repo is None:
+        return
 
     if args.search:
         runs = repo.search_by_title(args.search, limit=args.limit)
@@ -519,7 +548,9 @@ def cmd_history(args):
 
 def cmd_stats(args):
     """Show usage statistics."""
-    repo = RunRepository()
+    repo = _open_history_repository()
+    if repo is None:
+        return
     stats = repo.get_stats(days=args.days)
 
     print(f"\n📊 Usage Statistics (last {stats['period_days']} days)\n")
@@ -561,7 +592,9 @@ def cmd_stats(args):
 
 def cmd_show_run(args):
     """Show details of a specific run."""
-    repo = RunRepository()
+    repo = _open_history_repository()
+    if repo is None:
+        return
     run = repo.get_run_details(args.run_id)
 
     if not run:
@@ -627,7 +660,9 @@ def cmd_show_run(args):
 
 async def cmd_resume(args):
     """Resume interrupted/aborted runs."""
-    repo = RunRepository()
+    repo = _open_history_repository()
+    if repo is None:
+        return
     resumable = repo.get_resumable_runs()
 
     if not resumable:
@@ -696,6 +731,7 @@ async def cmd_resume(args):
                 thinking_level=thinking_level,
                 service_tier=run.get("service_tier"),
                 stream=stream,
+                save_history=True,
             )
 
             await assistant.process_multiple(
@@ -715,7 +751,9 @@ async def cmd_resume(args):
 
 def cmd_export(args):
     """Export run history to file."""
-    repo = RunRepository()
+    repo = _open_history_repository()
+    if repo is None:
+        return
     output_path = Path(args.output)
 
     # Determine format from extension if not specified

@@ -41,7 +41,7 @@ async def test_cli_service_tier_reaches_http_and_storage(
         args.append(str(source))
     if command == "process":
         args.extend(["--tasks", "brief,outline"])
-    args.extend(["--model", "doubao-seed-2.0-pro"])
+    args.extend(["--model", "doubao-seed-2.0-pro", "--save-history"])
     if tier:
         args.extend(["--service-tier", tier])
     if not stream:

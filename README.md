@@ -26,7 +26,7 @@ That relative source remains intentional for local development and workspace che
 - **Async processing**: Uses `asyncio` and `httpx` for concurrent conversion and LLM calls.
 - **Unified CLI**: `brief`, `outline`, `translate`, `process`, `batch`, `convert`, `clean`, `history`, `stats`, `show`, `resume`, and `export`.
 - **Typed source inputs**: `brief` and `process` accept typed sources such as `paper=...` and `news=...`; multiple supplied inputs are processed independently.
-- **SQLite run history**: Runs, inputs, outputs, and token usage are saved to a local database.
+- **Optional SQLite run history**: Add `--save-history` to save runs, inputs, outputs, and token usage to a local database. History is disabled by default.
 - **Optional file outputs**: Add `--save-files` to write generated markdown and token reports to disk.
 - **Multi-provider models**: DeepSeek, Gemini, Qwen, GLM/Zhipu, Doubao, OpenAI via OpenRouter, and Anthropic via OpenRouter.
 
@@ -99,7 +99,7 @@ export OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
 export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
-Run history is stored in `~/.editor_assistant/runs.db` by default. Set `EDITOR_ASSISTANT_DB_DIR` to use a different directory.
+History saving is disabled by default. With `--save-history`, run history is stored in `~/.editor_assistant/runs.db`. Set `EDITOR_ASSISTANT_DB_DIR` to use a different directory; setting it alone does not enable history. Without history saving, generation never opens SQLite or creates its database directory.
 
 ### CLI Usage
 
@@ -197,7 +197,8 @@ These options are available on generation commands such as `brief`, `outline`, `
 - `--thinking`: Reasoning level for supported Gemini models: `low`, `medium`, or `high`.
 - `--service-tier fast`: Request low-latency inference on supported Volcengine Ark models. Omitted by default; saved for `resume`.
 - `--no-stream`: Disable streaming output.
-- `--save-files`: Persist generated markdown files and token reports to disk. The SQLite run database is still updated either way.
+- `--save-files`: Persist generated markdown files and token reports to disk, independently of history saving.
+- `--save-history`: Save runs, inputs, outputs, token usage and run status to SQLite. Default: off. Use either saving flag alone or both together.
 - `--debug`: Enable detailed debug logging.
 
 For example:
@@ -276,7 +277,7 @@ from editor_assistant.main import EditorAssistant
 
 
 async def main():
-    assistant = EditorAssistant("glm-5.2-or", debug_mode=True)
+    assistant = EditorAssistant("glm-5.2-or", debug_mode=True)  # No SQLite history
 
     await assistant.process_multiple(
         [Input(type=InputType.PAPER, path="paper.pdf")],
@@ -302,12 +303,24 @@ The converter supports common document and web formats through MarkItDown plus l
 - Text/data: TXT, MD, CSV, JSON, XML, ZIP
 - Media formats supported by MarkItDown, such as images and audio, may also work depending on installed extras
 
+`EditorAssistant(..., save_history=True)` and `MDProcessor(..., save_history=True)` explicitly enable history for that instance. Both constructors default to `save_history=False`; the parameter is appended after existing parameters. File saving remains a separate `save_files=True` processing option. `MDProcessor.process_mds()` keeps returning `(success, run_id)`; `run_id=-1` means no persisted run, including successful processing with history disabled. Check `success` to determine whether processing succeeded. `EditorAssistant.process_multiple()` retains its existing `None` return value. Using `LLMClient` alone does not involve SQLite.
+
 ### Output and Storage
 
-- Run history, inputs, outputs, and token usage are stored in SQLite.
+- Run history, inputs, outputs, and token usage are stored in SQLite only with `--save-history` or `save_history=True`.
 - Default database: `~/.editor_assistant/runs.db`
 - Override database directory: `EDITOR_ASSISTANT_DB_DIR=/path/to/dir`
+- `history`, `stats`, `show`, `resume`, and `export` operate on existing databases. If the database is missing, they display its path and an enabling hint without creating a directory or empty database. `resume` always saves rerun results and token usage as new history records, following the existing rerun convention.
+- Existing databases and records are preserved. Current-schema databases are opened without schema writes; creation or upgrades write only when needed.
 - With `--save-files`, generated files are written next to the source/converted markdown under `llm_summaries/<model>/`.
+- Non-streaming results are printed independently of file saving. Streaming `batch` uses standard console output when both saving flags are off; when either flag is on, Rich displays progress while results are saved.
+
+```bash
+uv run editor-assistant outline paper.pdf                       # Neither
+uv run editor-assistant outline paper.pdf --save-files          # Files only
+uv run editor-assistant outline paper.pdf --save-history        # History only
+uv run editor-assistant outline paper.pdf --save-files --save-history  # Both
+```
 
 ```text
 llm_summaries/
@@ -337,7 +350,7 @@ Important current CLI conventions:
 - Source checkout commands should generally use `uv run ...`.
 - `brief` and `process` require typed source arguments: `paper=...` or `news=...`; multiple supplied inputs are processed independently.
 - `outline` and `translate` take a single plain input path or URL.
-- Generated responses are saved to SQLite by default; file output is opt-in with `--save-files`.
+- **Default behavior change**: Generated responses are no longer saved to SQLite automatically. Add `--save-history` (or `save_history=True` in the Python API) to retain previous persistence behavior. File output remains opt-in with `--save-files`.
 - The default model is `glm-5.2-or`. The removed `glm-4.7-or` and `glm-4.6-or` names are not aliases; migrate callers to a supported model explicitly.
 
 Older v0.1 syntax such as `--article paper:paper.pdf` is no longer supported.
@@ -380,7 +393,7 @@ llm-exec-core = { path = "../llm-exec-core", editable = true }
 - **异步处理**：基于 `asyncio` 和 `httpx`，支持并发转换和 LLM 请求。
 - **统一 CLI**：包含 `brief`、`outline`、`translate`、`process`、`batch`、`convert`、`clean`、`history`、`stats`、`show`、`resume`、`export`。
 - **带类型输入**：`brief` 和 `process` 支持 `paper=...`、`news=...` 这类带类型的输入；传入多个输入时会逐个独立处理。
-- **SQLite 历史记录**：运行记录、输入、输出和 token 用量会写入本地数据库。
+- **可选 SQLite 历史记录**：使用 `--save-history` 才会把运行记录、输入、输出和 token 用量写入本地数据库，默认关闭。
 - **可选文件输出**：使用 `--save-files` 才会把生成的 Markdown 和 token 报告写到磁盘。
 - **多模型提供商**：支持 DeepSeek、Gemini、Qwen、GLM/智谱、Doubao、OpenRouter 上的 OpenAI 和 Anthropic 模型。
 
@@ -453,7 +466,7 @@ export OPENAI_API_KEY_OPENROUTER=your_openrouter_api_key
 export ANTHROPIC_API_KEY_OPENROUTER=your_openrouter_api_key
 ```
 
-运行历史默认保存到 `~/.editor_assistant/runs.db`。如需更换目录，可以设置 `EDITOR_ASSISTANT_DB_DIR`。
+历史保存默认关闭。启用 `--save-history` 后，运行历史保存到 `~/.editor_assistant/runs.db`。如需更换目录，可以设置 `EDITOR_ASSISTANT_DB_DIR`；仅设置目录不会开启历史保存。关闭历史保存时，生成流程不会打开 SQLite 或创建数据库目录。
 
 ### CLI 用法
 
@@ -550,7 +563,8 @@ uv run editor-assistant export history.csv --limit 100
 - `--thinking`：支持的 Gemini 模型推理强度，可选 `low`、`medium`、`high`。
 - `--service-tier fast`：为支持的火山方舟模型请求低延迟推理。默认不传入，`resume` 会恢复原选项。
 - `--no-stream`：关闭流式输出。
-- `--save-files`：把生成的 Markdown 文件和 token 报告写入磁盘。无论是否启用，SQLite 数据库都会更新。
+- `--save-files`：把生成的 Markdown 文件和 token 报告写入磁盘，与历史保存独立。
+- `--save-history`：把运行记录、输入、输出、token 用量和运行状态保存到 SQLite，默认关闭。两个保存开关可分别开启，也可同时开启。
 - `--debug`：启用详细调试日志。
 
 例如：
@@ -629,7 +643,7 @@ from editor_assistant.main import EditorAssistant
 
 
 async def main():
-    assistant = EditorAssistant("glm-5.2-or", debug_mode=True)
+    assistant = EditorAssistant("glm-5.2-or", debug_mode=True)  # 不保存 SQLite 历史
 
     await assistant.process_multiple(
         [Input(type=InputType.PAPER, path="paper.pdf")],
@@ -655,12 +669,24 @@ if __name__ == "__main__":
 - 文本/数据：TXT、MD、CSV、JSON、XML、ZIP
 - MarkItDown extras 支持的图片、音频等媒体格式也可能可用
 
+通过 `EditorAssistant(..., save_history=True)` 或 `MDProcessor(..., save_history=True)` 显式开启该实例的历史保存。两个构造函数均默认 `save_history=False`，新参数追加在已有参数之后。文件保存仍由处理方法的 `save_files=True` 独立控制。`MDProcessor.process_mds()` 继续返回 `(success, run_id)`；`run_id=-1` 表示没有持久化运行记录，包括关闭历史保存时的成功处理，应使用 `success` 判断处理是否成功。`EditorAssistant.process_multiple()` 保留现有的 `None` 返回值。单独使用 `LLMClient` 不涉及 SQLite。
+
 ### 输出和存储
 
-- 运行历史、输入、输出和 token 用量会保存到 SQLite。
+- 仅启用 `--save-history` 或 `save_history=True` 时，运行历史、输入、输出和 token 用量才会保存到 SQLite。
 - 默认数据库：`~/.editor_assistant/runs.db`
 - 自定义数据库目录：`EDITOR_ASSISTANT_DB_DIR=/path/to/dir`
+- `history`、`stats`、`show`、`resume`、`export` 操作已有数据库。数据库不存在时，提示路径及开启方式，不创建目录或空数据库。`resume` 始终将重跑结果和 token 用量保存为新历史记录，沿用现有的重跑约定。
+- 已有数据库及记录保留。当前 schema 的数据库不会执行 schema 写入；仅创建或升级时写入。
 - 使用 `--save-files` 时，生成文件会写到输入/转换后的 Markdown 旁边的 `llm_summaries/<model>/`。
+- 非流式结果打印与文件保存独立。流式 `batch` 在两个保存开关均关闭时使用标准控制台输出；开启任一保存开关时，Rich 显示进度，结果保存到对应位置。
+
+```bash
+uv run editor-assistant outline paper.pdf                       # 两者均关闭
+uv run editor-assistant outline paper.pdf --save-files          # 仅保存文件
+uv run editor-assistant outline paper.pdf --save-history        # 仅保存历史
+uv run editor-assistant outline paper.pdf --save-files --save-history  # 同时保存
+```
 
 ```text
 llm_summaries/
@@ -689,7 +715,7 @@ uv run black src/ tests/
 - 源码目录中建议使用 `uv run ...`。
 - `brief` 和 `process` 使用 `paper=...` 或 `news=...` 这类带类型输入；传入多个输入时会逐个独立处理。
 - `outline` 和 `translate` 接收单个普通路径或 URL。
-- 生成结果默认写入 SQLite；文件输出需要显式加 `--save-files`。
+- **默认行为变更**：生成结果不再自动写入 SQLite。需要原有持久化行为时，请显式加 `--save-history`，或在 Python API 中设置 `save_history=True`。文件输出仍需显式加 `--save-files`。
 - 默认模型为 `glm-5.2-or`。已移除的 `glm-4.7-or` 和 `glm-4.6-or` 不是别名；调用方必须显式迁移到受支持的模型。
 
 旧版 v0.1 的 `--article paper:paper.pdf` 语法已经不再支持。
