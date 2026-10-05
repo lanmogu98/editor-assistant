@@ -195,9 +195,18 @@ These options are available on generation commands such as `brief`, `outline`, `
 
 - `--model`: Choose an LLM model. Default: `glm-5.2-or`.
 - `--thinking`: Reasoning level for supported Gemini models: `low`, `medium`, or `high`.
+- `--service-tier fast`: Request low-latency inference on supported Volcengine Ark models. Omitted by default; saved for `resume`.
 - `--no-stream`: Disable streaming output.
 - `--save-files`: Persist generated markdown files and token reports to disk. The SQLite run database is still updated either way.
 - `--debug`: Enable detailed debug logging.
+
+For example:
+
+```bash
+uv run editor-assistant brief paper=paper.pdf --model doubao-seed-2.0-pro --service-tier fast
+```
+
+Enable the model's low-latency service in Ark first. `fast` requests can fall back to regular inference; this option records the requested tier, not the actual tier returned by Ark. Fast pricing differs from regular pricing, so the existing flat cost estimates are not billing quotes. See [Volcengine's low-latency documentation](https://docs.volcengine.com/docs/ark/online-inference-low-latency?lang=zh).
 
 Global options:
 
@@ -537,9 +546,18 @@ uv run editor-assistant export history.csv --limit 100
 
 - `--model`：选择 LLM 模型。默认值：`glm-5.2-or`。
 - `--thinking`：支持的 Gemini 模型推理强度，可选 `low`、`medium`、`high`。
+- `--service-tier fast`：为支持的火山方舟模型请求低延迟推理。默认不传入，`resume` 会恢复原选项。
 - `--no-stream`：关闭流式输出。
 - `--save-files`：把生成的 Markdown 文件和 token 报告写入磁盘。无论是否启用，SQLite 数据库都会更新。
 - `--debug`：启用详细调试日志。
+
+例如：
+
+```bash
+uv run editor-assistant brief paper=paper.pdf --model doubao-seed-2.0-pro --service-tier fast
+```
+
+请先在方舟开通模型的低延迟服务。`fast` 请求可能降级到常规推理；此选项记录的是请求档位，尚未记录方舟返回的实际档位。低延迟与常规推理定价不同，现有平面成本估算不能作为账单价格。详见[火山低延迟文档](https://docs.volcengine.com/docs/ark/online-inference-low-latency?lang=zh)。
 
 全局选项：
 

@@ -57,6 +57,15 @@ def add_common_arguments(parser):
         ),
     )
     parser.add_argument(
+        "--service-tier",
+        choices=["fast"],
+        default=None,
+        help=(
+            "Request Volcengine Ark low-latency inference for supported "
+            "models with the service enabled. Default: provider decides."
+        ),
+    )
+    parser.add_argument(
         "--no-stream",
         action="store_true",
         dest="no_stream",
@@ -106,6 +115,7 @@ async def cmd_generate_brief(args):
         args.model,
         debug_mode=args.debug,
         thinking_level=args.thinking,
+        service_tier=getattr(args, "service_tier", None),
         stream=stream,
     )
 
@@ -124,6 +134,7 @@ async def cmd_generate_outline(args):
         args.model,
         debug_mode=args.debug,
         thinking_level=args.thinking,
+        service_tier=getattr(args, "service_tier", None),
         stream=stream,
     )
     # Create Input object for the paper
@@ -140,6 +151,7 @@ async def cmd_generate_translate(args):
         args.model,
         debug_mode=args.debug,
         thinking_level=args.thinking,
+        service_tier=getattr(args, "service_tier", None),
         stream=stream,
     )
     # Create Input object for the paper
@@ -156,6 +168,7 @@ async def cmd_process_multi_task(args):
         args.model,
         debug_mode=args.debug,
         thinking_level=args.thinking,
+        service_tier=getattr(args, "service_tier", None),
         stream=stream,
     )
 
@@ -197,6 +210,7 @@ async def cmd_batch_process(args):
         args.model,
         debug_mode=args.debug,
         thinking_level=args.thinking,
+        service_tier=getattr(args, "service_tier", None),
         stream=stream,
     )
 
@@ -561,6 +575,8 @@ def cmd_show_run(args):
     print(f"  Status:    {run.get('status', 'Unknown')}")
     if run.get("thinking_level"):
         print(f"  Thinking:  {run.get('thinking_level')}")
+    if run.get("service_tier"):
+        print(f"  Requested tier: {run['service_tier']}")
     print(f"  Stream:    {'Yes' if run.get('stream') else 'No'}")
     if run.get("error_message"):
         print(f"  Error:     {run.get('error_message')}")
@@ -678,6 +694,7 @@ async def cmd_resume(args):
                 model,
                 debug_mode=args.debug,
                 thinking_level=thinking_level,
+                service_tier=run.get("service_tier"),
                 stream=stream,
             )
 

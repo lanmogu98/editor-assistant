@@ -107,6 +107,7 @@ class MDProcessor:
         thinking_level: Optional[str] = None,
         stream: bool = True,
         max_concurrent: int = 5,
+        service_tier: Optional[str] = None,
     ) -> None:
         """
         Initialize the processor.
@@ -116,10 +117,12 @@ class MDProcessor:
             thinking_level: Optional thinking/reasoning level override
             stream: Whether to use streaming output
             max_concurrent: Maximum number of concurrent requests
+            service_tier: Optional requested inference service tier
         """
         self.llm_client = LLMClient(model_name, thinking_level=thinking_level)
         self.model_name = model_name
         self.thinking_level = thinking_level
+        self.service_tier = service_tier
         self.stream = stream
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(DEBUG_LOGGING_LEVEL)
@@ -431,11 +434,17 @@ class MDProcessor:
             # RFC Plan: Use __aenter__ in LLMClient.
             # Here, self.llm_client persists for MDProcessor lifetime.
             # generate_response handles auto-client creation.
+            request_kwargs: Dict[str, Any] = {}
+            if self.service_tier is not None:
+                request_kwargs["request_options"] = {
+                    "service_tier": self.service_tier
+                }
             return await self.llm_client.generate_response(
                 prompt,
                 request_name,
                 stream=stream,
                 stream_callback=stream_callback,
+                **request_kwargs,
             )
         except ConnectionError as e:
             error(f"Connection failed during {request_name}: {str(e)}")
@@ -478,6 +487,7 @@ class MDProcessor:
                 thinking_level=self.thinking_level,
                 stream=self.stream,
                 currency=self.llm_client.pricing_currency,
+                service_tier=self.service_tier,
             )
             return run_id
         except Exception as e:

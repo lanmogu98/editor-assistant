@@ -12,7 +12,7 @@ DEFAULT_DB_DIR = Path.home() / ".editor_assistant"
 DEFAULT_DB_NAME = "runs.db"
 
 # Schema version for migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def get_database_path() -> Path:
@@ -68,6 +68,10 @@ def init_database(db_path: Optional[Path] = None) -> None:
 
     # Create tables
     cursor.executescript(SCHEMA)
+    cursor.execute("BEGIN IMMEDIATE")
+    columns = {row[1] for row in cursor.execute("PRAGMA table_info(runs)")}
+    if "service_tier" not in columns:
+        cursor.execute("ALTER TABLE runs ADD COLUMN service_tier TEXT")
 
     # Set schema version
     cursor.execute(
@@ -104,6 +108,7 @@ CREATE TABLE IF NOT EXISTS runs (
     task TEXT NOT NULL,                     -- brief, outline, translate
     model TEXT NOT NULL,                    -- deepseek-v3.2, gemini-3-flash
     thinking_level TEXT,                    -- low, medium, high, null
+    service_tier TEXT,
     stream INTEGER DEFAULT 1,               -- 0 or 1
     currency TEXT DEFAULT '$',              -- pricing currency symbol
     status TEXT DEFAULT 'pending',          -- pending, success, failed

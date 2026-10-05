@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added opt-in `--service-tier fast` to generation commands using existing `llm-exec-core` request options. Requested tiers are saved, restored on resume, shown in run details, and exported; existing databases upgrade without losing history.
 - Documented downstream package contract for LinkResearcher and other workers.
 - Added the dated Qwen/Bailian catalog decision record for Issue #31.
 - Added translation benchmark aliases for DeepSeek V4 Flash Preview/GA, DeepSeek V3.2, Doubao Seed 2.1 Lite, and Doubao Seed 2.0 Pro/Lite/Mini.
