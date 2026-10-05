@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Strengthened the default Chinese translation prompt with publication-oriented accuracy, terminology, style, and formatting rules while preserving line alignment for bilingual output.
+- Clarified that translation must not supply absent acronym expansions, must preserve tone across all genres, and must translate prose enclosed in code fences while retaining program code.
 - Editor Assistant continues to package and own its 29-model catalog while using `llm-exec-core` 0.4.1 for schema validation, generic connection resolution, effective model policy, and execution. Library callers may provide an explicit path or dictionary `config_source` without sharing the app default.
 - Changed the CLI/library migration default from `glm-4.7-or` to `glm-5.2-or`. Removed names such as `glm-4.7-or` and `glm-4.6-or` are not restored or mapped.
 - Constrained the runtime dependency to `llm-exec-core>=0.4.1,<0.5.0` while retaining the sibling editable source for development.
