@@ -55,7 +55,7 @@ uv run editor-assistant history -n 8
 uv run editor-assistant show RUN_ID --output
 ```
 
-2026-09-29 的实测输入、方法和结果见 [翻译性能实验报告](reports/translation_performance_2026-09-29.md)。本次 V4 Preview、V4 GA、Doubao 2.1 Lite 和 Doubao 2.0 Lite 成功；Gemini key、V3.2 迁移状态和未开通模型的失败结果也记录在报告中。
+2026-09-29 的实测输入、方法和结果见 [翻译性能实验报告](reports/translation_performance_2026-09-29.md)。V4 Preview、V4 GA、Doubao 2.1 Lite 和 Doubao 2.0 Lite 成功；2026-10-05 配置新 key 后 Gemini 3.8 Flash 补测成功。V3.2 迁移状态和未开通模型的失败结果也记录在报告中。
 
 ## 生成横向对照文件
 
