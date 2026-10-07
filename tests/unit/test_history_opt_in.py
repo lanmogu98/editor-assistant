@@ -276,15 +276,89 @@ async def test_batch_streams_print_separate_documents(
             await args.func(args)
 
     output = capsys.readouterr().out
-    assert "ALPHA start;ALPHA end." in output
+    assert output.count("ALPHA start;ALPHA end.") == 1
     if fail_second:
         assert "BETA start;" in output
         assert "BETA end." not in output
         assert "second.md (incomplete)" in output
     else:
-        assert "BETA start;BETA end." in output
+        assert output.count("BETA start;BETA end.") == 1
     assert "paper.md" in output
     assert "second.md" in output
+    assert not (source.parent / "db").exists()
+    assert not (source.parent / "llm_summaries").exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("file_count", [1, 2])
+async def test_cancelled_batch_preserves_stream_output(
+    file_count, offline_history, capsys
+):
+    source = offline_history
+    source.write_text("ALPHA research content. " * 100)
+    if file_count == 2:
+        source.with_name("second.md").write_text(
+            "BETA research content. " * 100
+        )
+    started = set()
+    all_started = asyncio.Event()
+
+    class PausedStream(httpx.AsyncByteStream):
+        def __init__(self, label):
+            self.label = label
+
+        async def __aiter__(self):
+            chunk = {
+                "choices": [{"delta": {"content": self.label + " partial"}}]
+            }
+            yield f"data: {json.dumps(chunk)}\n\n".encode()
+            started.add(self.label)
+            if len(started) == file_count:
+                all_started.set()
+            await asyncio.Event().wait()
+
+    def respond(request):
+        label = "ALPHA" if b"ALPHA" in request.content else "BETA"
+        return httpx.Response(
+            200,
+            stream=PausedStream(label),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    args = create_parser().parse_args(
+        [
+            "batch",
+            str(source.parent),
+            "--ext",
+            ".md",
+            "--task",
+            "outline",
+            "--model",
+            "doubao-seed-2.0-pro",
+        ]
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(respond)
+    ) as client:
+        with patch(
+            "llm_exec_core.client.httpx.AsyncClient", return_value=client
+        ):
+            batch = asyncio.create_task(args.func(args))
+            try:
+                await asyncio.wait_for(all_started.wait(), timeout=5)
+                before_cancel = capsys.readouterr().out
+                assert ("ALPHA partial" in before_cancel) is (file_count == 1)
+            finally:
+                batch.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await batch
+
+    output = before_cancel + capsys.readouterr().out
+    assert output.count("ALPHA partial") == 1
+    if file_count == 2:
+        assert output.count("BETA partial") == 1
+        assert "paper.md (incomplete)" in output
+        assert "second.md (incomplete)" in output
     assert not (source.parent / "db").exists()
     assert not (source.parent / "llm_summaries").exists()
 

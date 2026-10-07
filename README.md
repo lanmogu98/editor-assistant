@@ -313,7 +313,7 @@ The converter supports common document and web formats through MarkItDown plus l
 - `history`, `stats`, `show`, `resume`, and `export` operate on existing databases. If the database is missing, they display its path and an enabling hint without creating a directory or empty database. `resume` always saves rerun results and token usage as new history records, following the existing rerun convention.
 - Existing databases and records are preserved. Current-schema databases are opened without schema writes; creation or upgrades write only when needed.
 - With `--save-files`, generated files are written next to the source/converted markdown under `llm_summaries/<model>/`.
-- Non-streaming results are printed independently of file saving. With file saving off, direct `MDProcessor` console output does not require logging configuration. When both saving flags are off, streaming `batch` buffers concurrent results and prints each document together with its filename on completion; partial results from failed requests are marked incomplete. Single-file batches still stream directly. When either flag is on, Rich displays progress while results are saved.
+- Non-streaming results are printed independently of file saving. With file saving off, direct `MDProcessor` console output does not require logging configuration. When both saving flags are off, streaming `batch` buffers concurrent results and prints each document together with its filename on completion; partial results from failed or cancelled requests are marked incomplete. Single-file batches still stream directly. When either flag is on, Rich displays progress while results are saved.
 
 ```bash
 uv run editor-assistant outline paper.pdf                       # Neither
@@ -679,7 +679,7 @@ if __name__ == "__main__":
 - `history`、`stats`、`show`、`resume`、`export` 操作已有数据库。数据库不存在时，提示路径及开启方式，不创建目录或空数据库。`resume` 始终将重跑结果和 token 用量保存为新历史记录，沿用现有的重跑约定。
 - 已有数据库及记录保留。当前 schema 的数据库不会执行 schema 写入；仅创建或升级时写入。
 - 使用 `--save-files` 时，生成文件会写到输入/转换后的 Markdown 旁边的 `llm_summaries/<model>/`。
-- 非流式结果打印与文件保存独立。关闭文件保存时，直接调用 `MDProcessor` 的控制台输出也无需配置 logging。两个保存开关均关闭时，流式 `batch` 会缓冲并发结果，每个文档完成后带文件名整段打印；失败请求已收到的内容会标为不完整。单文件批处理仍直接流式输出。开启任一保存开关时，Rich 显示进度，结果保存到对应位置。
+- 非流式结果打印与文件保存独立。关闭文件保存时，直接调用 `MDProcessor` 的控制台输出也无需配置 logging。两个保存开关均关闭时，流式 `batch` 会缓冲并发结果，每个文档完成后带文件名整段打印；失败或取消的请求已收到的内容会标为不完整。单文件批处理仍直接流式输出。开启任一保存开关时，Rich 显示进度，结果保存到对应位置。
 
 ```bash
 uv run editor-assistant outline paper.pdf                       # 两者均关闭

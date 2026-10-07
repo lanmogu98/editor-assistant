@@ -352,15 +352,20 @@ async def cmd_batch_process(args):
                 flush=True,
             )
 
-        await assistant.process_multiple(
-            inputs,
-            args.task,
-            output_to_console=False,
-            progress_callbacks={
-                path: chunks.append for path, chunks in buffers.items()
-            },
-            done_callback=print_completed,
-        )
+        try:
+            await assistant.process_multiple(
+                inputs,
+                args.task,
+                output_to_console=False,
+                progress_callbacks={
+                    path: chunks.append for path, chunks in buffers.items()
+                },
+                done_callback=print_completed,
+            )
+        finally:
+            for file_path in list(buffers):
+                if buffers[file_path]:
+                    print_completed(file_path, False)
     else:
         # Fallback to standard behavior.
         # Or just run it. If Rich is missing, streaming will be messy.
