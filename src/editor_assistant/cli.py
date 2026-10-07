@@ -337,6 +337,30 @@ async def cmd_batch_process(args):
             # Ensure overall is done (in case of weirdness)
             progress_ctx.update(overall_task, completed=len(inputs))
 
+    elif (
+        stream
+        and len(inputs) > 1
+        and not (args.save_files or getattr(args, "save_history", False))
+    ):
+        buffers: dict[str, list[str]] = {inp.path: [] for inp in inputs}
+
+        def print_completed(file_path: str, success: bool) -> None:
+            content = "".join(buffers.pop(file_path, []))
+            status = "" if success else " (incomplete)"
+            print(
+                f"\n--- {Path(file_path).name}{status} ---\n{content}",
+                flush=True,
+            )
+
+        await assistant.process_multiple(
+            inputs,
+            args.task,
+            output_to_console=False,
+            progress_callbacks={
+                path: chunks.append for path, chunks in buffers.items()
+            },
+            done_callback=print_completed,
+        )
     else:
         # Fallback to standard behavior.
         # Or just run it. If Rich is missing, streaming will be messy.

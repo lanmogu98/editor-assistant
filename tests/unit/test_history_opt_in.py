@@ -3,6 +3,7 @@
 import json
 import sqlite3
 import asyncio
+import logging
 from unittest.mock import patch
 
 import httpx
@@ -212,6 +213,103 @@ async def test_batch_streaming_result_or_rich_progress(
     assert (offline_history.parent / "db").exists() is save_history
     if save_history:
         assert RunRepository().get_recent_runs()[0]["status"] == "success"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("rich_available", [False, True])
+@pytest.mark.parametrize("fail_second", [False, True])
+async def test_batch_streams_print_separate_documents(
+    rich_available, fail_second, offline_history, monkeypatch, capsys
+):
+    source = offline_history
+    source.write_text("ALPHA research content. " * 100)
+    source.with_name("second.md").write_text("BETA research content. " * 100)
+    monkeypatch.setattr("editor_assistant.cli.RICH_AVAILABLE", rich_available)
+    started = set()
+    both_started = asyncio.Event()
+
+    class DocumentStream(httpx.AsyncByteStream):
+        def __init__(self, label):
+            self.label = label
+
+        async def __aiter__(self):
+            for part in [" start;", " end."]:
+                chunk = {
+                    "choices": [{"delta": {"content": self.label + part}}]
+                }
+                yield f"data: {json.dumps(chunk)}\n\n".encode()
+                if part == " start;":
+                    started.add(self.label)
+                    if len(started) == 2:
+                        both_started.set()
+                    await asyncio.wait_for(both_started.wait(), timeout=2)
+                    if fail_second and self.label == "BETA":
+                        raise RuntimeError("Interrupted test stream")
+            yield b"data: [DONE]\n\n"
+
+    def respond(request):
+        label = "ALPHA" if b"ALPHA" in request.content else "BETA"
+        return httpx.Response(
+            200,
+            stream=DocumentStream(label),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    args = create_parser().parse_args(
+        [
+            "batch",
+            str(source.parent),
+            "--ext",
+            ".md",
+            "--task",
+            "outline",
+            "--model",
+            "doubao-seed-2.0-pro",
+        ]
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(respond)
+    ) as client:
+        with patch(
+            "llm_exec_core.client.httpx.AsyncClient", return_value=client
+        ):
+            await args.func(args)
+
+    output = capsys.readouterr().out
+    assert "ALPHA start;ALPHA end." in output
+    if fail_second:
+        assert "BETA start;" in output
+        assert "BETA end." not in output
+        assert "second.md (incomplete)" in output
+    else:
+        assert "BETA start;BETA end." in output
+    assert "paper.md" in output
+    assert "second.md" in output
+    assert not (source.parent / "db").exists()
+    assert not (source.parent / "llm_summaries").exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("output_to_console", [False, True])
+async def test_processor_console_output_without_logging(
+    output_to_console, offline_history, offline_http, monkeypatch, capsys
+):
+    monkeypatch.setattr(logging.getLogger(), "handlers", [])
+    monkeypatch.setattr(logging.getLogger("user"), "handlers", [])
+    processor = MDProcessor("doubao-seed-2.0-pro", stream=False)
+    article = MDArticle(
+        type=InputType.PAPER,
+        content=offline_history.read_text(),
+        title="paper",
+        source_path=str(offline_history),
+    )
+    result = await processor.process_mds(
+        [article], "outline", output_to_console=output_to_console
+    )
+    assert result == (True, -1)
+    output = capsys.readouterr().out
+    assert ("Generated text" in output) is output_to_console
+    assert not (offline_history.parent / "db").exists()
 
 
 @pytest.mark.asyncio

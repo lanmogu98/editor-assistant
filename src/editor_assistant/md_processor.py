@@ -371,7 +371,7 @@ class MDProcessor:
                             f"{output_name} output saved to {output_path}"
                         )
                 elif should_print and output_name == "main":
-                    user_message(formatted_content)
+                    print(formatted_content)
 
                 # Save to database (Async via thread pool)
                 await asyncio.to_thread(
