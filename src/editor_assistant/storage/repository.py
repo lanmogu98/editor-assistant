@@ -41,23 +41,30 @@ class InputRecord:
 class RunRepository:
     """Repository for managing run history in SQLite."""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Optional[Path] = None, *, create: bool = True):
         """
         Initialize repository.
 
         Args:
             db_path: Optional custom database path
+            create: Create missing storage; False only opens existing history.
         """
-        self.db_path = db_path or get_database_path()
+        self.db_path = db_path or get_database_path(create_dir=create)
+        self._create = create
+        if not create and not self.db_path.is_file():
+            raise FileNotFoundError(self.db_path)
         self._ensure_initialized()
 
     def _ensure_initialized(self) -> None:
         """Ensure database is initialized."""
-        init_database(self.db_path)
+        if self._create:
+            init_database(self.db_path)
+        else:
+            init_database(self.db_path, create=False)
 
     def _get_conn(self) -> sqlite3.Connection:
         """Get database connection."""
-        return get_connection(self.db_path)
+        return get_connection(self.db_path, create=self._create)
 
     # =========================================================================
     # Input Operations

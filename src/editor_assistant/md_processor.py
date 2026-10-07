@@ -109,6 +109,7 @@ class MDProcessor:
         stream: bool = True,
         max_concurrent: int = 5,
         service_tier: Optional[str] = None,
+        save_history: bool = False,
     ) -> None:
         """
         Initialize the processor.
@@ -119,6 +120,7 @@ class MDProcessor:
             stream: Whether to use streaming output
             max_concurrent: Maximum number of concurrent requests
             service_tier: Optional requested inference service tier
+            save_history: Persist runs and outputs to SQLite (default: off)
         """
         if service_tier is not None:
             _, model_details = get_model_details(model_name)
@@ -138,8 +140,9 @@ class MDProcessor:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(DEBUG_LOGGING_LEVEL)
 
-        # Initialize storage repository
-        self.repository = RunRepository()
+        self.repository: Optional[RunRepository] = (
+            RunRepository() if save_history else None
+        )
 
         # Concurrency control
         self._semaphore = asyncio.Semaphore(max_concurrent)
@@ -158,6 +161,9 @@ class MDProcessor:
         Args:
             stream_callback: Optional callback for streaming chunks.
                 If None and output_to_console is True, chunks print to stdout.
+
+        Returns:
+            Success and persisted run ID; -1 when no history was saved.
         """
         run_id = -1
 
@@ -364,6 +370,8 @@ class MDProcessor:
                         progress(
                             f"{output_name} output saved to {output_path}"
                         )
+                elif should_print and output_name == "main":
+                    print(formatted_content)
 
                 # Save to database (Async via thread pool)
                 await asyncio.to_thread(
@@ -480,6 +488,8 @@ class MDProcessor:
     def _create_run_record(
         self, md_articles: List[MDArticle], task_name: str
     ) -> int:
+        if self.repository is None:
+            return -1
         try:
             input_ids = []
             for article in md_articles:
@@ -508,7 +518,7 @@ class MDProcessor:
     def _update_run_status(
         self, run_id: int, status: str, error_message: Optional[str] = None
     ) -> None:
-        if run_id < 0:
+        if self.repository is None or run_id < 0:
             return
         try:
             self.repository.update_run_status(run_id, status, error_message)
@@ -518,7 +528,7 @@ class MDProcessor:
     def _save_output_to_db(
         self, run_id: int, output_type: str, content: str
     ) -> None:
-        if run_id < 0:
+        if self.repository is None or run_id < 0:
             return
         try:
             content_type = (
@@ -533,7 +543,7 @@ class MDProcessor:
     def _save_token_usage_to_db(
         self, run_id: int, usage: Optional[Dict[str, Any]] = None
     ) -> None:
-        if run_id < 0:
+        if self.repository is None or run_id < 0:
             return
         try:
             if usage is None:

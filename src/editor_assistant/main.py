@@ -22,6 +22,7 @@ class EditorAssistant:
         thinking_level=None,
         stream=True,
         service_tier: Optional[str] = None,
+        save_history: bool = False,
     ):
         setup_logging(debug_mode)
         self.logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class EditorAssistant:
             thinking_level=thinking_level,
             stream=stream,
             service_tier=service_tier,
+            save_history=save_history,
         )
         self.md_converter = MarkdownConverter()
 

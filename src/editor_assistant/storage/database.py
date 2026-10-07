@@ -15,9 +15,9 @@ DEFAULT_DB_NAME = "runs.db"
 SCHEMA_VERSION = 2
 
 
-def get_database_path() -> Path:
+def get_database_path(*, create_dir: bool = True) -> Path:
     """
-    Get the database file path, creating directory if needed.
+    Get the database file path; optionally create its parent directory.
 
     Environment variables (checked in order):
     1. EDITOR_ASSISTANT_TEST_DB_DIR - For testing (highest priority)
@@ -28,42 +28,59 @@ def get_database_path() -> Path:
     test_db_dir = os.getenv("EDITOR_ASSISTANT_TEST_DB_DIR")
     if test_db_dir:
         db_dir = Path(test_db_dir)
-        db_dir.mkdir(parents=True, exist_ok=True)
+        if create_dir:
+            db_dir.mkdir(parents=True, exist_ok=True)
         return db_dir / DEFAULT_DB_NAME
 
     # Production: explicit override or default
     db_dir = Path(os.getenv("EDITOR_ASSISTANT_DB_DIR", DEFAULT_DB_DIR))
-    db_dir.mkdir(parents=True, exist_ok=True)
+    if create_dir:
+        db_dir.mkdir(parents=True, exist_ok=True)
     return db_dir / DEFAULT_DB_NAME
 
 
-def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
+def get_connection(
+    db_path: Optional[Path] = None, *, create: bool = True
+) -> sqlite3.Connection:
     """
     Get a database connection.
 
     Args:
         db_path: Optional custom database path. Uses default if not provided.
+        create: Whether a missing database may be created.
 
     Returns:
         SQLite connection with row factory enabled
     """
     if db_path is None:
-        db_path = get_database_path()
+        db_path = get_database_path(create_dir=create)
 
-    conn = sqlite3.connect(str(db_path))
+    if create:
+        conn = sqlite3.connect(str(db_path))
+    else:
+        conn = sqlite3.connect(
+            f"{db_path.resolve().as_uri()}?mode=rw", uri=True
+        )
     conn.row_factory = sqlite3.Row  # Enable dict-like access
     conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
     return conn
 
 
-def init_database(db_path: Optional[Path] = None) -> None:
+def init_database(
+    db_path: Optional[Path] = None, *, create: bool = True
+) -> None:
     """
     Initialize the database with schema.
 
     Args:
         db_path: Optional custom database path
+        create: Whether a missing database may be created.
     """
-    conn = get_connection(db_path)
+    conn = (
+        get_connection(db_path)
+        if create
+        else get_connection(db_path, create=False)
+    )
     try:
         version = get_schema_version(conn)
         if version > SCHEMA_VERSION:

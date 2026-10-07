@@ -91,7 +91,7 @@ class TestAsyncMDProcessor:
             mock_registry.get.return_value = mock_task_cls
 
             # Initialize processor
-            processor = MDProcessor("test-model")
+            processor = MDProcessor("test-model", save_history=True)
 
             article = MDArticle(
                 type=InputType.PAPER,

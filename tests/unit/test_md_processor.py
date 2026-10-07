@@ -119,7 +119,7 @@ class TestMDProcessorProcessMds:
             repo.get_or_create_input.return_value = 456
             repo.create_run.return_value = 123
             MockRepo.return_value = repo
-            return MDProcessor("test-model")
+            return MDProcessor("test-model", save_history=True)
 
     @pytest.fixture
     def valid_article(self, temp_dir):
